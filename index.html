@@ -1655,6 +1655,24 @@ function sendMessage() {
     return;
   }
 
+  // /继续 命令：继续输出新的助手消息，不新增用户气泡
+  if (text === '/继续') {
+    input.value = '';
+    input.style.height = 'auto';
+    if (!currentChatId) {
+      showToast('请先开始一个对话', 'error');
+      return;
+    }
+    const chat = appData.chats[currentChatId];
+    if (!chat || chat.messages.length === 0) {
+      showToast('请先发送消息再继续', 'error');
+      return;
+    }
+    // 直接触发 AI 继续请求
+    requestAI();
+    return;
+  }
+
   const chat = appData.chats[currentChatId];
   chat.messages.push({ role: 'user', content: text });
   saveData();
