@@ -7,7 +7,7 @@
 
 ## 关键技术决策
 - 弹框编辑消息（非行内编辑），用 showTextareaModal
-- System Prompt 版本化：每次编辑/压缩生成新版本，可前后翻页查看
+- System Prompt 版本化：压缩生成新版本可翻页查看；编辑时原地更新当前版本（不创建新版本）
 - 分享链接使用 gzip 压缩 + base64url 编码（v2格式），兼容旧版纯base64（v1/无前缀）
 - 移动端视口修复：使用 100dvh + JS --app-height 变量双重保障
 - 背景图片：使用文件上传（非URL输入），自动压缩为 Data URL 存储（最大1920px, JPEG 0.7质量）
@@ -40,4 +40,5 @@
 - 聊天通知：可选开启，自动话题触发消息时弹出系统通知（含角色头像、名称、内容截断50字）
 - 所有新数据（characters数组、新settings字段）均已纳入导入/导出/分享兼容
 - .gitignore：忽略 .workbuddy/、*.bak、*.bak2 等
+- default.txt 首次启动：localStorage 无数据时 fetch 同目录 default.txt 并导入（base64/JSON 自动识别），导入时清除 syncToken
 

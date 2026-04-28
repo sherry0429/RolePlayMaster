@@ -1774,12 +1774,61 @@ function loadData() {
       if (appData.settings.autoTopic === undefined) appData.settings.autoTopic = false;
       if (appData.settings.chatNotification === undefined) appData.settings.chatNotification = false;
       if (!appData.characters) appData.characters = [];
+      return true; // localStorage 有数据
     } else {
       appData = createDefaultData();
+      return false; // 首次启动，无数据
     }
   } catch (e) {
     console.error('数据加载失败', e);
     appData = createDefaultData();
+    return false;
+  }
+}
+
+/* 尝试从 default.txt 加载默认数据（首次启动时） */
+async function loadDefaultData() {
+  try {
+    const resp = await fetch('default.txt');
+    if (!resp.ok) return; // 文件不存在或加载失败，静默跳过
+    const rawText = (await resp.text()).trim();
+    if (!rawText) return;
+
+    let data;
+    // 尝试 base64 解码
+    try {
+      const jsonStr = base64ToJson(rawText);
+      data = JSON.parse(jsonStr);
+    } catch (b64Err) {
+      // base64 失败，尝试直接 JSON
+      try {
+        data = JSON.parse(rawText);
+      } catch (jsonErr) {
+        console.warn('default.txt 格式无效，跳过');
+        return;
+      }
+    }
+
+    if (!data.chats || !data.settings) {
+      console.warn('default.txt 数据格式不完整，跳过');
+      return;
+    }
+
+    // 兼容性补全
+    if (!data.chatOrder) data.chatOrder = Object.keys(data.chats);
+    if (!data.chatCounter) data.chatCounter = data.chatOrder.length;
+    if (!data.theme) data.theme = 'light';
+    if (!data.characters) data.characters = [];
+    if (data._shareLite) {
+      data = expandShareData(data);
+    }
+    // 清除敏感信息（如 syncToken）
+    if (data.settings) data.settings.syncToken = '';
+
+    applyImportedData(data);
+    console.log('已从 default.txt 加载默认数据');
+  } catch (e) {
+    console.warn('加载 default.txt 失败，跳过', e);
   }
 }
 
@@ -1804,7 +1853,7 @@ function init() {
   window.addEventListener('resize', setAppHeight);
   window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 100));
 
-  loadData();
+  const hasData = loadData();
   // 主题
   applyTheme(appData.theme);
   // 设置表单
@@ -1834,6 +1883,11 @@ function init() {
   input.addEventListener('keydown', handleInputKeydown);
   // 检查 URL 中的分享数据
   checkShareData();
+
+  // 首次启动且无 localStorage 数据时，尝试从 default.txt 加载
+  if (!hasData) {
+    loadDefaultData();
+  }
 
   // ---- PWA: 注册 Service Worker ----
   registerServiceWorker();
