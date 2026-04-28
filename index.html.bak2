@@ -4,29 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>AI Chat</title>
-
-<!-- PWA Meta -->
-<meta name="application-name" content="AI Chat">
-<meta name="description" content="AI 聊天助手，支持自定义 System Prompt">
-<meta name="theme-color" content="#4a90d9">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="AI Chat">
-<meta name="msapplication-TileColor" content="#4a90d9">
-<meta name="msapplication-TileImage" content="icons/icon-144.png">
-
-<!-- PWA Manifest -->
-<link rel="manifest" href="manifest.json">
-
-<!-- Apple Touch Icons -->
-<link rel="apple-touch-icon" href="icons/icon-152.png">
-<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
-<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
-
-<!-- Favicon -->
-<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-96.png">
-<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-72.png">
 <style>
 /* ==================== CSS 变量与主题 ==================== */
 :root {
@@ -107,8 +84,6 @@ html, body {
 .app-container {
   display: flex;
   height: 100vh;
-  height: 100dvh;
-  height: var(--app-height, 100dvh);
   position: relative;
   z-index: 1;
 }
@@ -233,8 +208,8 @@ html, body {
 .sp-section {
   padding: 12px 16px;
   border-top: 1px solid var(--border-color);
-  flex: 1;
-  min-height: 100px;
+  margin-top: auto;
+  max-height: 260px;
   overflow-y: auto;
 }
 
@@ -293,6 +268,7 @@ html, body {
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-all;
+  max-height: 100px;
   overflow-y: auto;
   padding: 8px;
   background: var(--bg-tertiary);
@@ -403,7 +379,6 @@ html, body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  overflow: hidden;
 }
 
 /* 顶部菜单栏 */
@@ -721,7 +696,6 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 0;
 }
 
 .chat-area::-webkit-scrollbar {
@@ -936,59 +910,6 @@ html, body {
 }
 .send-btn.stop-btn:hover { background: var(--danger-hover); }
 
-/* ==================== 快捷指令区 ==================== */
-.quick-actions {
-  display: flex;
-  gap: 6px;
-  padding: 6px 16px;
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
-  flex-shrink: 0;
-  transition: background-color 0.3s;
-}
-
-.quick-action-btn {
-  padding: 4px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  white-space: nowrap;
-}
-
-.quick-action-btn:hover {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-
-.quick-action-btn:active {
-  transform: scale(0.95);
-}
-
-/* ==================== PWA 安装横幅 ==================== */
-#pwaBanner {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 9999;
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
-  padding: 10px 16px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 14px;
-  color: var(--text-primary);
-  box-shadow: 0 -2px 12px rgba(0,0,0,0.12);
-  transition: background-color 0.3s;
-}
-
 /* ==================== 模态框 ==================== */
 .modal-overlay {
   display: none;
@@ -1171,7 +1092,7 @@ html, body {
   }
 
   .sp-section {
-    min-height: 80px;
+    max-height: 200px;
   }
 
   .top-bar {
@@ -1275,7 +1196,7 @@ html, body {
       <button class="btn-sm btn-ghost" onclick="exportData()">📤 导出</button>
       <button class="btn-sm btn-ghost" onclick="importData()">📥 导入</button>
       <button class="btn-sm btn-ghost" onclick="shareLink()">🔗 分享</button>
-      <input type="file" id="importFile" accept=".txt,.json" style="display:none" onchange="handleImport(event)">
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
     </div>
 
     <!-- 聊天列表 -->
@@ -1316,12 +1237,6 @@ html, body {
       <div class="welcome-msg" id="welcomeMsg">
         👋 欢迎使用 AI Chat<br>点击左侧 + 开始新对话
       </div>
-    </div>
-
-    <!-- 快捷指令 -->
-    <div class="quick-actions" id="quickActions">
-      <button class="quick-action-btn" onclick="triggerMemory()">🧠 /记忆</button>
-      <button class="quick-action-btn" onclick="triggerContinue()">▶ /继续</button>
     </div>
 
     <!-- 输入区域 -->
@@ -1427,17 +1342,7 @@ function saveData() {
 }
 
 // ==================== 初始化 ====================
-// 移动端视口高度修复（解决 100vh 含地址栏的问题）
-function setAppHeight() {
-  document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
-}
-
 function init() {
-  // 视口高度修复
-  setAppHeight();
-  window.addEventListener('resize', setAppHeight);
-  window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 100));
-
   loadData();
   // 主题
   applyTheme(appData.theme);
@@ -1462,92 +1367,6 @@ function init() {
   input.addEventListener('keydown', handleInputKeydown);
   // 检查 URL 中的分享数据
   checkShareData();
-
-  // ---- PWA: 注册 Service Worker ----
-  registerServiceWorker();
-  // ---- PWA: 处理安装提示 ----
-  initPwaInstall();
-}
-
-// ==================== PWA ====================
-function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').then(reg => {
-        console.log('[SW] 注册成功', reg.scope);
-        // 有新版本时提示用户刷新
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              showToast('发现新版本，刷新页面即可更新 🔄', 'success');
-            }
-          });
-        });
-      }).catch(err => {
-        console.warn('[SW] 注册失败', err);
-      });
-    });
-  }
-}
-
-// PWA 安装提示
-let _deferredPrompt = null;
-
-function initPwaInstall() {
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    _deferredPrompt = e;
-    // 显示安装横幅
-    showPwaBanner();
-  });
-
-  window.addEventListener('appinstalled', () => {
-    _deferredPrompt = null;
-    hidePwaBanner();
-    showToast('已成功添加到桌面 🎉', 'success');
-  });
-
-  // 快捷方式：action=new
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('action') === 'new') {
-    setTimeout(() => newChat(), 300);
-  }
-}
-
-function showPwaBanner() {
-  // 如果已经是 standalone 模式（已安装），不显示
-  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
-  let banner = document.getElementById('pwaBanner');
-  if (!banner) {
-    banner = document.createElement('div');
-    banner.id = 'pwaBanner';
-    banner.innerHTML = `
-      <span>📱 添加到桌面，获得更好体验</span>
-      <div style="display:flex;gap:8px">
-        <button onclick="installPwa()" style="padding:4px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">安装</button>
-        <button onclick="hidePwaBanner()" style="padding:4px 10px;background:transparent;color:var(--text-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;font-size:13px">稍后</button>
-      </div>
-    `;
-    document.body.appendChild(banner);
-  }
-  banner.style.display = 'flex';
-}
-
-function hidePwaBanner() {
-  const banner = document.getElementById('pwaBanner');
-  if (banner) banner.style.display = 'none';
-}
-
-async function installPwa() {
-  if (!_deferredPrompt) return;
-  _deferredPrompt.prompt();
-  const { outcome } = await _deferredPrompt.userChoice;
-  _deferredPrompt = null;
-  hidePwaBanner();
-  if (outcome === 'accepted') {
-    showToast('正在安装，请稍候…', 'success');
-  }
 }
 
 // ==================== 主题 ====================
@@ -1659,11 +1478,6 @@ function newChat() {
   selectChat(id);
   renderChatList();
   showToast(`已创建「${name}」`);
-  // 确保输入区域可见并聚焦
-  requestAnimationFrame(() => {
-    const inputArea = document.querySelector('.input-area');
-    if (inputArea) inputArea.scrollIntoView(false);
-  });
 }
 
 function selectChat(id) {
@@ -1866,30 +1680,6 @@ function sendMessage() {
   input.style.height = 'auto';
   renderMessages();
   // 发送 AI 请求
-  requestAI();
-}
-
-// ==================== 快捷指令 ====================
-function triggerMemory() {
-  if (isStreaming || isCompressing) return;
-  if (!currentChatId) {
-    showToast('请先开始一个对话', 'error');
-    return;
-  }
-  compressChat();
-}
-
-function triggerContinue() {
-  if (isStreaming || isCompressing) return;
-  if (!currentChatId) {
-    showToast('请先开始一个对话', 'error');
-    return;
-  }
-  const chat = appData.chats[currentChatId];
-  if (!chat || chat.messages.length === 0) {
-    showToast('请先发送消息再继续', 'error');
-    return;
-  }
   requestAI();
 }
 
@@ -2223,88 +2013,16 @@ function spStartEdit() {
 }
 
 // ==================== 数据导入导出 ====================
-// 工具函数：JSON ↔ Base64 互转（支持中文）
-function jsonToBase64(jsonStr) {
-  // 先用 encodeURIComponent 处理中文，再 btoa
-  return btoa(unescape(encodeURIComponent(jsonStr)));
-}
-
-function base64ToJson(b64Str) {
-  // atob 解码后再用 decodeURIComponent 恢复中文
-  return decodeURIComponent(escape(atob(b64Str.trim())));
-}
-
-// ---- 压缩/解压工具（gzip + base64url） ----
-function arrayBufferToBase64Url(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function base64UrlToArrayBuffer(b64url) {
-  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
-  while (b64.length % 4) b64 += '=';
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
-
-async function compressText(text) {
-  if (typeof CompressionStream !== 'undefined') {
-    try {
-      const blob = new Blob([text]);
-      const cs = new CompressionStream('gzip');
-      const stream = blob.stream().pipeThrough(cs);
-      const compressed = await new Response(stream).arrayBuffer();
-      return 'v2:' + arrayBufferToBase64Url(compressed);
-    } catch (e) {
-      console.warn('CompressionStream 失败，回退到 base64', e);
-    }
-  }
-  return 'v1:' + jsonToBase64(text);
-}
-
-async function decompressText(encoded) {
-  if (encoded.startsWith('v2:')) {
-    const b64 = encoded.slice(3);
-    const compressed = base64UrlToArrayBuffer(b64);
-    if (typeof DecompressionStream !== 'undefined') {
-      const blob = new Blob([compressed]);
-      const ds = new DecompressionStream('gzip');
-      const stream = blob.stream().pipeThrough(ds);
-      return await new Response(stream).text();
-    }
-    throw new Error('浏览器不支持解压缩');
-  }
-  if (encoded.startsWith('v1:')) {
-    return base64ToJson(encoded.slice(3));
-  }
-  // 旧格式（无前缀）：直接 base64
-  return base64ToJson(encoded);
-}
-
 function exportData() {
-  try {
-    const json = JSON.stringify(appData);
-    const base64 = jsonToBase64(json);
-    const blob = new Blob([base64], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `aichat_backup_${new Date().toISOString().slice(0,10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('数据已导出（Base64 编码）', 'success');
-  } catch (e) {
-    console.error('导出失败', e);
-    showToast('导出失败: ' + e.message, 'error');
-  }
+  const json = JSON.stringify(appData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `aichat_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('数据已导出', 'success');
 }
 
 function importData() {
@@ -2317,36 +2035,15 @@ function handleImport(event) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const rawText = e.target.result.trim();
-      let data;
-
-      // 尝试 base64 解码
-      try {
-        const jsonStr = base64ToJson(rawText);
-        data = JSON.parse(jsonStr);
-      } catch (b64Err) {
-        // base64 失败，尝试直接解析为 JSON（兼容旧格式）
-        try {
-          data = JSON.parse(rawText);
-        } catch (jsonErr) {
-          throw new Error('文件格式无效，无法解析');
-        }
-      }
-
+      const data = JSON.parse(e.target.result);
       if (!data.chats || !data.settings) {
         throw new Error('无效的数据格式');
       }
-
-      // 兼容性补全
-      if (!data.chatOrder) data.chatOrder = Object.keys(data.chats);
-      if (!data.chatCounter) data.chatCounter = data.chatOrder.length;
-      if (!data.theme) data.theme = 'light';
-      // 如果是分享精简数据（_shareLite 标记），需要转换为完整结构
-      if (data._shareLite) {
-        data = expandShareData(data);
-      }
-
       appData = data;
+      // 兼容性补全
+      if (!appData.chatOrder) appData.chatOrder = Object.keys(appData.chats);
+      if (!appData.chatCounter) appData.chatCounter = appData.chatOrder.length;
+      if (!appData.theme) appData.theme = 'light';
       saveData();
       // 刷新界面
       applyTheme(appData.theme);
@@ -2371,78 +2068,18 @@ function handleImport(event) {
   event.target.value = '';
 }
 
-// ==================== 分享链接（精简版：不含聊天记录） ====================
-
-/**
- * 构建精简的分享数据：
- * - 总配置（theme, settings）
- * - 每个聊天框的：名称、背景图、最新 system_prompt
- * - 不含聊天记录（messages）、不含历史 sp 版本
- */
-function buildShareLiteData() {
-  const lite = {
-    _shareLite: true,
-    theme: appData.theme,
-    settings: { ...appData.settings },
-    // 不含 apiKey 的敏感信息
-    chats: {},
-    chatOrder: [...appData.chatOrder],
-    chatCounter: appData.chatCounter
-  };
-  // 复制 settings 但清除 apiKey
-  delete lite.settings.apiKey;
-
-  for (const id of appData.chatOrder) {
-    const chat = appData.chats[id];
-    if (!chat) continue;
-    // 只保留最新 system prompt 版本
-    const latestSp = chat.spVersions[chat.spVersions.length - 1] || { version: 0, content: '', lastIndex: -1 };
-    lite.chats[id] = {
-      name: chat.name,
-      bgImage: chat.bgImage,
-      messages: [],  // 不分享聊天记录
-      spVersions: [{ version: latestSp.version, content: latestSp.content, lastIndex: -1 }],
-      spViewIndex: 0
-    };
-  }
-  return lite;
-}
-
-/**
- * 将精简分享数据展开为完整结构（用于导入时）
- */
-function expandShareData(liteData) {
-  const full = createDefaultData();
-  full.theme = liteData.theme || 'light';
-  full.settings = { ...full.settings, ...liteData.settings };
-  full.chatOrder = liteData.chatOrder || [];
-  full.chatCounter = liteData.chatCounter || 0;
-
-  for (const id of full.chatOrder) {
-    const chat = liteData.chats[id];
-    if (!chat) continue;
-    full.chats[id] = {
-      name: chat.name,
-      bgImage: chat.bgImage || '',
-      messages: [],
-      spVersions: chat.spVersions || [{ version: 0, content: '', lastIndex: -1 }],
-      spViewIndex: 0
-    };
-  }
-  return full;
-}
-
-async function shareLink() {
+// ==================== 分享链接 ====================
+function shareLink() {
   try {
-    const liteData = buildShareLiteData();
-    const json = JSON.stringify(liteData);
-    const encoded = await compressText(json);
+    const json = JSON.stringify(appData);
+    // 使用 base64 编码
+    const encoded = btoa(unescape(encodeURIComponent(json)));
     const url = window.location.origin + window.location.pathname + '#share=' + encoded;
 
     // 尝试使用剪贴板 API
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(() => {
-        showToast('分享链接已复制（仅配置，不含聊天记录）', 'success');
+        showToast('分享链接已复制到剪贴板', 'success');
       }).catch(() => {
         fallbackCopy(url);
       });
@@ -2463,59 +2100,45 @@ function fallbackCopy(text) {
   ta.select();
   try {
     document.execCommand('copy');
-    showToast('分享链接已复制（仅配置，不含聊天记录）', 'success');
+    showToast('分享链接已复制到剪贴板', 'success');
   } catch (e) {
+    // 如果复制失败，显示链接
     showModal('分享链接', text, null, true);
   }
   document.body.removeChild(ta);
 }
 
-async function checkShareData() {
+function checkShareData() {
   const hash = window.location.hash;
   if (hash.startsWith('#share=')) {
     const encoded = hash.slice(7);
     try {
-      const jsonStr = await decompressText(encoded);
-      const data = JSON.parse(jsonStr);
-
-      // 判断是精简版还是完整版
-      const isLite = data._shareLite === true;
-      const desc = isLite ? '配置和 System Prompt（不含聊天记录）' : '完整数据';
-
-      if (!data.chats || !data.settings) {
-        throw new Error('无效的分享数据');
-      }
-
-      if (confirm(`检测到分享数据（${desc}），是否导入？这将覆盖当前数据。`)) {
-        if (isLite) {
-          appData = expandShareData(data);
-        } else {
+      const json = decodeURIComponent(escape(atob(encoded)));
+      const data = JSON.parse(json);
+      if (data.chats && data.settings) {
+        if (confirm('检测到分享数据，是否导入？这将覆盖当前数据。')) {
           appData = data;
           if (!appData.chatOrder) appData.chatOrder = Object.keys(appData.chats);
           if (!appData.chatCounter) appData.chatCounter = appData.chatOrder.length;
           if (!appData.theme) appData.theme = 'light';
+          saveData();
+          // 刷新
+          applyTheme(appData.theme);
+          document.getElementById('apiHost').value = appData.settings.apiHost || '';
+          document.getElementById('apiKey').value = appData.settings.apiKey || '';
+          document.getElementById('bgImage').value = appData.settings.bgImage || '';
+          applyBgImage(appData.settings.bgImage);
+          renderChatList();
+          if (appData.chatOrder.length > 0) {
+            selectChat(appData.chatOrder[0]);
+          }
+          showToast('分享数据导入成功', 'success');
         }
-        saveData();
-        // 刷新
-        applyTheme(appData.theme);
-        document.getElementById('apiHost').value = appData.settings.apiHost || '';
-        document.getElementById('apiKey').value = appData.settings.apiKey || '';
-        document.getElementById('bgImage').value = appData.settings.bgImage || '';
-        applyBgImage(appData.settings.bgImage);
-        renderChatList();
-        if (appData.chatOrder.length > 0) {
-          selectChat(appData.chatOrder[0]);
-        } else {
-          currentChatId = null;
-          updateUIForNoChat();
-        }
-        showToast('分享数据导入成功', 'success');
+        // 清除 hash
+        history.replaceState(null, '', window.location.pathname);
       }
-      // 清除 hash
-      history.replaceState(null, '', window.location.pathname);
     } catch (e) {
       console.error('分享数据解析失败', e);
-      showToast('分享数据解析失败: ' + e.message, 'error');
     }
   }
 }
