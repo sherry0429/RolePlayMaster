@@ -29,3 +29,15 @@
 - 移动端 100vh 含地址栏高度，需用 100dvh + JS fallback 修复（已修复）
 - PWA 需 HTTPS 或 localhost 才能安装（本地用 file:// 打开 SW 不会生效）
 
+## 新增功能（v2）
+- 角色图库：右上角🎭按钮打开右侧抽屉，瀑布流展示，分页加载（每页20个），支持新增/编辑/删除角色（头像+名称+简介）
+- 说话人区分：默认开启，用【角色名】正则拆分AI消息为多段展示，匹配角色图库头像；history messages 中仍为一条
+- 云端同步：设置中填写 syncToken，POST/GET `https://poecurrency.top/api/v1/chat_sync`，Bearer token 认证
+  - 同步到云端（导出）：POST，body: `{ data: base64 }`
+  - 从云端同步（导入）：GET，解析返回数据后执行导入
+  - applyImportedData() 函数复用导入后UI刷新逻辑
+- 自动找话题：可选开启，10分钟无操作+页面不可见时触发AI请求，让随机角色发起话题或闲聊
+- 聊天通知：可选开启，自动话题触发消息时弹出系统通知（含角色头像、名称、内容截断50字）
+- 所有新数据（characters数组、新settings字段）均已纳入导入/导出/分享兼容
+- .gitignore：忽略 .workbuddy/、*.bak、*.bak2 等
+

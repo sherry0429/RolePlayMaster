@@ -1,0 +1,16 @@
+# WorkBuddy
+.workbuddy/
+
+# Backup files
+*.bak
+*.bak2
+*.bak3
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
