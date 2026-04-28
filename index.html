@@ -1228,11 +1228,11 @@ html, body {
   <div class="modal" id="modalContent"></div>
 </div>
 
-<!-- 移动端侧边栏遮罩 -->
-<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-
 <!-- 主容器 -->
 <div class="app-container">
+
+  <!-- 移动端侧边栏遮罩（放在 app-container 内以确保 z-index stacking context 正确） -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
   <!-- ========== 左侧边栏 ========== -->
   <aside class="sidebar" id="sidebar">
@@ -1252,12 +1252,22 @@ html, body {
           <input type="password" id="apiKey" placeholder="sk-...">
         </div>
         <div class="form-group">
-          <label>背景图片 URL</label>
-          <input type="text" id="bgImage" placeholder="https://...">
+          <label>全局背景图片</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn-sm btn-primary" onclick="document.getElementById('bgImageFile').click()">📷 上传</button>
+            <button class="btn-sm btn-danger" onclick="clearBgImage()" id="clearBgBtn" style="display:none;">🗑️ 清除</button>
+            <span id="bgImageStatus" style="font-size:12px;color:var(--text-secondary);"></span>
+          </div>
+          <input type="file" id="bgImageFile" accept="image/*" style="display:none" onchange="handleBgImageUpload(event, false)">
         </div>
         <div class="form-group">
           <label>当前聊天背景图片</label>
-          <input type="text" id="chatBgImage" placeholder="留空则使用全局背景">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn-sm btn-primary" onclick="document.getElementById('chatBgImageFile').click()">📷 上传</button>
+            <button class="btn-sm btn-danger" onclick="clearChatBgImage()" id="clearChatBgBtn" style="display:none;">🗑️ 清除</button>
+            <span id="chatBgImageStatus" style="font-size:12px;color:var(--text-secondary);"></span>
+          </div>
+          <input type="file" id="chatBgImageFile" accept="image/*" style="display:none" onchange="handleBgImageUpload(event, true)">
         </div>
         <div class="form-group">
           <label>摘要压缩阈值（每多少条消息触发一次 System Prompt 更新）</label>
@@ -1444,12 +1454,13 @@ function init() {
   // 设置表单
   document.getElementById('apiHost').value = appData.settings.apiHost || DEFAULT_API_HOST;
   document.getElementById('apiKey').value = appData.settings.apiKey || '';
-  document.getElementById('bgImage').value = appData.settings.bgImage || '';
   document.getElementById('compressThreshold').value = appData.settings.compressThreshold || COMPRESS_THRESHOLD;
   // 全局背景
   applyBgImage(appData.settings.bgImage);
   // 聊天列表
   renderChatList();
+  // 背景图片状态
+  updateBgImageStatus();
   // 如果有聊天，选中第一个
   if (appData.chatOrder.length > 0) {
     selectChat(appData.chatOrder[0]);
@@ -1589,6 +1600,94 @@ function applyChatBgImage(url) {
   }
 }
 
+// ==================== 背景图片上传 ====================
+function handleBgImageUpload(event, isChatBg) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('请选择图片文件', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    compressImage(e.target.result, (compressedUrl) => {
+      if (isChatBg) {
+        if (currentChatId && appData.chats[currentChatId]) {
+          appData.chats[currentChatId].bgImage = compressedUrl;
+          applyChatBgImage(compressedUrl);
+        }
+      } else {
+        appData.settings.bgImage = compressedUrl;
+        applyBgImage(compressedUrl);
+        if (currentChatId) applyChatBgImage(appData.chats[currentChatId]?.bgImage);
+      }
+      updateBgImageStatus();
+      saveData();
+      showToast('背景图片已更新', 'success');
+    });
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function compressImage(dataUrl, callback) {
+  const img = new Image();
+  img.onload = () => {
+    const MAX_SIZE = 1920;
+    let w = img.width, h = img.height;
+    if (w > MAX_SIZE || h > MAX_SIZE) {
+      const ratio = Math.min(MAX_SIZE / w, MAX_SIZE / h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    callback(canvas.toDataURL('image/jpeg', 0.7));
+  };
+  img.onerror = () => callback(dataUrl);
+  img.src = dataUrl;
+}
+
+function clearBgImage() {
+  appData.settings.bgImage = '';
+  applyBgImage('');
+  if (currentChatId) applyChatBgImage(appData.chats[currentChatId]?.bgImage);
+  updateBgImageStatus();
+  saveData();
+  showToast('全局背景已清除');
+}
+
+function clearChatBgImage() {
+  if (currentChatId && appData.chats[currentChatId]) {
+    appData.chats[currentChatId].bgImage = '';
+    applyChatBgImage('');
+    updateBgImageStatus();
+    saveData();
+    showToast('聊天背景已清除');
+  }
+}
+
+function updateBgImageStatus() {
+  const bgStatus = document.getElementById('bgImageStatus');
+  const clearBgBtn = document.getElementById('clearBgBtn');
+  const chatBgStatus = document.getElementById('chatBgImageStatus');
+  const clearChatBgBtn = document.getElementById('clearChatBgBtn');
+
+  if (bgStatus) {
+    const hasBg = !!(appData.settings.bgImage);
+    bgStatus.textContent = hasBg ? '✅ 已设置' : '未设置';
+    if (clearBgBtn) clearBgBtn.style.display = hasBg ? 'inline-block' : 'none';
+  }
+  if (chatBgStatus) {
+    const hasChatBg = !!(currentChatId && appData.chats[currentChatId]?.bgImage);
+    chatBgStatus.textContent = hasChatBg ? '✅ 已设置' : '未设置';
+    if (clearChatBgBtn) clearChatBgBtn.style.display = hasChatBg ? 'inline-block' : 'none';
+  }
+}
+
 // ==================== 设置区 ====================
 function toggleSettings() {
   const toggle = document.getElementById('settingsToggle');
@@ -1600,17 +1699,9 @@ function toggleSettings() {
 function saveSettings() {
   appData.settings.apiHost = document.getElementById('apiHost').value.trim() || DEFAULT_API_HOST;
   appData.settings.apiKey = document.getElementById('apiKey').value.trim();
-  appData.settings.bgImage = document.getElementById('bgImage').value.trim();
   // 摘要压缩阈值
   const threshold = parseInt(document.getElementById('compressThreshold').value, 10);
   appData.settings.compressThreshold = (threshold >= 10) ? threshold : COMPRESS_THRESHOLD;
-  // 聊天专属背景
-  if (currentChatId && appData.chats[currentChatId]) {
-    appData.chats[currentChatId].bgImage = document.getElementById('chatBgImage').value.trim();
-    applyChatBgImage(appData.chats[currentChatId].bgImage);
-  }
-  applyBgImage(appData.settings.bgImage);
-  if (currentChatId) applyChatBgImage(appData.chats[currentChatId]?.bgImage);
   saveData();
   showToast('设置已保存', 'success');
 }
@@ -1618,12 +1709,12 @@ function saveSettings() {
 function resetSettings() {
   document.getElementById('apiHost').value = DEFAULT_API_HOST;
   document.getElementById('apiKey').value = '';
-  document.getElementById('bgImage').value = '';
-  document.getElementById('chatBgImage').value = '';
   document.getElementById('compressThreshold').value = COMPRESS_THRESHOLD;
   appData.settings = { apiHost: DEFAULT_API_HOST, apiKey: '', bgImage: '', compressThreshold: COMPRESS_THRESHOLD };
   if (currentChatId) appData.chats[currentChatId].bgImage = '';
   applyBgImage('');
+  if (currentChatId) applyChatBgImage('');
+  updateBgImageStatus();
   saveData();
   showToast('已重置为默认设置');
 }
@@ -1673,8 +1764,8 @@ function selectChat(id) {
   // 更新顶部名称
   document.getElementById('currentChatName').textContent = chat.name;
   // 更新聊天专属背景
-  document.getElementById('chatBgImage').value = chat.bgImage || '';
   applyChatBgImage(chat.bgImage);
+  updateBgImageStatus();
   // 渲染消息
   renderMessages();
   // 更新 System Prompt 显示
@@ -1725,8 +1816,8 @@ function updateUIForNoChat() {
     <div class="welcome-msg" id="welcomeMsg">
       👋 欢迎使用 AI Chat<br>点击左侧 + 开始新对话
     </div>`;
-  document.getElementById('chatBgImage').value = '';
   applyChatBgImage('');
+  updateBgImageStatus();
   updateSpDisplay();
 }
 
@@ -2352,8 +2443,8 @@ function handleImport(event) {
       applyTheme(appData.theme);
       document.getElementById('apiHost').value = appData.settings.apiHost || '';
       document.getElementById('apiKey').value = appData.settings.apiKey || '';
-      document.getElementById('bgImage').value = appData.settings.bgImage || '';
       applyBgImage(appData.settings.bgImage);
+      updateBgImageStatus();
       renderChatList();
       if (appData.chatOrder.length > 0) {
         selectChat(appData.chatOrder[0]);
@@ -2500,8 +2591,8 @@ async function checkShareData() {
         applyTheme(appData.theme);
         document.getElementById('apiHost').value = appData.settings.apiHost || '';
         document.getElementById('apiKey').value = appData.settings.apiKey || '';
-        document.getElementById('bgImage').value = appData.settings.bgImage || '';
         applyBgImage(appData.settings.bgImage);
+        updateBgImageStatus();
         renderChatList();
         if (appData.chatOrder.length > 0) {
           selectChat(appData.chatOrder[0]);

@@ -10,6 +10,8 @@
 - System Prompt 版本化：每次编辑/压缩生成新版本，可前后翻页查看
 - 分享链接使用 gzip 压缩 + base64url 编码（v2格式），兼容旧版纯base64（v1/无前缀）
 - 移动端视口修复：使用 100dvh + JS --app-height 变量双重保障
+- 背景图片：使用文件上传（非URL输入），自动压缩为 Data URL 存储（最大1920px, JPEG 0.7质量）
+- 移动端侧边栏遮罩必须与sidebar在同一stacking context内（app-container内），否则z-index stacking context导致遮罩盖住sidebar
 
 ## PWA 相关
 - manifest.json：standalone模式，shortcuts支持"新建聊天"（action=new参数）
