@@ -2788,17 +2788,8 @@ function spStartEdit() {
     const chat = appData.chats[currentChatId];
     const newContent = val.trim();
 
-    // 如果当前查看的不是最新版本，删除当前版本之后的所有版本
-    chat.spVersions = chat.spVersions.slice(0, chat.spViewIndex + 1);
-
-    // 新增版本
-    const newVersion = chat.spVersions[chat.spVersions.length - 1].version + 1;
-    chat.spVersions.push({
-      version: newVersion,
-      content: newContent,
-      lastIndex: chat.spVersions[chat.spVersions.length - 1].lastIndex
-    });
-    chat.spViewIndex = chat.spVersions.length - 1;
+    // 直接修改当前版本的 content，不创建新版本
+    chat.spVersions[chat.spViewIndex].content = newContent;
     saveData();
     updateSpDisplay();
     showToast('System Prompt 已更新', 'success');
