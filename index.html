@@ -166,6 +166,7 @@ html, body {
 .settings-form.open {
   max-height: 70vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .settings-form .form-group {
@@ -244,12 +245,20 @@ html, body {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+  gap: 6px;
 }
 
 .sp-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
+  flex: 1;
+}
+
+.sp-edit-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  flex-shrink: 0;
 }
 
 .sp-version-badge {
@@ -1599,6 +1608,10 @@ html, body {
           <label>同步 Token</label>
           <input type="text" id="syncToken" placeholder="填写同步用的 Token">
         </div>
+        <div class="sync-token-group">
+          <label>云端同步地址（含云端导入导出和通知功能）</label>
+          <input type="text" id="cloudSyncHost" placeholder="https://poecurrency.top">
+        </div>
         <div class="btn-row">
           <button class="btn-sm btn-primary" onclick="saveSettings()">保存</button>
           <button class="btn-sm btn-ghost" onclick="resetSettings()">重置默认</button>
@@ -1625,6 +1638,7 @@ html, body {
     <div class="sp-section" id="spSection">
       <div class="sp-header">
         <span class="sp-title">System Prompt</span>
+        <button class="btn-sm btn-ghost sp-edit-btn" onclick="spStartEdit()" id="spEditBtn">✏️ 编辑</button>
         <span class="sp-version-badge" id="spVersionBadge">v0</span>
       </div>
       <div class="sp-version-nav">
@@ -1633,9 +1647,6 @@ html, body {
         <button onclick="spNavNext()" id="spNextBtn" title="下一版本">▶</button>
       </div>
       <div class="sp-content" id="spDisplay">暂无 System Prompt</div>
-      <div style="margin-top:6px; display:flex; gap:6px;" id="spActionBtns">
-        <button class="btn-sm btn-ghost" onclick="spStartEdit()">✏️ 编辑</button>
-      </div>
     </div>
   </aside>
 
@@ -1716,9 +1727,17 @@ const DEFAULT_API_HOST = 'https://api.deepseek.com';
 const DEFAULT_MODEL = 'deepseek-chat';
 const COMPRESS_THRESHOLD = 300; // 每超过多少条消息触发一次摘要压缩
 const STORAGE_KEY = 'aichat_data'; // localStorage 主键
-// ==================== Push 通知服务器 ====================
-// 与 CHAT_SYNC_URL 使用同一域，无需额外配置
-const PUSH_SERVER_BASE = 'https://poecurrency.top';
+const DEFAULT_CLOUD_HOST = 'https://poecurrency.top';
+
+// 获取云端同步基础地址
+function getCloudHost() {
+  const host = (appData?.settings?.cloudSyncHost || DEFAULT_CLOUD_HOST).trim();
+  return host.endsWith('/') ? host.slice(0, -1) : host;
+}
+// 获取云端同步 API URL
+function getChatSyncUrl() {
+  return getCloudHost() + '/api/v1/chat_sync';
+}
 
 // ==================== 全局状态 ====================
 let appData = null;     // 应用数据
@@ -1739,6 +1758,7 @@ function createDefaultData() {
       compressThreshold: COMPRESS_THRESHOLD,
       speakerMode: true,
       syncToken: '',
+      cloudSyncHost: '',
       autoTopic: false,
       chatNotification: false
     },
@@ -1776,6 +1796,7 @@ function loadData() {
       if (appData.settings.syncToken === undefined) appData.settings.syncToken = '';
       if (appData.settings.autoTopic === undefined) appData.settings.autoTopic = false;
       if (appData.settings.chatNotification === undefined) appData.settings.chatNotification = false;
+      if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
       if (!appData.characters) appData.characters = [];
       return true; // localStorage 有数据
     } else {
@@ -1868,6 +1889,7 @@ function init() {
   document.getElementById('autoTopic').checked = !!appData.settings.autoTopic;
   document.getElementById('chatNotification').checked = !!appData.settings.chatNotification;
   document.getElementById('syncToken').value = appData.settings.syncToken || '';
+  document.getElementById('cloudSyncHost').value = appData.settings.cloudSyncHost || '';
   // 全局背景
   applyBgImage(appData.settings.bgImage);
   // 聊天列表
@@ -2155,6 +2177,7 @@ function saveSettings() {
   appData.settings.autoTopic = document.getElementById('autoTopic').checked;
   appData.settings.chatNotification = document.getElementById('chatNotification').checked;
   appData.settings.syncToken = document.getElementById('syncToken').value.trim();
+  appData.settings.cloudSyncHost = document.getElementById('cloudSyncHost').value.trim();
   // 重新初始化自动话题和通知
   initAutoTopic();
   initChatNotification();
@@ -2172,9 +2195,10 @@ function resetSettings() {
   document.getElementById('autoTopic').checked = false;
   document.getElementById('chatNotification').checked = false;
   document.getElementById('syncToken').value = '';
+  document.getElementById('cloudSyncHost').value = '';
   appData.settings = {
     apiHost: DEFAULT_API_HOST, apiKey: '', bgImage: '', compressThreshold: COMPRESS_THRESHOLD,
-    speakerMode: true, syncToken: '',
+    speakerMode: true, syncToken: '', cloudSyncHost: '',
     autoTopic: false, chatNotification: false
   };
   if (currentChatId) appData.chats[currentChatId].bgImage = '';
@@ -3671,7 +3695,6 @@ function saveCharacterForm(idx) {
 }
 
 // ==================== 云端同步 ====================
-const CHAT_SYNC_URL = 'https://poecurrency.top/api/v1/chat_sync';
 
 async function syncToCloud() {
   const token = appData.settings.syncToken;
@@ -3683,7 +3706,7 @@ async function syncToCloud() {
     showToast('正在同步到云端...', 'success');
     const json = JSON.stringify(appData);
     const base64 = jsonToBase64(json);
-    const response = await fetch(CHAT_SYNC_URL, {
+    const response = await fetch(getChatSyncUrl(), {
       method: 'POST',
       cache: 'no-store',
       headers: {
@@ -3711,7 +3734,7 @@ async function syncFromCloud() {
   }
   try {
     showToast('正在从云端拉取数据...', 'success');
-    const response = await fetch(CHAT_SYNC_URL + '?t=' + Date.now(), {
+    const response = await fetch(getChatSyncUrl() + '?t=' + Date.now(), {
       method: 'GET',
       cache: 'no-store',
       headers: {
@@ -3774,6 +3797,7 @@ function applyImportedData(data) {
   document.getElementById('autoTopic').checked = !!appData.settings.autoTopic;
   document.getElementById('chatNotification').checked = !!appData.settings.chatNotification;
   document.getElementById('syncToken').value = appData.settings.syncToken || '';
+  document.getElementById('cloudSyncHost').value = appData.settings.cloudSyncHost || '';
   applyBgImage(appData.settings.bgImage);
   updateBgImageStatus();
   renderChatList();
@@ -4009,7 +4033,7 @@ async function subscribePush() {
 
   try {
     // 1. 拿到服务器的 VAPID 公钥
-    const keyResp = await fetch(`${PUSH_SERVER_BASE}/api/push/vapid-public-key`);
+    const keyResp = await fetch(`${getCloudHost()}/api/push/vapid-public-key`);
     if (!keyResp.ok) throw new Error('获取 VAPID 公钥失败: ' + keyResp.status);
     const { publicKey } = await keyResp.json();
 
@@ -4024,7 +4048,7 @@ async function subscribePush() {
     console.log('[通知] Push 订阅成功', pushSubscription.endpoint);
 
     // 3. 上报订阅到服务器
-    const regResp = await fetch(`${PUSH_SERVER_BASE}/api/push/subscribe`, {
+    const regResp = await fetch(`${getCloudHost()}/api/push/subscribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -4056,7 +4080,7 @@ async function unsubscribePush() {
 
     const token = appData.settings.syncToken;
     if (token) {
-      fetch(`${PUSH_SERVER_BASE}/api/push/unsubscribe`, {
+      fetch(`${getCloudHost()}/api/push/unsubscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
