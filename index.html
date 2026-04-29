@@ -2589,6 +2589,10 @@ function initPwaInstall() {
 function showPwaBanner() {
   // 如果已经是 standalone 模式（已安装），不显示
   if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
+  // 桌面端浏览器（Windows/Mac/Linux）不需要安装 PWA，浏览器本身已够好用
+  const ua = navigator.userAgent || navigator.vendor || '';
+  const isDesktop = /Windows|Macintosh|Linux/.test(ua) && !/Android|iPhone|iPad|iPod/.test(ua);
+  if (isDesktop) return;
   let banner = document.getElementById('pwaBanner');
   if (!banner) {
     banner = document.createElement('div');
@@ -2641,24 +2645,67 @@ function applyBgImage(url) {
   const layer = document.getElementById('bg-layer');
   if (url && url.trim()) {
     layer.style.backgroundImage = `url(${url})`;
+    layer.style.backgroundSize = 'cover';
+    layer.style.backgroundPosition = 'center';
     layer.style.opacity = '0.15';
   } else {
-    layer.style.backgroundImage = 'none';
-    layer.style.opacity = '0';
+    // 全局背景未设置时，也用随机角色图片作为缺省
+    const fallbackUrl = getRandomCharacterImage();
+    if (fallbackUrl) {
+      layer.style.backgroundImage = `url(${fallbackUrl})`;
+      layer.style.backgroundSize = 'cover';
+      layer.style.backgroundPosition = getRandomBgPosition();
+      layer.style.opacity = '0.12';
+    } else {
+      layer.style.backgroundImage = 'none';
+      layer.style.opacity = '0';
+    }
   }
 }
 
 function applyChatBgImage(url) {
   const layer = document.getElementById('bg-layer');
-  // 优先使用聊天专属背景，其次全局背景
+  // 优先使用聊天专属背景，其次全局背景，最后随机角色图片
   const finalUrl = (url && url.trim()) ? url : appData.settings.bgImage;
   if (finalUrl && finalUrl.trim()) {
     layer.style.backgroundImage = `url(${finalUrl})`;
+    layer.style.backgroundSize = 'cover';
+    layer.style.backgroundPosition = 'center';
     layer.style.opacity = '0.15';
   } else {
-    layer.style.backgroundImage = 'none';
-    layer.style.opacity = '0';
+    // 缺省背景：从角色图库随机选一张
+    const fallbackUrl = getRandomCharacterImage();
+    if (fallbackUrl) {
+      layer.style.backgroundImage = `url(${fallbackUrl})`;
+      // 角色图片可能是头像(正方形)或壁纸(宽幅)，使用 cover 确保填满
+      // 搭配随机位置让不同图片的各部分都有机会展示
+      layer.style.backgroundSize = 'cover';
+      layer.style.backgroundPosition = getRandomBgPosition();
+      layer.style.opacity = '0.12'; // 缺省背景稍淡一点
+    } else {
+      layer.style.backgroundImage = 'none';
+      layer.style.opacity = '0';
+    }
   }
+}
+
+/**
+ * 从角色图库中随机获取一张角色图片
+ */
+function getRandomCharacterImage() {
+  if (!appData.characters || appData.characters.length === 0) return null;
+  const withAvatar = appData.characters.filter(c => c.avatar);
+  if (withAvatar.length === 0) return null;
+  const char = withAvatar[Math.floor(Math.random() * withAvatar.length)];
+  return char.avatar;
+}
+
+/**
+ * 随机背景位置，让不同尺寸的图片各部分都有机会展示
+ */
+function getRandomBgPosition() {
+  const positions = ['center', 'top', 'bottom', 'left', 'right', 'top left', 'top right', 'bottom left', 'bottom right'];
+  return positions[Math.floor(Math.random() * positions.length)];
 }
 
 // ==================== 背景图片上传 ====================
@@ -2790,29 +2837,78 @@ function saveSettings() {
 }
 
 function resetSettings() {
-  document.getElementById('apiHost').value = DEFAULT_API_HOST;
-  document.getElementById('apiKey').value = '';
-  document.getElementById('compressThreshold').value = COMPRESS_THRESHOLD;
-  document.getElementById('speakerMode').checked = true;
-  document.getElementById('autoTopic').checked = false;
-  document.getElementById('chatNotification').checked = false;
-  document.getElementById('autoTopicInterval').value = 10;
-  document.getElementById('autoTopicMaxCount').value = 5;
-  toggleAutoTopicConfig();
-  appData.settings = {
-    apiHost: DEFAULT_API_HOST, apiKey: '', bgImage: '', compressThreshold: COMPRESS_THRESHOLD,
-    speakerMode: true, syncToken: '', cloudSyncHost: '',
-    autoTopic: false, chatNotification: false, autoTopicInterval: 10, autoTopicMaxCount: 5
-  };
-  if (currentChatId) appData.chats[currentChatId].bgImage = '';
-  applyBgImage('');
-  if (currentChatId) applyChatBgImage('');
-  updateBgImageStatus();
-  initAutoTopic();
-  initChatNotification();
-  if (currentChatId) renderMessages();
-  saveData();
-  showToast('已重置为默认设置');
+  // 弹出确认提示
+  const overlay = document.getElementById('modalOverlay');
+  const content = document.getElementById('modalContent');
+  content.style.maxWidth = '400px';
+
+  let html = '<h3>⚠️ 重置所有数据</h3>';
+  html += '<div style="color:var(--text-secondary);font-size:14px;line-height:1.6;margin-bottom:12px;">';
+  html += '此操作将<strong style="color:var(--danger)">清空所有数据</strong>，包括：';
+  html += '<ul style="margin:8px 0;padding-left:20px;">';
+  html += '<li>所有聊天记录和 System Prompt</li>';
+  html += '<li>所有角色图库数据</li>';
+  html += '<li>所有设置（API Key、背景图等）</li>';
+  html += '<li>IndexedDB 和 localStorage 中的全部数据</li>';
+  html += '</ul>';
+  html += '页面将恢复到最初始状态，此操作<strong style="color:var(--danger)">不可撤销</strong>。';
+  html += '</div>';
+  html += '<div class="modal-btns">';
+  html += '<button class="btn-sm btn-danger" onclick="confirmResetAll()">确认重置</button>';
+  html += '<button class="btn-sm btn-ghost" onclick="closeModal()">取消</button>';
+  html += '</div>';
+
+  content.innerHTML = html;
+  overlay.classList.add('show');
+  overlay._onConfirm = null;
+}
+
+async function confirmResetAll() {
+  closeModal();
+  try {
+    // 清空 IndexedDB
+    await deleteFromDB(STORAGE_KEY);
+    // 清空 localStorage 中所有相关数据
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('useIndexedDB');
+    localStorage.removeItem('sidebarCollapsed');
+    // 删除整个 IndexedDB 数据库
+    indexedDB.deleteDatabase(DB_NAME);
+    // 重置内存数据为默认值
+    appData = createDefaultData();
+    currentChatId = null;
+    isStreaming = false;
+    isCompressing = false;
+    _streamingCache = null;
+    _streamingScrolledOnce = false;
+    abortController = null;
+    requestLog = [];
+    // 重新初始化 UI
+    document.getElementById('currentChatName').textContent = 'AI Chat';
+    document.getElementById('chatArea').innerHTML = '<div class="welcome-msg">👋 欢迎使用 AI Chat<br>点击左侧 + 开始新对话</div>';
+    applyBgImage('');
+    updateBgImageStatus();
+    renderChatList();
+    updateSpDisplay();
+    // 重置设置表单
+    document.getElementById('apiHost').value = DEFAULT_API_HOST;
+    document.getElementById('apiKey').value = '';
+    document.getElementById('compressThreshold').value = COMPRESS_THRESHOLD;
+    document.getElementById('speakerMode').checked = true;
+    document.getElementById('autoTopic').checked = false;
+    document.getElementById('chatNotification').checked = false;
+    document.getElementById('autoTopicInterval').value = 10;
+    document.getElementById('autoTopicMaxCount').value = 5;
+    document.getElementById('syncToken').value = '';
+    document.getElementById('cloudSyncHost').value = '';
+    toggleAutoTopicConfig();
+    initAutoTopic();
+    initChatNotification();
+    showToast('所有数据已重置为初始状态', 'success');
+  } catch (e) {
+    console.error('重置失败', e);
+    showToast('重置失败: ' + e.message, 'error');
+  }
 }
 
 // ==================== 聊天管理 ====================
@@ -3272,6 +3368,7 @@ async function requestAI() {
   renderMessages();
 
   isStreaming = true;
+  _streamingScrolledOnce = false; // 重置首次滚动标记
   document.getElementById('sendBtn').style.display = 'none';
   document.getElementById('stopBtn').style.display = 'flex';
   abortController = new AbortController();
@@ -3352,6 +3449,7 @@ async function requestAI() {
 
 // 流式阶段增量更新：记录已渲染的 segment 摘要，避免重绘已完成的气泡
 let _streamingCache = null; // { msgIdx, segments: [{speaker, textLen}] }
+let _streamingScrolledOnce = false; // 当前流式输出是否已触发过首次自动滚动
 
 function updateStreamingMessage(idx, content) {
   const msgEl = document.querySelector(`.message[data-idx="${idx}"] .msg-body`);
@@ -3368,7 +3466,7 @@ function updateStreamingMessage(idx, content) {
       const bubble = msgEl.querySelector('.msg-bubble');
       if (bubble) bubble.innerHTML = renderMarkdown(content);
       _streamingCache = null;
-      scrollToBottom();
+      if (!_streamingScrolledOnce) { scrollToBottom(); _streamingScrolledOnce = true; }
       return;
     }
 
@@ -3404,6 +3502,8 @@ function updateStreamingMessage(idx, content) {
         msgEl.insertBefore(segEl, actionsEl);
       });
       _streamingCache = { msgIdx: idx, segments: newSegments.map(s => ({ speaker: s.speaker, textLen: s.text.length })) };
+      // 首次渲染 segment 时触发一次自动滚动
+      if (!_streamingScrolledOnce) { scrollToBottom(); _streamingScrolledOnce = true; }
     } else {
       // 同一条消息的增量更新
       const prevSegments = prevCache.segments;
@@ -3470,7 +3570,8 @@ function updateStreamingMessage(idx, content) {
     _streamingCache = null;
   }
 
-  scrollToBottom();
+  // 只有首次才自动滚动，后续增量更新不滚动，避免消息一直往下刷
+  if (!_streamingScrolledOnce) { scrollToBottom(); _streamingScrolledOnce = true; }
 }
 
 /**
