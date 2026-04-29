@@ -1470,6 +1470,94 @@ html, body {
   font-size: 11px;
 }
 
+/* ==================== 角色选择模式 ==================== */
+.gallery-card.selectable {
+  cursor: pointer;
+  position: relative;
+}
+
+.gallery-card.selectable::after {
+  content: '';
+  position: absolute;
+  top: 6px; left: 6px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.7);
+  background: rgba(0,0,0,0.3);
+  z-index: 3;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-card.selected::after {
+  content: '✓';
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-card.selected {
+  box-shadow: 0 0 0 2px var(--accent), 0 2px 12px rgba(0,0,0,0.15);
+}
+
+.char-select-bar {
+  display: none;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+}
+
+.char-select-bar.show {
+  display: flex;
+}
+
+.char-select-bar .select-info {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.char-select-bar .btn-confirm-group {
+  white-space: nowrap;
+}
+
+.char-select-bar .btn-confirm-group button {
+  margin-left: 6px;
+}
+
+.gallery-drawer-header .mode-switch-btn {
+  padding: 5px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.gallery-drawer-header .mode-switch-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.gallery-drawer-header .mode-switch-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 /* ==================== 角色编辑弹框 ==================== */
 .character-form .avatar-upload-area {
   display: flex;
@@ -1712,12 +1800,20 @@ html, body {
   <div class="gallery-drawer-header">
     <h3>🎭 角色图库</h3>
     <div style="display:flex;gap:8px;align-items:center;">
+      <button class="mode-switch-btn" id="charSelectModeBtn" onclick="toggleCharSelectMode()">👥 群聊</button>
       <button class="gallery-add-btn" onclick="addCharacter()">➕ 新增</button>
       <button class="log-drawer-close" onclick="closeGalleryDrawer()">✕</button>
     </div>
   </div>
   <div class="gallery-drawer-body" id="galleryDrawerBody">
     <div class="gallery-empty">暂无角色，点击「新增」添加</div>
+  </div>
+  <div class="char-select-bar" id="charSelectBar">
+    <span class="select-info" id="charSelectInfo">未选择角色</span>
+    <div class="btn-confirm-group">
+      <button class="btn-sm btn-ghost" onclick="cancelCharSelect()">取消</button>
+      <button class="btn-sm btn-primary" id="charSelectConfirmBtn" onclick="confirmCharSelect()" disabled>确认建群</button>
+    </div>
   </div>
 </div>
 
@@ -3659,6 +3755,16 @@ function openGalleryDrawer() {
 function closeGalleryDrawer() {
   document.getElementById('galleryDrawer').classList.remove('open');
   document.getElementById('galleryBackdrop').classList.remove('show');
+  // 关闭时退出选择模式
+  if (charSelectMode) {
+    charSelectMode = false;
+    charSelectedIndices.clear();
+    const btn = document.getElementById('charSelectModeBtn');
+    const bar = document.getElementById('charSelectBar');
+    btn.classList.remove('active');
+    btn.textContent = '👥 群聊';
+    bar.classList.remove('show');
+  }
 }
 
 document.getElementById('galleryBackdrop').addEventListener('click', closeGalleryDrawer);
@@ -3686,16 +3792,22 @@ function renderGalleryContent(append) {
   const waterfall = document.getElementById('galleryWaterfall');
   if (!waterfall) return;
 
+  const isSelectMode = charSelectMode;
+
   pageChars.forEach((char, idx) => {
     const globalIdx = start + idx;
     const avatarHtml = char.avatar
       ? `<img src="${escHtml(char.avatar)}" alt="${escHtml(char.name)}">`
       : `<span class="avatar-placeholder">${escHtml(char.name.charAt(0) || '?')}</span>`;
+    const isSelected = charSelectedIndices.has(globalIdx);
+    const selectClass = isSelectMode ? ` selectable${isSelected ? ' selected' : ''}` : '';
+    const clickAction = isSelectMode ? `toggleCharSelect(${globalIdx})` : `editCharacter(${globalIdx})`;
+    const deleteBtn = isSelectMode ? '' : `<button class="gallery-card-delete" onclick="event.stopPropagation();deleteCharacter(${globalIdx})" title="删除">✕</button>`;
     waterfall.insertAdjacentHTML('beforeend', `
-      <div class="gallery-card" onclick="editCharacter(${globalIdx})">
+      <div class="gallery-card${selectClass}" onclick="${clickAction}">
         <div class="gallery-card-avatar-wrap">
           ${avatarHtml}
-          <button class="gallery-card-delete" onclick="event.stopPropagation();deleteCharacter(${globalIdx})" title="删除">✕</button>
+          ${deleteBtn}
         </div>
         <div class="gallery-card-info">
           <div class="gallery-card-name">${escHtml(char.name)}</div>
@@ -3860,7 +3972,256 @@ function saveCharacterForm(idx) {
   showToast(idx >= 0 ? '角色已更新' : '角色已添加', 'success');
 }
 
-// ==================== 云端同步 ====================
+// ==================== 角色选择模式（建群） ====================
+let charSelectMode = false;
+let charSelectedIndices = new Set();
+
+function toggleCharSelectMode() {
+  charSelectMode = !charSelectMode;
+  const btn = document.getElementById('charSelectModeBtn');
+  const bar = document.getElementById('charSelectBar');
+
+  if (charSelectMode) {
+    btn.classList.add('active');
+    btn.textContent = '👥 选择中';
+    bar.classList.add('show');
+    charSelectedIndices.clear();
+    updateCharSelectInfo();
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '👥 群聊';
+    bar.classList.remove('show');
+    charSelectedIndices.clear();
+  }
+  // 重新渲染图库以更新卡片样式
+  galleryCurrentPage = 0;
+  renderGalleryContent();
+}
+
+function cancelCharSelect() {
+  charSelectMode = false;
+  charSelectedIndices.clear();
+  const btn = document.getElementById('charSelectModeBtn');
+  const bar = document.getElementById('charSelectBar');
+  btn.classList.remove('active');
+  btn.textContent = '👥 群聊';
+  bar.classList.remove('show');
+  galleryCurrentPage = 0;
+  renderGalleryContent();
+}
+
+function toggleCharSelect(idx) {
+  if (!charSelectMode) return;
+  if (charSelectedIndices.has(idx)) {
+    charSelectedIndices.delete(idx);
+  } else {
+    charSelectedIndices.add(idx);
+  }
+  // 更新对应卡片的 class（无需全量重渲染）
+  const waterfall = document.getElementById('galleryWaterfall');
+  if (!waterfall) return;
+  const cards = waterfall.querySelectorAll('.gallery-card');
+  cards.forEach(card => {
+    const onclick = card.getAttribute('onclick') || '';
+    const match = onclick.match(/toggleCharSelect\((\d+)\)/);
+    if (match) {
+      const cardIdx = parseInt(match[1]);
+      if (charSelectedIndices.has(cardIdx)) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    }
+  });
+  updateCharSelectInfo();
+}
+
+function updateCharSelectInfo() {
+  const info = document.getElementById('charSelectInfo');
+  const btn = document.getElementById('charSelectConfirmBtn');
+  const count = charSelectedIndices.size;
+  if (count === 0) {
+    info.textContent = '未选择角色';
+    btn.disabled = true;
+  } else {
+    const names = [...charSelectedIndices].map(i => (appData.characters[i] || {}).name).filter(Boolean);
+    info.textContent = `已选 ${count} 人：${names.join('、')}`;
+    btn.disabled = false;
+  }
+}
+
+async function confirmCharSelect() {
+  if (charSelectedIndices.size === 0) return;
+  const selectedChars = [...charSelectedIndices]
+    .map(i => appData.characters[i])
+    .filter(Boolean);
+
+  if (selectedChars.length === 0) return;
+
+  // 关闭选择模式和图库抽屉
+  const wasSelectMode = charSelectMode;
+  cancelCharSelect();
+  closeGalleryDrawer();
+
+  // 创建新聊天
+  appData.chatCounter++;
+  const id = 'chat_' + Date.now() + '_' + appData.chatCounter;
+  const chatName = selectedChars.map(c => c.name).join(' & ');
+  appData.chats[id] = createChat(id, chatName);
+  appData.chatOrder.push(id);
+
+  // 自动生成 System Prompt
+  const spContent = generateGroupSystemPrompt(selectedChars);
+  appData.chats[id].spVersions[0].content = spContent;
+
+  saveData();
+  selectChat(id);
+  renderChatList();
+  showToast(`群聊「${chatName}」已创建`);
+
+  // 确保输入区域可见
+  requestAnimationFrame(() => {
+    const inputArea = document.querySelector('.input-area');
+    if (inputArea) inputArea.scrollIntoView(false);
+  });
+
+  // 如果有 API Key，自动让 AI 生成角色设定和开场
+  const apiKey = appData.settings.apiKey;
+  if (apiKey) {
+    await autoInitGroupChat(id, selectedChars);
+  }
+}
+
+function generateGroupSystemPrompt(selectedChars) {
+  const charDescList = selectedChars.map(c => {
+    let desc = `- ${c.name}`;
+    if (c.description) desc += `：${c.description}`;
+    return desc;
+  }).join('\n');
+
+  const charNames = selectedChars.map(c => c.name).join('、');
+
+  return `# 任务定义
+你现在是一个多角色扮演模拟引擎，负责驱动一个叙事世界。你的任务是：
+- 严格遵循指定角色的身份、性格、知识背景和说话风格。
+- 用户：根据关系和性格有对应亲密称呼，默认为你。
+- 推动符合当前世界观下的合理剧情发展。
+- 在需要时自动完成各角色之间的对话、必要时包括行动和内在心理描写。
+- 回复时以角色名字用【】开头。如果是旁白则直接加在文本开始或结尾。
+
+# 角色设定
+${charDescList}
+
+# 背景故事
+（待AI生成）
+
+# 当前状态
+无
+
+# 回复样例
+（待AI生成）`;
+}
+
+async function autoInitGroupChat(chatId, selectedChars) {
+  const chat = appData.chats[chatId];
+  if (!chat) return;
+
+  const apiKey = appData.settings.apiKey;
+  if (!apiKey) return;
+
+  const apiHost = appData.settings.apiHost || DEFAULT_API_HOST;
+  const url = apiHost.replace(/\/+$/, '') + '/chat/completions';
+
+  const charDescList = selectedChars.map(c => {
+    let desc = `- ${c.name}`;
+    if (c.description) desc += `：${c.description}`;
+    return desc;
+  }).join('\n');
+
+  const charNames = selectedChars.map(c => c.name).join('、');
+
+  const initPrompt = `你是一个多角色扮演模拟引擎。现在需要你根据以下角色信息，完成初始化设置：
+
+角色列表：
+${charDescList}
+
+请完成以下任务，直接输出结果，不需要额外说明：
+1. 为每个角色补充详细的设定（性格、外貌、说话风格、与用户的关系等）
+2. 随机生成一句话的初始场景作为背景故事
+3. 为每个角色生成一句回复样例，突出人物性格，用【角色名】开头
+4. 如果角色名是知名二次元角色，则直接套用二次元设定。
+
+输出格式要求：
+# 角色设定
+（每个角色的详细设定）
+
+# 背景故事
+（一句话场景描述）
+
+# 回复样例
+（每个角色一句话，用【角色名】开头）`;
+
+  const messages = [
+    { role: 'system', content: chat.spVersions[0].content },
+    { role: 'user', content: initPrompt }
+  ];
+
+  // 显示加载状态
+  isCompressing = true;
+  document.getElementById('compressOverlay').classList.add('show');
+  document.querySelector('.compress-text').textContent = '🎭 正在初始化群聊...';
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: DEFAULT_MODEL,
+        messages: messages,
+        stream: false
+      })
+    });
+
+    if (!response.ok) throw new Error('初始化请求失败');
+
+    const result = await response.json();
+    const content = result.choices?.[0]?.message?.content || '';
+
+    if (content) {
+      // 更新 System Prompt 为完整版本
+      const fullSp = `# 任务定义
+你现在是一个多角色扮演模拟引擎，负责驱动一个叙事世界。你的任务是：
+- 严格遵循指定角色的身份、性格、知识背景和说话风格。
+- 用户：根据关系和性格有对应亲密称呼，默认为你。
+- 推动符合当前世界观下的合理剧情发展。
+- 在需要时自动完成各角色之间的对话、必要时包括行动和内在心理描写。
+- 回复时以角色名字用【】开头。如果是旁白则直接加在文本开始或结尾。
+
+${content}
+
+# 当前状态
+无`;
+
+      chat.spVersions[0].content = fullSp;
+      saveData();
+      if (currentChatId === chatId) {
+        updateSpDisplay();
+      }
+    }
+  } catch (e) {
+    console.error('自动初始化群聊失败', e);
+    // 失败也不阻塞，用户可以手动编辑 SP
+  } finally {
+    document.getElementById('compressOverlay').classList.remove('show');
+    document.querySelector('.compress-text').textContent = '🧠 正在整理记忆...';
+    setTimeout(() => {
+      isCompressing = false;
+    }, 400);
+  }
+}
 
 async function syncToCloud() {
   const token = appData.settings.syncToken;
