@@ -34,9 +34,6 @@
 ### 角色图库
 ![Character Gallery](screenshots/gallery.png)
 
-### 群聊
-![Group Chat](screenshots/group-chat.png)
-
 ### 设置
 ![Settings](screenshots/settings.png)
 
