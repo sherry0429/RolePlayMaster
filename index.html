@@ -191,9 +191,21 @@ html, body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  transition: transform 0.3s, background-color 0.3s;
+  transition: transform 0.3s, width 0.3s ease, background-color 0.3s;
   z-index: 10;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
+}
+
+/* 桌面端侧边栏折叠 */
+@media (min-width: 769px) {
+  .sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    border-right: none;
+    overflow: hidden;
+  }
 }
 
 [data-theme="dark"] .sidebar {
@@ -2315,8 +2327,23 @@ function init() {
   const input = document.getElementById('userInput');
   input.addEventListener('input', autoResizeInput);
   input.addEventListener('keydown', handleInputKeydown);
+  // 点击输入框时，桌面端自动折叠侧边栏（沉浸式聊天体验）
+  input.addEventListener('focus', () => {
+    if (window.innerWidth > 768) {
+      document.getElementById('sidebar').classList.add('collapsed');
+      localStorage.setItem('sidebarCollapsed', 'true');
+    }
+  });
   // 检查 URL 中的分享数据
   checkShareData();
+
+  // 桌面端：读取侧边栏状态
+  if (window.innerWidth > 768) {
+    const collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (collapsed) {
+      document.getElementById('sidebar').classList.add('collapsed');
+    }
+  }
 
   // 首次启动且无 localStorage 数据时，尝试从 default.txt 加载
   if (!hasData) {
@@ -3767,19 +3794,33 @@ async function checkShareData() {
   }
 }
 
-// ==================== 侧边栏（移动端） ====================
+// ==================== 侧边栏 ====================
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const backdrop = document.getElementById('sidebarBackdrop');
-  sidebar.classList.toggle('open');
-  backdrop.classList.toggle('show');
+
+  if (window.innerWidth <= 768) {
+    // 移动端：切换 open 类
+    sidebar.classList.toggle('open');
+    backdrop.classList.toggle('show');
+  } else {
+    // 桌面端：切换 collapsed 类，并保存状态
+    sidebar.classList.toggle('collapsed');
+    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+  }
 }
 
 function closeSidebar() {
   const sidebar = document.getElementById('sidebar');
   const backdrop = document.getElementById('sidebarBackdrop');
-  sidebar.classList.remove('open');
-  backdrop.classList.remove('show');
+
+  if (window.innerWidth <= 768) {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('show');
+  } else {
+    sidebar.classList.add('collapsed');
+    localStorage.setItem('sidebarCollapsed', 'true');
+  }
 }
 
 document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebar);
