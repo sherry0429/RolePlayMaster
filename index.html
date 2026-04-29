@@ -30,47 +30,117 @@
 <style>
 /* ==================== CSS 变量与主题 ==================== */
 :root {
+  /* 基础背景 - 纯白主区域 */
   --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --bg-tertiary: #e8e8e8;
-  --text-primary: #1a1a1a;
-  --text-secondary: #666666;
-  --text-tertiary: #999999;
-  --border-color: #e0e0e0;
-  --accent: #4a90d9;
-  --accent-hover: #3a7bc8;
-  --user-bubble: #4a90d9;
+  --bg-secondary: #f8f9fc;  /* 侧边栏用稍暖的灰 */
+  --bg-tertiary: #eef0f5;   /* 输入框、按钮等 */
+
+  /* 文字 */
+  --text-primary: #1a1a2e;
+  --text-secondary: #5a5a7a;
+  --text-tertiary: #8a8aa0;
+
+  /* 边框 */
+  --border-color: #e2e4ea;
+  --border-light: #eef0f5;
+
+  /* 主题色 - 深邃蓝紫 */
+  --accent: #6366f1;
+  --accent-hover: #5558e6;
+  --accent-light: rgba(99, 102, 241, 0.1);
+  --accent-medium: rgba(99, 102, 241, 0.2);
+
+  /* 用户气泡 - 渐变蓝紫 */
+  --user-bubble-start: #6366f1;
+  --user-bubble-end: #8b5cf6;
+  --user-bubble: linear-gradient(135deg, var(--user-bubble-start), var(--user-bubble-end));
   --user-text: #ffffff;
-  --ai-bubble: #f0f0f0;
-  --ai-text: #1a1a1a;
-  --danger: #e74c3c;
-  --danger-hover: #c0392b;
-  --success: #27ae60;
-  --overlay: rgba(0,0,0,0.4);
+
+  /* AI 气泡 - 浅灰带微妙渐变 */
+  --ai-bubble: #f5f6fa;
+  --ai-bubble-hover: #eef0f5;
+  --ai-text: #1a1a2e;
+
+  /* 功能色 */
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --success: #10b981;
+  --warning: #f59e0b;
+
+  /* 遮罩 */
+  --overlay: rgba(0, 0, 0, 0.45);
+
+  /* 布局 */
   --sidebar-width: 280px;
-  --header-height: 52px;
-  --input-height: 60px;
-  --shadow: 0 2px 10px rgba(0,0,0,0.1);
+  --header-height: 56px;
+  --input-height: 64px;
+
+  /* 阴影 - 增强 */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 12px 36px rgba(0, 0, 0, 0.16);
+
+  /* 气泡阴影 */
+  --shadow-bubble-user: 0 4px 12px rgba(99, 102, 241, 0.3);
+  --shadow-bubble-ai: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  /* 动画 */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.35s ease;
 }
 
 [data-theme="dark"] {
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-tertiary: #0f3460;
-  --text-primary: #e0e0e0;
-  --text-secondary: #a0a0a0;
-  --text-tertiary: #707070;
+  /* 基础背景 - 深色主题 */
+  --bg-primary: #0f0f1a;        /* 主区域 - 深邃黑 */
+  --bg-secondary: #161625;      /* 侧边栏 - 稍亮 */
+  --bg-tertiary: #1e1e32;      /* 输入框、按钮等 */
+
+  /* 文字 */
+  --text-primary: #e8e8f0;
+  --text-secondary: #9898b8;
+  --text-tertiary: #6868a0;
+
+  /* 边框 */
   --border-color: #2a2a4a;
-  --accent: #5dade2;
-  --accent-hover: #4a9ad2;
-  --user-bubble: #5dade2;
+  --border-light: #22223a;
+
+  /* 主题色 - 暗色下的亮紫 */
+  --accent: #818cf8;
+  --accent-hover: #6366f1;
+  --accent-light: rgba(129, 140, 248, 0.1);
+  --accent-medium: rgba(129, 140, 248, 0.2);
+
+  /* 用户气泡 */
+  --user-bubble-start: #6366f1;
+  --user-bubble-end: #8b5cf6;
+  --user-bubble: linear-gradient(135deg, var(--user-bubble-start), var(--user-bubble-end));
   --user-text: #ffffff;
-  --ai-bubble: #252545;
-  --ai-text: #e0e0e0;
-  --danger: #e74c3c;
-  --danger-hover: #c0392b;
-  --overlay: rgba(0,0,0,0.6);
-  --shadow: 0 2px 10px rgba(0,0,0,0.3);
+
+  /* AI 气泡 - 深色主题 */
+  --ai-bubble: #1e1e35;
+  --ai-bubble-hover: #252545;
+  --ai-text: #e8e8f0;
+
+  /* 功能色 */
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --success: #10b981;
+  --warning: #f59e0b;
+
+  /* 遮罩 */
+  --overlay: rgba(0, 0, 0, 0.65);
+
+  /* 阴影 - 暗色主题更深邃 */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 12px 36px rgba(0, 0, 0, 0.6);
+
+  /* 气泡阴影 */
+  --shadow-bubble-user: 0 4px 16px rgba(99, 102, 241, 0.4);
+  --shadow-bubble-ai: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* ==================== 基础样式 ==================== */
@@ -121,14 +191,36 @@ html, body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  transition: transform 0.3s, background-color 0.3s;
+  transition: transform 0.3s, width 0.3s ease, background-color 0.3s;
   z-index: 10;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
+}
+
+/* 桌面端侧边栏折叠 */
+@media (min-width: 769px) {
+  .sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    border-right: none;
+    overflow: hidden;
+  }
+}
+
+[data-theme="dark"] .sidebar {
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3);
 }
 
 /* 设置区 - 左上角 */
 .settings-section {
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  margin: 8px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
 }
 
 .settings-toggle {
@@ -136,16 +228,20 @@ html, body {
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
   background: var(--bg-tertiary);
-  transition: background 0.2s;
+  transition: all var(--transition-normal);
   font-size: 14px;
   font-weight: 500;
+  border: 1px solid transparent;
 }
 
 .settings-toggle:hover {
-  filter: brightness(1.1);
+  background: var(--accent-light);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .settings-toggle .icon {
@@ -205,30 +301,63 @@ html, body {
 }
 
 .btn-sm {
-  padding: 6px 12px;
+  padding: 7px 14px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
 }
 
 .btn-sm:active { transform: scale(0.95); }
 
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-hover); }
-.btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover { background: var(--danger-hover); }
-.btn-ghost { background: var(--bg-tertiary); color: var(--text-primary); }
-.btn-ghost:hover { filter: brightness(1.1); }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+.btn-danger:hover {
+  background: var(--danger-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+.btn-ghost {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+.btn-ghost:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
 
 /* 数据操作区 */
 .data-section {
-  padding: 8px 16px;
+  padding: 10px 16px;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  margin: 8px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
 }
 
 /* System Prompt 编辑区 - 左下角 */
@@ -238,6 +367,12 @@ html, body {
   flex: 1;
   min-height: 100px;
   overflow-y: auto;
+  background: var(--bg-primary);
+  margin: 8px;
+  border-radius: 12px 12px 0 0;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  border-bottom: none;
 }
 
 .sp-header {
@@ -299,15 +434,17 @@ html, body {
 
 .sp-content {
   font-size: 12px;
-  color: var(--text-tertiary);
-  line-height: 1.5;
+  color: var(--text-secondary);
+  line-height: 1.6;
   white-space: pre-wrap;
-  word-break: break-all;
+  word-break: break-word;
   overflow-y: auto;
-  padding: 8px;
-  background: var(--bg-tertiary);
-  border-radius: 6px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 10px;
   transition: opacity 0.4s ease;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
 }
 
 .sp-content.fading {
@@ -319,35 +456,62 @@ html, body {
   flex: 1;
   overflow-y: auto;
   padding: 8px;
+  background: var(--bg-primary);
+  margin: 8px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
 }
 
 .chat-list-section::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
+}
+
+.chat-list-section::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .chat-list-section::-webkit-scrollbar-thumb {
   background: var(--border-color);
-  border-radius: 2px;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.chat-list-section::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 
 .chat-item {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background 0.2s;
-  margin-bottom: 2px;
+  transition: all var(--transition-normal);
+  margin-bottom: 4px;
   position: relative;
+  border: 1px solid transparent;
+  background: transparent;
 }
 
 .chat-item:hover {
-  background: var(--bg-tertiary);
+  background: var(--accent-light);
+  border-color: var(--accent-medium);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .chat-item.active {
   background: var(--accent);
   color: #fff;
+  border-color: transparent;
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--accent);
+}
+
+.chat-item.active:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--accent-hover);
 }
 
 .chat-item .chat-name {
@@ -374,37 +538,45 @@ html, body {
 }
 
 .chat-action-btn {
-  width: 26px; height: 26px;
-  border: none; border-radius: 50%;
+  width: 28px; height: 28px;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
   background: var(--bg-tertiary);
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 12px;
   display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s;
+  transition: all 0.25s ease;
 }
 
 .chat-action-btn:hover {
   background: var(--danger);
   color: #fff;
+  border-color: var(--danger);
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(239, 68, 68, 0.3);
 }
 
 .new-chat-btn {
   width: 100%;
   padding: 10px;
   border: 2px dashed var(--border-color);
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-secondary);
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: all 0.25s ease;
   margin-top: 4px;
 }
 
 .new-chat-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
+  background: var(--accent-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ==================== 右侧主区域 ==================== */
@@ -414,6 +586,7 @@ html, body {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
+  background: var(--bg-primary);
 }
 
 /* 顶部菜单栏 */
@@ -427,20 +600,46 @@ html, body {
   gap: 12px;
   flex-shrink: 0;
   transition: background-color 0.3s;
+  box-shadow: var(--shadow-sm);
+}
+
+/* 自动话题倒计时 - 在标题栏内显示 */
+.auto-topic-countdown {
+  font-size: 12px;
+  color: var(--accent);
+  background: var(--accent-light);
+  border: 1px solid var(--accent-medium);
+  padding: 3px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  display: none;
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 .menu-btn {
-  width: 36px; height: 36px;
-  border: none; border-radius: 8px;
+  width: 38px; height: 38px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
   background: var(--bg-tertiary);
   color: var(--text-primary);
   cursor: pointer;
   font-size: 18px;
   display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s;
+  transition: all 0.25s ease;
 }
 
-.menu-btn:hover { filter: brightness(1.1); }
+.menu-btn:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
 
 .top-bar .current-chat-name {
   flex: 1;
@@ -452,31 +651,43 @@ html, body {
 }
 
 .theme-toggle {
-  width: 36px; height: 36px;
-  border: none; border-radius: 8px;
+  width: 38px; height: 38px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
   background: var(--bg-tertiary);
   color: var(--text-primary);
   cursor: pointer;
   font-size: 18px;
   display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s;
+  transition: all 0.25s ease;
 }
 
-.theme-toggle:hover { filter: brightness(1.1); }
+.theme-toggle:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
 
 /* ==================== 右侧 Log 抽屉 ==================== */
 .log-btn {
-  width: 36px; height: 36px;
-  border: none; border-radius: 8px;
+  width: 38px; height: 38px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
   background: var(--bg-tertiary);
   color: var(--text-primary);
   cursor: pointer;
   font-size: 18px;
   display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s;
+  transition: all 0.25s ease;
 }
 
-.log-btn:hover { filter: brightness(1.1); }
+.log-btn:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
 
 /* 抽屉遮罩 */
 .drawer-backdrop {
@@ -546,12 +757,21 @@ html, body {
 }
 
 .log-drawer-body::-webkit-scrollbar {
-  width: 5px;
+  width: 6px;
+}
+
+.log-drawer-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .log-drawer-body::-webkit-scrollbar-thumb {
   background: var(--border-color);
   border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.log-drawer-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 
 /* 日志为空 */
@@ -738,9 +958,18 @@ html, body {
   width: 6px;
 }
 
+.chat-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .chat-area::-webkit-scrollbar-thumb {
   background: var(--border-color);
   border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.chat-area::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 
 /* 欢迎提示 */
@@ -750,6 +979,24 @@ html, body {
   margin: auto;
   font-size: 15px;
   line-height: 1.8;
+}
+
+/* 加载更多提示 */
+.load-more {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 10px;
+  margin: 8px 0;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.load-more:hover {
+  background: var(--accent-light);
+  color: var(--accent);
 }
 
 /* 消息气泡 */
@@ -775,22 +1022,32 @@ html, body {
 }
 
 .msg-avatar {
-  width: 32px; height: 32px;
+  width: 36px; height: 36px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
+  font-size: 15px;
   flex-shrink: 0;
   font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transition: all 0.25s ease;
 }
 
 .message.user .msg-avatar {
-  background: var(--user-bubble);
+  background: linear-gradient(135deg, var(--user-bubble-start), var(--user-bubble-end));
   color: var(--user-text);
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.3);
 }
 
 .message.ai .msg-avatar {
-  background: var(--ai-bubble);
-  color: var(--ai-text);
+  background: var(--bg-tertiary);
+  color: var(--accent);
+  border: 2px solid var(--accent-light);
+}
+
+.message:hover .msg-avatar {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .msg-body {
@@ -799,25 +1056,42 @@ html, body {
 }
 
 .msg-bubble {
-  padding: 10px 14px;
-  border-radius: 14px;
+  padding: 12px 16px;
+  border-radius: 16px;
   font-size: 14px;
   line-height: 1.6;
   word-break: break-word;
   white-space: pre-wrap;
   position: relative;
+  transition: all var(--transition-normal);
+  border: 1px solid transparent;
 }
 
 .message.user .msg-bubble {
-  background: var(--user-bubble);
+  background: linear-gradient(135deg, var(--user-bubble-start), var(--user-bubble-end));
   color: var(--user-text);
-  border-bottom-right-radius: 4px;
+  border-bottom-right-radius: 6px;
+  box-shadow: var(--shadow-bubble-user);
+  border: none;
+}
+
+.message.user .msg-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
 }
 
 .message.ai .msg-bubble {
   background: var(--ai-bubble);
   color: var(--ai-text);
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: 6px;
+  box-shadow: var(--shadow-bubble-ai);
+  border: 1px solid var(--border-light);
+}
+
+.message.ai .msg-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color);
 }
 
 /* 消息操作按钮 */
@@ -848,24 +1122,30 @@ html, body {
 }
 
 .msg-action-btn {
-  padding: 3px 8px;
-  border: none;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   background: var(--bg-tertiary);
   color: var(--text-secondary);
   font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.25s ease;
 }
 
 .msg-action-btn:hover {
   background: var(--accent);
   color: #fff;
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
 }
 
 .msg-action-btn.del:hover {
   background: var(--danger);
   color: #fff;
+  border-color: var(--danger);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
 }
 
 /* 编辑状态 - 已改用弹框，此处保留占位 */
@@ -894,7 +1174,7 @@ html, body {
 
 /* ==================== 输入区 ==================== */
 .input-area {
-  padding: 10px 16px;
+  padding: 12px 16px;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   display: flex;
@@ -902,13 +1182,18 @@ html, body {
   align-items: flex-end;
   flex-shrink: 0;
   transition: background-color 0.3s;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .input-area {
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.3);
 }
 
 .input-area textarea {
   flex: 1;
-  padding: 10px 14px;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+  padding: 12px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 14px;
@@ -916,30 +1201,40 @@ html, body {
   resize: none;
   outline: none;
   max-height: 120px;
-  min-height: 40px;
+  min-height: 44px;
   font-family: inherit;
-  transition: border-color 0.2s;
+  transition: all 0.25s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .input-area textarea:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light), var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .send-btn {
-  width: 40px; height: 40px;
+  width: 44px; height: 44px;
   border: none; border-radius: 50%;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--user-bubble-start), var(--user-bubble-end));
   color: #fff;
   cursor: pointer;
   font-size: 18px;
   display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s, transform 0.1s;
+  transition: all 0.25s ease;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  position: relative;
+  overflow: hidden;
 }
 
-.send-btn:hover { background: var(--accent-hover); }
-.send-btn:active { transform: scale(0.9); }
-.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.send-btn:hover {
+  background: linear-gradient(135deg, var(--accent-hover), var(--user-bubble-end));
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+}
+.send-btn:active { transform: scale(0.95); }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 .send-btn.stop-btn {
   background: var(--danger);
@@ -1017,11 +1312,24 @@ html, body {
 
 .modal {
   background: var(--bg-primary);
-  border-radius: 12px;
-  padding: 24px;
+  border-radius: 16px;
+  padding: 28px;
   width: 90%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
+  max-width: 420px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-light);
+  animation: modalIn 0.3s ease;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .modal h3 {
@@ -1277,8 +1585,10 @@ html, body {
   padding: 16px;
 }
 
-.gallery-drawer-body::-webkit-scrollbar { width: 5px; }
-.gallery-drawer-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+.gallery-drawer-body::-webkit-scrollbar { width: 6px; }
+.gallery-drawer-body::-webkit-scrollbar-track { background: transparent; }
+.gallery-drawer-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; transition: background 0.2s; }
+.gallery-drawer-body::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
 
 /* 瀑布流布局 */
 .gallery-waterfall {
@@ -1289,18 +1599,20 @@ html, body {
 .gallery-card {
   break-inside: avoid;
   margin-bottom: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
   overflow: hidden;
   background: var(--bg-secondary);
   cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.15s;
+  transition: all 0.25s ease;
   position: relative;
+  box-shadow: var(--shadow-sm);
 }
 
 .gallery-card:hover {
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+  border-color: var(--accent);
 }
 
 .gallery-card-avatar-wrap {
@@ -1347,23 +1659,26 @@ html, body {
 .gallery-card:hover .gallery-card-delete { opacity: 1; }
 
 .gallery-card-info {
-  padding: 8px 10px;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-light);
 }
 
 .gallery-card-name {
   font-size: 13px;
   font-weight: 600;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-primary);
 }
 
 .gallery-card-desc {
   font-size: 11px;
   color: var(--text-secondary);
-  line-height: 1.4;
-  max-height: 40px;
+  line-height: 1.5;
+  max-height: 42px;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1387,9 +1702,14 @@ html, body {
 /* ==================== 说话人区分样式 ==================== */
 .speaker-segment {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 10px;
   animation: msgIn 0.3s ease;
+  transition: all 0.25s ease;
+}
+
+.speaker-segment:hover {
+  transform: translateY(-1px);
 }
 
 /* 流式增量更新时，已存在的 segment 不重播动画 */
@@ -1400,17 +1720,25 @@ html, body {
 .speaker-segment:last-child { margin-bottom: 0; }
 
 .speaker-segment .msg-avatar {
-  width: 32px; height: 32px;
+  width: 36px; height: 36px;
   border-radius: 50%;
   flex-shrink: 0;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  background: var(--ai-bubble);
-  color: var(--ai-text);
+  background: var(--bg-tertiary);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  border: 2px solid var(--accent-light);
+  transition: all 0.25s ease;
+}
+
+.speaker-segment:hover .msg-avatar {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .speaker-segment .msg-avatar img {
@@ -1424,19 +1752,30 @@ html, body {
   font-size: 11px;
   font-weight: 600;
   color: var(--accent);
-  margin-bottom: 2px;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .speaker-bubble {
-  padding: 8px 12px;
-  border-radius: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
   background: var(--ai-bubble);
   color: var(--ai-text);
   font-size: 14px;
   line-height: 1.6;
   word-break: break-word;
   white-space: pre-wrap;
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: 6px;
+  box-shadow: var(--shadow-bubble-ai);
+  border: 1px solid var(--border-light);
+  transition: all 0.25s ease;
+}
+
+.speaker-segment:hover .speaker-bubble {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color);
 }
 
 /* ==================== 设置区增强 ==================== */
@@ -1700,7 +2039,7 @@ html, body {
           <input type="number" id="autoTopicMaxCount" placeholder="5" min="1" max="100">
         </div>
         <div class="checkbox-group">
-          <input type="checkbox" id="chatNotification">
+          <input type="checkbox" id="chatNotification" disabled checked="false">
           <label for="chatNotification">聊天通知</label>
         </div>
         <div class="sync-token-group">
@@ -1755,6 +2094,7 @@ html, body {
     <div class="top-bar">
       <button class="menu-btn" onclick="toggleSidebar()" title="菜单">☰</button>
       <span class="current-chat-name" id="currentChatName">AI Chat</span>
+      <span class="auto-topic-countdown" id="autoTopicCountdown" style="display:none;"></span>
       <button class="menu-btn" onclick="openGalleryDrawer()" title="角色图库">🎭</button>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="切换主题">🌙</button>
       <button class="log-btn" onclick="openLogDrawer()" title="请求日志">📋</button>
@@ -1829,14 +2169,14 @@ html, body {
 <script>
 /* ==================================================================
    AI Chat - 全部逻辑（单文件实现）
-   数据存储在 localStorage，流式输出使用 DeepSeek API
+   数据存储在 IndexedDB（原 localStorage，已迁移），流式输出使用 DeepSeek API
    ================================================================== */
 
 // ==================== 常量 ====================
 const DEFAULT_API_HOST = 'https://api.deepseek.com';
 const DEFAULT_MODEL = 'deepseek-chat';
 const COMPRESS_THRESHOLD = 300; // 每超过多少条消息触发一次摘要压缩
-const STORAGE_KEY = 'aichat_data'; // localStorage 主键
+const STORAGE_KEY = 'aichat_data'; // IndexedDB 主键（原 localStorage 主键，已迁移）
 const DEFAULT_CLOUD_HOST = 'https://poecurrency.top';
 
 // 获取云端同步基础地址
@@ -1847,6 +2187,97 @@ function getCloudHost() {
 // 获取云端同步 API URL
 function getChatSyncUrl() {
   return getCloudHost() + '/api/v1/chat_sync';
+}
+
+// ==================== IndexedDB 存储（替代 localStorage，解决大小限制）====================
+const DB_NAME = 'SimpleGirlFriendDB';
+const DB_VERSION = 1;
+const DB_STORE_NAME = 'appData';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(DB_STORE_NAME)) {
+        db.createObjectStore(DB_STORE_NAME, { keyPath: 'key' });
+      }
+    };
+
+    request.onsuccess = (event) => resolve(event.target.result);
+    request.onerror = (event) => reject(event.target.error);
+  });
+}
+
+async function getFromDB(key) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([DB_STORE_NAME], 'readonly');
+      const store = transaction.objectStore(DB_STORE_NAME);
+      const request = store.get(key);
+
+      request.onsuccess = (event) => {
+        const result = event.target.result;
+        resolve(result ? result.value : null);
+      };
+      request.onerror = (event) => reject(event.target.error);
+    });
+  } catch (e) {
+    console.error('IndexedDB 读取失败', e);
+    return null;
+  }
+}
+
+async function saveToDB(key, value) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([DB_STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(DB_STORE_NAME);
+      const request = store.put({ key, value });
+
+      request.onsuccess = () => resolve();
+      request.onerror = (event) => reject(event.target.error);
+    });
+  } catch (e) {
+    console.error('IndexedDB 保存失败', e);
+    throw e;
+  }
+}
+
+async function deleteFromDB(key) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([DB_STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(DB_STORE_NAME);
+      const request = store.delete(key);
+
+      request.onsuccess = () => resolve();
+      request.onerror = (event) => reject(event.target.error);
+    });
+  } catch (e) {
+    console.error('IndexedDB 删除失败', e);
+    throw e;
+  }
+}
+
+// 从 localStorage 迁移到 IndexedDB（向后兼容）
+async function migrateFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      await saveToDB(STORAGE_KEY, data);
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem('useIndexedDB', 'true');
+      console.log('[DB] 已从 localStorage 迁移数据到 IndexedDB');
+    }
+  } catch (e) {
+    console.error('迁移失败', e);
+  }
 }
 
 // ==================== 全局状态 ====================
@@ -1894,8 +2325,30 @@ function createChat(id, name) {
 }
 
 // ==================== 存储 ====================
-function loadData() {
+async function loadData() {
   try {
+    // 先尝试从 IndexedDB 加载
+    let data = await getFromDB(STORAGE_KEY);
+
+    if (data) {
+      appData = data;
+      // 兼容性补全
+      if (!appData.chatOrder) appData.chatOrder = [];
+      if (!appData.chatCounter) appData.chatCounter = 0;
+      if (!appData.settings) appData.settings = { apiHost: DEFAULT_API_HOST, apiKey: '', bgImage: '' };
+      if (!appData.settings.compressThreshold) appData.settings.compressThreshold = COMPRESS_THRESHOLD;
+      if (appData.settings.speakerMode === undefined) appData.settings.speakerMode = true;
+      if (appData.settings.syncToken === undefined) appData.settings.syncToken = '';
+      if (appData.settings.autoTopic === undefined) appData.settings.autoTopic = false;
+      if (appData.settings.chatNotification === undefined) appData.settings.chatNotification = false;
+      if (appData.settings.autoTopicInterval === undefined) appData.settings.autoTopicInterval = 10;
+      if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
+      if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
+      if (!appData.characters) appData.characters = [];
+      return true; // IndexedDB 有数据
+    }
+
+    // IndexedDB 没有数据，尝试 localStorage（向后兼容）
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       appData = JSON.parse(raw);
@@ -1912,11 +2365,19 @@ function loadData() {
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
       if (!appData.characters) appData.characters = [];
+
+      // 迁移到 IndexedDB
+      await saveToDB(STORAGE_KEY, appData);
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem('useIndexedDB', 'true');
+      console.log('[DB] 已从 localStorage 迁移数据到 IndexedDB');
+
       return true; // localStorage 有数据
-    } else {
-      appData = createDefaultData();
-      return false; // 首次启动，无数据
     }
+
+    // 都没有数据，创建默认数据
+    appData = createDefaultData();
+    return false; // 首次启动，无数据
   } catch (e) {
     console.error('数据加载失败', e);
     appData = createDefaultData();
@@ -1970,9 +2431,9 @@ async function loadDefaultData() {
   }
 }
 
-function saveData() {
+async function saveData() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    await saveToDB(STORAGE_KEY, appData);
   } catch (e) {
     console.error('数据保存失败', e);
     showToast('数据保存失败', 'error');
@@ -1985,13 +2446,13 @@ function setAppHeight() {
   document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
 }
 
-function init() {
+async function init() {
   // 视口高度修复
   setAppHeight();
   window.addEventListener('resize', setAppHeight);
   window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 100));
 
-  const hasData = loadData();
+  const hasData = await loadData();
   // 主题
   applyTheme(appData.theme);
   // 设置表单
@@ -2025,12 +2486,27 @@ function init() {
   const input = document.getElementById('userInput');
   input.addEventListener('input', autoResizeInput);
   input.addEventListener('keydown', handleInputKeydown);
+  // 点击输入框时，桌面端自动折叠侧边栏（沉浸式聊天体验）
+  input.addEventListener('focus', () => {
+    if (window.innerWidth > 768) {
+      document.getElementById('sidebar').classList.add('collapsed');
+      localStorage.setItem('sidebarCollapsed', 'true');
+    }
+  });
   // 检查 URL 中的分享数据
   checkShareData();
 
-  // 首次启动且无 localStorage 数据时，尝试从 default.txt 加载
+  // 桌面端：读取侧边栏状态
+  if (window.innerWidth > 768) {
+    const collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (collapsed) {
+      document.getElementById('sidebar').classList.add('collapsed');
+    }
+  }
+
+  // 首次启动且无数据时，尝试从 default.txt 加载
   if (!hasData) {
-    loadDefaultData();
+    await loadDefaultData();
   }
 
   // ---- PWA: 注册 Service Worker ----
@@ -2042,10 +2518,6 @@ function init() {
   initChatNotification();
   // ---- 页面可见性监听 ----
   document.addEventListener('visibilitychange', handleVisibilityChange);
-  // ---- 用户活动监听（重置自动话题计时器） ----
-  ['click', 'keydown', 'touchstart', 'mousemove'].forEach(evt => {
-    document.addEventListener(evt, resetAutoTopicTimer, { passive: true });
-  });
 
   // ---- 聊天通知权限请求（用户勾选时触发） ----
   const chatNotifCheckbox = document.getElementById('chatNotification');
@@ -2385,6 +2857,8 @@ function selectChat(id) {
   if (!appData.chats[id]) return;
   currentChatId = id;
   const chat = appData.chats[id];
+  // 重置消息渲染数量
+  resetRenderedCount();
   // 更新顶部名称
   document.getElementById('currentChatName').textContent = chat.name;
   // 更新聊天专属背景
@@ -2446,7 +2920,8 @@ function updateUIForNoChat() {
 }
 
 // ==================== 消息渲染 ====================
-function renderMessages() {
+// 渲染消息（只渲染最近 renderedMessageCount 条）
+function renderMessages(shouldScrollToBottom = true) {
   const area = document.getElementById('chatArea');
   if (!currentChatId || !appData.chats[currentChatId]) {
     area.innerHTML = '<div class="welcome-msg">👋 欢迎使用 AI Chat<br>点击左侧 + 开始新对话</div>';
@@ -2457,9 +2932,25 @@ function renderMessages() {
     area.innerHTML = '<div class="welcome-msg">💬 开始新的对话吧</div>';
     return;
   }
+
   const speakerMode = appData.settings.speakerMode !== false;
+  const totalMessages = chat.messages.length;
+  // 计算实际渲染的消息范围
+  const renderCount = Math.min(renderedMessageCount, totalMessages);
+  const startIndex = Math.max(0, totalMessages - renderCount);
+
   let html = '';
-  chat.messages.forEach((msg, idx) => {
+
+  // 如果还有更多历史消息未渲染，显示"加载更多"提示
+  if (startIndex > 0) {
+    html += `<div class="load-more" id="loadMoreBtn" onclick="loadMoreMessages()">
+      📜 向上滚动或点击加载更早的消息（还剩 ${startIndex} 条）
+    </div>`;
+  }
+
+  // 只渲染最近的消息
+  for (let idx = startIndex; idx < totalMessages; idx++) {
+    const msg = chat.messages[idx];
     const isUser = msg.role === 'user';
     const avatar = isUser ? '👤' : '🤖';
     const cls = isUser ? 'user' : 'ai';
@@ -2491,9 +2982,37 @@ function renderMessages() {
           </div>
         </div>`;
     }
-  });
+  }
+
+  // 保存当前滚动位置（用于加载更多时保持位置）
+  const oldScrollHeight = area.scrollHeight;
+  const oldScrollTop = area.scrollTop;
+
   area.innerHTML = html;
-  scrollToBottom();
+
+  if (shouldScrollToBottom) {
+    scrollToBottom();
+  } else {
+    // 加载更多消息时，保持滚动位置
+    requestAnimationFrame(() => {
+      area.scrollTop = area.scrollHeight - oldScrollHeight + oldScrollTop;
+    });
+  }
+}
+
+// 加载更多历史消息
+function loadMoreMessages() {
+  const chat = appData.chats[currentChatId];
+  if (!chat) return;
+
+  // 增加渲染数量
+  renderedMessageCount = Math.min(renderedMessageCount + MESSAGE_PAGE_SIZE, chat.messages.length);
+  renderMessages(false);
+}
+
+// 重置消息渲染数量（切换聊天或发送新消息时调用）
+function resetRenderedCount() {
+  renderedMessageCount = MESSAGE_PAGE_SIZE;
 }
 
 /**
@@ -2593,10 +3112,16 @@ function editMessage(idx) {
     chat.messages = chat.messages.slice(0, idx);
     chat.messages.push({ role: isUser ? 'user' : 'assistant', content: newContent });
     saveData();
+    // 重置渲染数量，确保消息可见
+    resetRenderedCount();
     renderMessages();
 
     // 如果是用户消息，编辑保存后触发新的 AI 请求
     if (isUser) {
+      // 编辑消息相当于用户发送了消息，重置自动话题计数和计时器
+      autoTopicCount = 0;
+      lastActivityTime = Date.now();
+      updateCountdownDisplay();
       requestAI();
     }
   });
@@ -2632,8 +3157,10 @@ function sendMessage() {
   const input = document.getElementById('userInput');
   const text = input.value.trim();
   if (!text) return;
-  // 用户发送消息，重置自动话题触发计数
+  // 用户发送消息，重置自动话题触发计数和计时器
   autoTopicCount = 0;
+  lastActivityTime = Date.now();
+  updateCountdownDisplay();
   if (!currentChatId) {
     newChat();
   }
@@ -2669,6 +3196,8 @@ function sendMessage() {
   saveData();
   input.value = '';
   input.style.height = 'auto';
+  // 重置渲染数量，确保新消息可见
+  resetRenderedCount();
   renderMessages();
   // 发送 AI 请求
   requestAI();
@@ -3477,19 +4006,33 @@ async function checkShareData() {
   }
 }
 
-// ==================== 侧边栏（移动端） ====================
+// ==================== 侧边栏 ====================
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const backdrop = document.getElementById('sidebarBackdrop');
-  sidebar.classList.toggle('open');
-  backdrop.classList.toggle('show');
+
+  if (window.innerWidth <= 768) {
+    // 移动端：切换 open 类
+    sidebar.classList.toggle('open');
+    backdrop.classList.toggle('show');
+  } else {
+    // 桌面端：切换 collapsed 类，并保存状态
+    sidebar.classList.toggle('collapsed');
+    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+  }
 }
 
 function closeSidebar() {
   const sidebar = document.getElementById('sidebar');
   const backdrop = document.getElementById('sidebarBackdrop');
-  sidebar.classList.remove('open');
-  backdrop.classList.remove('show');
+
+  if (window.innerWidth <= 768) {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('show');
+  } else {
+    sidebar.classList.add('collapsed');
+    localStorage.setItem('sidebarCollapsed', 'true');
+  }
 }
 
 document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebar);
@@ -4477,26 +5020,90 @@ function applyImportedData(data) {
 let autoTopicTimer = null;
 let lastActivityTime = Date.now();
 let autoTopicCount = 0; // 当前连续触发次数
+let autoTopicCountdownTimer = null; // 倒计时定时器
+
+// ==================== 消息分页渲染 ====================
+let renderedMessageCount = 20; // 当前渲染的消息数量
+const MESSAGE_PAGE_SIZE = 20; // 每次加载的消息数量
 
 function initAutoTopic() {
   if (autoTopicTimer) {
     clearInterval(autoTopicTimer);
     autoTopicTimer = null;
   }
+  if (autoTopicCountdownTimer) {
+    clearInterval(autoTopicCountdownTimer);
+    autoTopicCountdownTimer = null;
+  }
   autoTopicCount = 0;
   if (appData.settings.autoTopic) {
     // 每分钟检查一次是否需要触发
     autoTopicTimer = setInterval(checkAutoTopic, 60000);
+    // 每秒更新倒计时显示
+    updateCountdownDisplay();
+    autoTopicCountdownTimer = setInterval(updateCountdownDisplay, 1000);
+  } else {
+    // 隐藏倒计时
+    const countdownEl = document.getElementById('autoTopicCountdown');
+    if (countdownEl) countdownEl.style.display = 'none';
   }
 }
 
 function resetAutoTopicTimer() {
   lastActivityTime = Date.now();
+  updateCountdownDisplay();
+}
+
+// 更新自动话题倒计时显示
+function updateCountdownDisplay() {
+  const countdownEl = document.getElementById('autoTopicCountdown');
+  if (!countdownEl) return;
+
+  // 如果自动话题未开启，隐藏倒计时
+  if (!appData.settings.autoTopic) {
+    countdownEl.style.display = 'none';
+    return;
+  }
+
+  // 如果没有当前聊天，隐藏倒计时
+  if (!currentChatId || !appData.chats[currentChatId]) {
+    countdownEl.style.display = 'none';
+    return;
+  }
+
+  const maxCount = appData.settings.autoTopicMaxCount || 5;
+  const countText = `${autoTopicCount}/${maxCount}`;
+
+  // 如果达到触发上限，显示"已达上限"并隐藏
+  if (autoTopicCount >= maxCount) {
+    countdownEl.style.display = 'none';
+    return;
+  }
+
+  // 计算剩余时间
+  const intervalMin = appData.settings.autoTopicInterval || 10;
+  const intervalMs = intervalMin * 60 * 1000;
+  const idleMs = Date.now() - lastActivityTime;
+  const remainingMs = intervalMs - idleMs;
+
+  if (remainingMs <= 0) {
+    countdownEl.textContent = `⏱️ 即将开始新话题 (${countText})`;
+    countdownEl.style.display = 'inline-block';
+    return;
+  }
+
+  // 计算分秒
+  const remainingSec = Math.ceil(remainingMs / 1000);
+  const minutes = Math.floor(remainingSec / 60);
+  const seconds = remainingSec % 60;
+
+  countdownEl.textContent = `⏱️ ${minutes}分${seconds}秒 (${countText})`;
+  countdownEl.style.display = 'inline-block';
 }
 
 function handleVisibilityChange() {
-  // 页面变为可见时，如果有未读的自动消息，不需要特别处理
-  // 因为消息已经添加到聊天记录中了
+  // 页面可见性变化时，更新倒计时显示
+  updateCountdownDisplay();
 }
 
 function checkAutoTopic() {
@@ -4506,11 +5113,6 @@ function checkAutoTopic() {
   // 检查触发次数上限
   const maxCount = appData.settings.autoTopicMaxCount || 5;
   if (autoTopicCount >= maxCount) return;
-  // 检查用户是否在页面上
-  if (!document.hidden) {
-    lastActivityTime = Date.now();
-    return;
-  }
   // 检查是否已经超过指定分钟无操作
   const intervalMin = appData.settings.autoTopicInterval || 10;
   const idleMs = Date.now() - lastActivityTime;
@@ -4587,6 +5189,8 @@ async function triggerAutoTopic() {
   // 重置活动时间，避免频繁触发
   lastActivityTime = Date.now();
   autoTopicCount++;
+  // 更新倒计时显示
+  updateCountdownDisplay();
 }
 
 // ==================== 聊天通知（Web Push 版）====================
