@@ -603,6 +603,23 @@ html, body {
   box-shadow: var(--shadow-sm);
 }
 
+/* 自动话题倒计时 */
+.auto-topic-countdown {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--accent-light);
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  display: none;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
 .menu-btn {
   width: 38px; height: 38px;
   border: 1px solid var(--border-color);
@@ -960,6 +977,24 @@ html, body {
   margin: auto;
   font-size: 15px;
   line-height: 1.8;
+}
+
+/* 加载更多提示 */
+.load-more {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 10px;
+  margin: 8px 0;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.load-more:hover {
+  background: var(--accent-light);
+  color: var(--accent);
 }
 
 /* 消息气泡 */
@@ -2057,6 +2092,7 @@ html, body {
     <div class="top-bar">
       <button class="menu-btn" onclick="toggleSidebar()" title="菜单">☰</button>
       <span class="current-chat-name" id="currentChatName">AI Chat</span>
+      <span class="auto-topic-countdown" id="autoTopicCountdown" style="display:none;"></span>
       <button class="menu-btn" onclick="openGalleryDrawer()" title="角色图库">🎭</button>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="切换主题">🌙</button>
       <button class="log-btn" onclick="openLogDrawer()" title="请求日志">📋</button>
@@ -2823,6 +2859,8 @@ function selectChat(id) {
   if (!appData.chats[id]) return;
   currentChatId = id;
   const chat = appData.chats[id];
+  // 重置消息渲染数量
+  resetRenderedCount();
   // 更新顶部名称
   document.getElementById('currentChatName').textContent = chat.name;
   // 更新聊天专属背景
@@ -2884,7 +2922,8 @@ function updateUIForNoChat() {
 }
 
 // ==================== 消息渲染 ====================
-function renderMessages() {
+// 渲染消息（只渲染最近 renderedMessageCount 条）
+function renderMessages(shouldScrollToBottom = true) {
   const area = document.getElementById('chatArea');
   if (!currentChatId || !appData.chats[currentChatId]) {
     area.innerHTML = '<div class="welcome-msg">👋 欢迎使用 AI Chat<br>点击左侧 + 开始新对话</div>';
@@ -2895,9 +2934,25 @@ function renderMessages() {
     area.innerHTML = '<div class="welcome-msg">💬 开始新的对话吧</div>';
     return;
   }
+
   const speakerMode = appData.settings.speakerMode !== false;
+  const totalMessages = chat.messages.length;
+  // 计算实际渲染的消息范围
+  const renderCount = Math.min(renderedMessageCount, totalMessages);
+  const startIndex = Math.max(0, totalMessages - renderCount);
+
   let html = '';
-  chat.messages.forEach((msg, idx) => {
+
+  // 如果还有更多历史消息未渲染，显示"加载更多"提示
+  if (startIndex > 0) {
+    html += `<div class="load-more" id="loadMoreBtn" onclick="loadMoreMessages()">
+      📜 向上滚动或点击加载更早的消息（还剩 ${startIndex} 条）
+    </div>`;
+  }
+
+  // 只渲染最近的消息
+  for (let idx = startIndex; idx < totalMessages; idx++) {
+    const msg = chat.messages[idx];
     const isUser = msg.role === 'user';
     const avatar = isUser ? '👤' : '🤖';
     const cls = isUser ? 'user' : 'ai';
@@ -2929,9 +2984,37 @@ function renderMessages() {
           </div>
         </div>`;
     }
-  });
+  }
+
+  // 保存当前滚动位置（用于加载更多时保持位置）
+  const oldScrollHeight = area.scrollHeight;
+  const oldScrollTop = area.scrollTop;
+
   area.innerHTML = html;
-  scrollToBottom();
+
+  if (shouldScrollToBottom) {
+    scrollToBottom();
+  } else {
+    // 加载更多消息时，保持滚动位置
+    requestAnimationFrame(() => {
+      area.scrollTop = area.scrollHeight - oldScrollHeight + oldScrollTop;
+    });
+  }
+}
+
+// 加载更多历史消息
+function loadMoreMessages() {
+  const chat = appData.chats[currentChatId];
+  if (!chat) return;
+
+  // 增加渲染数量
+  renderedMessageCount = Math.min(renderedMessageCount + MESSAGE_PAGE_SIZE, chat.messages.length);
+  renderMessages(false);
+}
+
+// 重置消息渲染数量（切换聊天或发送新消息时调用）
+function resetRenderedCount() {
+  renderedMessageCount = MESSAGE_PAGE_SIZE;
 }
 
 /**
@@ -3031,10 +3114,14 @@ function editMessage(idx) {
     chat.messages = chat.messages.slice(0, idx);
     chat.messages.push({ role: isUser ? 'user' : 'assistant', content: newContent });
     saveData();
+    // 重置渲染数量，确保消息可见
+    resetRenderedCount();
     renderMessages();
 
     // 如果是用户消息，编辑保存后触发新的 AI 请求
     if (isUser) {
+      // 编辑消息相当于用户发送了消息，重置自动话题计数
+      autoTopicCount = 0;
       requestAI();
     }
   });
@@ -3107,6 +3194,8 @@ function sendMessage() {
   saveData();
   input.value = '';
   input.style.height = 'auto';
+  // 重置渲染数量，确保新消息可见
+  resetRenderedCount();
   renderMessages();
   // 发送 AI 请求
   requestAI();
@@ -4929,26 +5018,88 @@ function applyImportedData(data) {
 let autoTopicTimer = null;
 let lastActivityTime = Date.now();
 let autoTopicCount = 0; // 当前连续触发次数
+let autoTopicCountdownTimer = null; // 倒计时定时器
+
+// ==================== 消息分页渲染 ====================
+let renderedMessageCount = 20; // 当前渲染的消息数量
+const MESSAGE_PAGE_SIZE = 20; // 每次加载的消息数量
 
 function initAutoTopic() {
   if (autoTopicTimer) {
     clearInterval(autoTopicTimer);
     autoTopicTimer = null;
   }
+  if (autoTopicCountdownTimer) {
+    clearInterval(autoTopicCountdownTimer);
+    autoTopicCountdownTimer = null;
+  }
   autoTopicCount = 0;
   if (appData.settings.autoTopic) {
     // 每分钟检查一次是否需要触发
     autoTopicTimer = setInterval(checkAutoTopic, 60000);
+    // 每秒更新倒计时显示
+    updateCountdownDisplay();
+    autoTopicCountdownTimer = setInterval(updateCountdownDisplay, 1000);
+  } else {
+    // 隐藏倒计时
+    const countdownEl = document.getElementById('autoTopicCountdown');
+    if (countdownEl) countdownEl.style.display = 'none';
   }
 }
 
 function resetAutoTopicTimer() {
   lastActivityTime = Date.now();
+  updateCountdownDisplay();
+}
+
+// 更新自动话题倒计时显示
+function updateCountdownDisplay() {
+  const countdownEl = document.getElementById('autoTopicCountdown');
+  if (!countdownEl) return;
+
+  // 如果自动话题未开启，隐藏倒计时
+  if (!appData.settings.autoTopic) {
+    countdownEl.style.display = 'none';
+    return;
+  }
+
+  // 如果页面可见，隐藏倒计时
+  if (!document.hidden) {
+    countdownEl.style.display = 'none';
+    return;
+  }
+
+  // 如果达到触发上限，隐藏倒计时
+  const maxCount = appData.settings.autoTopicMaxCount || 5;
+  if (autoTopicCount >= maxCount) {
+    countdownEl.style.display = 'none';
+    return;
+  }
+
+  // 计算剩余时间
+  const intervalMin = appData.settings.autoTopicInterval || 10;
+  const intervalMs = intervalMin * 60 * 1000;
+  const idleMs = Date.now() - lastActivityTime;
+  const remainingMs = intervalMs - idleMs;
+
+  if (remainingMs <= 0) {
+    countdownEl.textContent = '⏱️ 即将开始新话题...';
+    countdownEl.style.display = 'inline-block';
+    return;
+  }
+
+  // 计算分秒
+  const remainingSec = Math.ceil(remainingMs / 1000);
+  const minutes = Math.floor(remainingSec / 60);
+  const seconds = remainingSec % 60;
+
+  countdownEl.textContent = `⏱️ ${minutes}分${seconds}秒后开始新话题`;
+  countdownEl.style.display = 'inline-block';
 }
 
 function handleVisibilityChange() {
-  // 页面变为可见时，如果有未读的自动消息，不需要特别处理
-  // 因为消息已经添加到聊天记录中了
+  // 页面可见性变化时，更新倒计时显示
+  updateCountdownDisplay();
 }
 
 function checkAutoTopic() {
@@ -5039,6 +5190,8 @@ async function triggerAutoTopic() {
   // 重置活动时间，避免频繁触发
   lastActivityTime = Date.now();
   autoTopicCount++;
+  // 更新倒计时显示
+  updateCountdownDisplay();
 }
 
 // ==================== 聊天通知（Web Push 版）====================
