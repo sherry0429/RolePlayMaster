@@ -3685,7 +3685,7 @@ async function syncToCloud() {
     const base64 = jsonToBase64(json);
     const response = await fetch(CHAT_SYNC_URL, {
       method: 'POST',
-      cache: 'no-cache',
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token
@@ -3711,9 +3711,9 @@ async function syncFromCloud() {
   }
   try {
     showToast('正在从云端拉取数据...', 'success');
-    const response = await fetch(CHAT_SYNC_URL, {
+    const response = await fetch(CHAT_SYNC_URL + '?t=' + Date.now(), {
       method: 'GET',
-      cache: 'no-cache',
+      cache: 'no-store',
       headers: {
         'Authorization': 'Bearer ' + token
       }
