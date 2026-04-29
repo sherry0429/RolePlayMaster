@@ -1392,6 +1392,11 @@ html, body {
   animation: msgIn 0.3s ease;
 }
 
+/* 流式增量更新时，已存在的 segment 不重播动画 */
+.speaker-segment.no-anim {
+  animation: none;
+}
+
 .speaker-segment:last-child { margin-bottom: 0; }
 
 .speaker-segment .msg-avatar {
@@ -2677,6 +2682,7 @@ async function requestAI() {
     }
   } finally {
     isStreaming = false;
+    _streamingCache = null; // 清除流式增量缓存
     document.getElementById('sendBtn').style.display = 'flex';
     document.getElementById('stopBtn').style.display = 'none';
     abortController = null;
@@ -2687,25 +2693,185 @@ async function requestAI() {
   }
 }
 
+// 流式阶段增量更新：记录已渲染的 segment 摘要，避免重绘已完成的气泡
+let _streamingCache = null; // { msgIdx, segments: [{speaker, textLen}] }
+
 function updateStreamingMessage(idx, content) {
   const msgEl = document.querySelector(`.message[data-idx="${idx}"] .msg-body`);
-  if (msgEl) {
-    const speakerMode = appData.settings.speakerMode !== false;
-    // 流式阶段：如果内容已有完整的【】标签，实时应用说话人区分
-    if (speakerMode && hasSpeakerTags(content)) {
-      const segmentsHtml = renderSpeakerSegments(content, idx);
-      // 保留 msg-actions
-      const actionsEl = msgEl.querySelector('.msg-actions');
-      const actionsHtml = actionsEl ? actionsEl.outerHTML : '';
-      msgEl.innerHTML = segmentsHtml + actionsHtml;
-    } else {
+  if (!msgEl) return;
+
+  const speakerMode = appData.settings.speakerMode !== false;
+
+  if (speakerMode && hasSpeakerTags(content)) {
+    // 解析当前内容为 segment 列表
+    const newSegments = parseSpeakerSegments(content);
+
+    if (newSegments.length === 0) {
+      // 没有 segment，回退到普通渲染
       const bubble = msgEl.querySelector('.msg-bubble');
-      if (bubble) {
-        bubble.innerHTML = renderMarkdown(content);
-      }
+      if (bubble) bubble.innerHTML = renderMarkdown(content);
+      _streamingCache = null;
+      scrollToBottom();
+      return;
     }
-    scrollToBottom();
+
+    // 确保 msg-actions 存在
+    let actionsEl = msgEl.querySelector('.msg-actions');
+    if (!actionsEl) {
+      actionsEl = document.createElement('div');
+      actionsEl.className = 'msg-actions';
+      actionsEl.innerHTML = `<button class="msg-action-btn" onclick="editMessage(${idx})">✏️ 编辑</button><button class="msg-action-btn del" onclick="deleteMessage(${idx})">🗑️ 删除</button>`;
+      msgEl.appendChild(actionsEl);
+    }
+
+    const prevCache = _streamingCache;
+    const isNewMessage = !prevCache || prevCache.msgIdx !== idx;
+
+    if (isNewMessage) {
+      // 新消息：清空并渲染所有 segment
+      // 移除旧的 speaker-segment 和 msg-bubble
+      msgEl.querySelectorAll('.speaker-segment, .msg-bubble').forEach(el => el.remove());
+      // 重新添加 preamble（【】之前的内容）
+      const firstBracket = content.indexOf('【');
+      if (firstBracket > 0) {
+        const preamble = content.slice(0, firstBracket).trim();
+        if (preamble) {
+          const segEl = createSpeakerSegmentEl('🤖', null, preamble, idx);
+          msgEl.insertBefore(segEl, actionsEl);
+        }
+      }
+      // 添加所有 segment
+      newSegments.forEach((seg, i) => {
+        const segEl = createSpeakerSegmentEl(null, seg.speaker, seg.text, idx);
+        segEl.dataset.segIdx = i;
+        msgEl.insertBefore(segEl, actionsEl);
+      });
+      _streamingCache = { msgIdx: idx, segments: newSegments.map(s => ({ speaker: s.speaker, textLen: s.text.length })) };
+    } else {
+      // 同一条消息的增量更新
+      const prevSegments = prevCache.segments;
+      const segEls = msgEl.querySelectorAll('.speaker-segment');
+      const actionsAnchor = actionsEl;
+
+      // 处理 preamble（第一个无 data-seg-idx 的 segment）
+      // 检查是否有 preamble 变化（一般不会有，因为【】之前的内容在流式阶段不会增加）
+
+      // 更新/添加 segment
+      for (let i = 0; i < newSegments.length; i++) {
+        const newSeg = newSegments[i];
+        const prevSeg = prevSegments[i];
+
+        if (i < prevSegments.length && prevSeg.speaker === newSeg.speaker) {
+          // 已存在的 segment：只更新最后一个的文字（如果长度变了）
+          const segEl = msgEl.querySelector(`.speaker-segment[data-seg-idx="${i}"]`);
+          if (segEl) {
+            segEl.classList.add('no-anim'); // 增量更新时不重播动画
+            if (newSeg.text.length !== prevSeg.textLen) {
+              const bubbleEl = segEl.querySelector('.speaker-bubble');
+              if (bubbleEl) {
+                bubbleEl.innerHTML = renderMarkdown(newSeg.text);
+              }
+            }
+          }
+        } else if (i < prevSegments.length) {
+          // speaker 变了（流式中间插入了新的【】），需要重建此 segment
+          const segEl = msgEl.querySelector(`.speaker-segment[data-seg-idx="${i}"]`);
+          if (segEl) {
+            segEl.classList.add('no-anim');
+            const charInfo = findCharacter(newSeg.speaker);
+            const avatarHtml = charInfo && charInfo.avatar
+              ? `<img src="${escHtml(charInfo.avatar)}" alt="${escHtml(newSeg.speaker)}">`
+              : `<span>${escHtml(newSeg.speaker.charAt(0))}</span>`;
+            segEl.querySelector('.msg-avatar').innerHTML = avatarHtml;
+            segEl.querySelector('.speaker-name').textContent = newSeg.speaker;
+            const bubbleEl = segEl.querySelector('.speaker-bubble');
+            if (bubbleEl) bubbleEl.innerHTML = renderMarkdown(newSeg.text);
+          }
+        } else {
+          // 新增 segment：追加 DOM
+          const segEl = createSpeakerSegmentEl(null, newSeg.speaker, newSeg.text, idx);
+          segEl.dataset.segIdx = i;
+          msgEl.insertBefore(segEl, actionsAnchor);
+        }
+      }
+
+      // 删除多余的旧 segment（不会常见，但防御性处理）
+      const existingSegEls = msgEl.querySelectorAll('.speaker-segment[data-seg-idx]');
+      existingSegEls.forEach(el => {
+        const si = parseInt(el.dataset.segIdx);
+        if (si >= newSegments.length) el.remove();
+      });
+
+      _streamingCache.segments = newSegments.map(s => ({ speaker: s.speaker, textLen: s.text.length }));
+    }
+  } else {
+    // 普通消息（无说话人标签）：只更新 bubble 内容
+    const bubble = msgEl.querySelector('.msg-bubble');
+    if (bubble) {
+      bubble.innerHTML = renderMarkdown(content);
+    }
+    _streamingCache = null;
   }
+
+  scrollToBottom();
+}
+
+/**
+ * 解析说话人段落（纯数据，不生成 HTML）
+ */
+function parseSpeakerSegments(content) {
+  const regex = /【(.+?)】([\s\S]*?)(?=【.+?】|$)/g;
+  let match;
+  const segments = [];
+  while ((match = regex.exec(content)) !== null) {
+    const speaker = match[1];
+    const text = match[2].trim();
+    if (text) {
+      segments.push({ speaker, text });
+    }
+  }
+  return segments;
+}
+
+/**
+ * 创建单个 speaker-segment 的 DOM 元素（流式阶段用）
+ */
+function createSpeakerSegmentEl(fallbackAvatar, speaker, text, msgIdx) {
+  const div = document.createElement('div');
+  div.className = 'speaker-segment';
+
+  const avatarDiv = document.createElement('div');
+  avatarDiv.className = 'msg-avatar';
+
+  if (speaker) {
+    const charInfo = findCharacter(speaker);
+    if (charInfo && charInfo.avatar) {
+      avatarDiv.innerHTML = `<img src="${escHtml(charInfo.avatar)}" alt="${escHtml(speaker)}">`;
+    } else {
+      avatarDiv.innerHTML = `<span>${escHtml(speaker.charAt(0))}</span>`;
+    }
+  } else {
+    avatarDiv.textContent = fallbackAvatar || '🤖';
+  }
+
+  const contentDiv = document.createElement('div');
+
+  if (speaker) {
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'speaker-name';
+    nameDiv.textContent = speaker;
+    contentDiv.appendChild(nameDiv);
+  }
+
+  const bubbleDiv = document.createElement('div');
+  bubbleDiv.className = 'speaker-bubble';
+  bubbleDiv.innerHTML = renderMarkdown(text);
+  contentDiv.appendChild(bubbleDiv);
+
+  div.appendChild(avatarDiv);
+  div.appendChild(contentDiv);
+
+  return div;
 }
 
 function stopStreaming() {
