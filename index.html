@@ -161,7 +161,7 @@ html, body {
 
 /* ==================== 背景图片层 ==================== */
 #bg-layer {
-  position: fixed;
+  position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
   background-size: cover;
@@ -180,7 +180,6 @@ html, body {
   height: 100dvh;
   height: var(--app-height, 100dvh);
   position: relative;
-  z-index: 1;
 }
 
 /* ==================== 左侧边栏 ==================== */
@@ -586,7 +585,8 @@ html, body {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  background: var(--bg-primary);
+  background: transparent;
+  position: relative;
 }
 
 /* 顶部菜单栏 */
@@ -601,6 +601,8 @@ html, body {
   flex-shrink: 0;
   transition: background-color 0.3s;
   box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: 1;
 }
 
 /* 自动话题倒计时 - 在标题栏内显示 */
@@ -952,6 +954,9 @@ html, body {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .chat-area::-webkit-scrollbar {
@@ -1182,6 +1187,8 @@ html, body {
   align-items: flex-end;
   flex-shrink: 0;
   transition: background-color 0.3s;
+  position: relative;
+  z-index: 1;
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.04);
 }
 
@@ -1248,6 +1255,8 @@ html, body {
   padding: 6px 16px;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
   transition: background-color 0.3s;
 }
@@ -1968,9 +1977,6 @@ html, body {
 </head>
 <body>
 
-<!-- 背景图片层 -->
-<div id="bg-layer"></div>
-
 <!-- Toast 通知容器 -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -2010,15 +2016,6 @@ html, body {
             <span id="bgImageStatus" style="font-size:12px;color:var(--text-secondary);"></span>
           </div>
           <input type="file" id="bgImageFile" accept="image/*" style="display:none" onchange="handleBgImageUpload(event, false)">
-        </div>
-        <div class="form-group">
-          <label>当前聊天背景图片</label>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button class="btn-sm btn-primary" onclick="document.getElementById('chatBgImageFile').click()">📷 上传</button>
-            <button class="btn-sm btn-danger" onclick="clearChatBgImage()" id="clearChatBgBtn" style="display:none;">🗑️ 清除</button>
-            <span id="chatBgImageStatus" style="font-size:12px;color:var(--text-secondary);"></span>
-          </div>
-          <input type="file" id="chatBgImageFile" accept="image/*" style="display:none" onchange="handleBgImageUpload(event, true)">
         </div>
         <div class="form-group">
           <label>摘要压缩阈值（每多少条消息触发一次 System Prompt 更新）</label>
@@ -2090,6 +2087,8 @@ html, body {
 
   <!-- ========== 右侧主区域 ========== -->
   <div class="main-area">
+    <!-- 背景图片层 - 覆盖主区域 -->
+    <div id="bg-layer"></div>
     <!-- 顶部栏 -->
     <div class="top-bar">
       <button class="menu-btn" onclick="toggleSidebar()" title="菜单">☰</button>
@@ -2649,12 +2648,12 @@ function applyBgImage(url) {
     layer.style.backgroundPosition = 'center';
     layer.style.opacity = '0.15';
   } else {
-    // 全局背景未设置时，也用随机角色图片作为缺省
-    const fallbackUrl = getRandomCharacterImage();
+    // 全局背景未设置时，用当前聊天角色缺省背景
+    const fallbackUrl = getChatCharacterImage();
     if (fallbackUrl) {
       layer.style.backgroundImage = `url(${fallbackUrl})`;
       layer.style.backgroundSize = 'cover';
-      layer.style.backgroundPosition = getRandomBgPosition();
+      layer.style.backgroundPosition = 'center';
       layer.style.opacity = '0.12';
     } else {
       layer.style.backgroundImage = 'none';
@@ -2665,7 +2664,7 @@ function applyBgImage(url) {
 
 function applyChatBgImage(url) {
   const layer = document.getElementById('bg-layer');
-  // 优先使用聊天专属背景，其次全局背景，最后随机角色图片
+  // 优先级：聊天专属背景 > 全局背景 > 当前聊天角色缺省背景
   const finalUrl = (url && url.trim()) ? url : appData.settings.bgImage;
   if (finalUrl && finalUrl.trim()) {
     layer.style.backgroundImage = `url(${finalUrl})`;
@@ -2673,14 +2672,12 @@ function applyChatBgImage(url) {
     layer.style.backgroundPosition = 'center';
     layer.style.opacity = '0.15';
   } else {
-    // 缺省背景：从角色图库随机选一张
-    const fallbackUrl = getRandomCharacterImage();
+    // 缺省背景：从当前聊天的 system_prompt 提取角色名，匹配角色图库图片
+    const fallbackUrl = getChatCharacterImage();
     if (fallbackUrl) {
       layer.style.backgroundImage = `url(${fallbackUrl})`;
-      // 角色图片可能是头像(正方形)或壁纸(宽幅)，使用 cover 确保填满
-      // 搭配随机位置让不同图片的各部分都有机会展示
       layer.style.backgroundSize = 'cover';
-      layer.style.backgroundPosition = getRandomBgPosition();
+      layer.style.backgroundPosition = 'center';
       layer.style.opacity = '0.12'; // 缺省背景稍淡一点
     } else {
       layer.style.backgroundImage = 'none';
@@ -2690,22 +2687,43 @@ function applyChatBgImage(url) {
 }
 
 /**
- * 从角色图库中随机获取一张角色图片
+ * 从当前聊天的 system_prompt 中提取【角色名】，在角色图库中找到匹配角色的图片
+ * 优先返回当前聊天的角色图片，如果多个角色则随机选一个
  */
-function getRandomCharacterImage() {
+function getChatCharacterImage() {
+  if (!currentChatId || !appData.chats[currentChatId]) return null;
   if (!appData.characters || appData.characters.length === 0) return null;
-  const withAvatar = appData.characters.filter(c => c.avatar);
-  if (withAvatar.length === 0) return null;
-  const char = withAvatar[Math.floor(Math.random() * withAvatar.length)];
-  return char.avatar;
+
+  const chat = appData.chats[currentChatId];
+  // 从最新的 system_prompt 中提取【角色名】
+  const sp = getCurrentSpVersion();
+  const spContent = sp.content || '';
+  const speakerNames = extractSpeakerNames(spContent);
+
+  // 在角色图库中找到匹配的角色（有头像的）
+  const matchedChars = speakerNames
+    .map(name => appData.characters.find(c => c.name === name && c.avatar))
+    .filter(Boolean);
+
+  if (matchedChars.length > 0) {
+    // 随机选一个匹配的角色图片
+    return matchedChars[Math.floor(Math.random() * matchedChars.length)].avatar;
+  }
+
+  return null;
 }
 
 /**
- * 随机背景位置，让不同尺寸的图片各部分都有机会展示
+ * 从文本中提取【】括号内的角色名（去重）
  */
-function getRandomBgPosition() {
-  const positions = ['center', 'top', 'bottom', 'left', 'right', 'top left', 'top right', 'bottom left', 'bottom right'];
-  return positions[Math.floor(Math.random() * positions.length)];
+function extractSpeakerNames(text) {
+  const names = new Set();
+  const regex = /【(.+?)】/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    names.add(match[1]);
+  }
+  return Array.from(names);
 }
 
 // ==================== 背景图片上传 ====================
@@ -2768,31 +2786,14 @@ function clearBgImage() {
   showToast('全局背景已清除');
 }
 
-function clearChatBgImage() {
-  if (currentChatId && appData.chats[currentChatId]) {
-    appData.chats[currentChatId].bgImage = '';
-    applyChatBgImage('');
-    updateBgImageStatus();
-    saveData();
-    showToast('聊天背景已清除');
-  }
-}
-
 function updateBgImageStatus() {
   const bgStatus = document.getElementById('bgImageStatus');
   const clearBgBtn = document.getElementById('clearBgBtn');
-  const chatBgStatus = document.getElementById('chatBgImageStatus');
-  const clearChatBgBtn = document.getElementById('clearChatBgBtn');
 
   if (bgStatus) {
     const hasBg = !!(appData.settings.bgImage);
     bgStatus.textContent = hasBg ? '✅ 已设置' : '未设置';
     if (clearBgBtn) clearBgBtn.style.display = hasBg ? 'inline-block' : 'none';
-  }
-  if (chatBgStatus) {
-    const hasChatBg = !!(currentChatId && appData.chats[currentChatId]?.bgImage);
-    chatBgStatus.textContent = hasChatBg ? '✅ 已设置' : '未设置';
-    if (clearChatBgBtn) clearChatBgBtn.style.display = hasChatBg ? 'inline-block' : 'none';
   }
 }
 
@@ -2923,7 +2924,7 @@ function renderChatList() {
       <div class="chat-item ${active}" onclick="selectChat('${id}')">
         <span class="chat-name">${escHtml(chat.name)}</span>
         <div class="chat-actions">
-          <button class="chat-action-btn" onclick="event.stopPropagation();editChatName('${id}')" title="编辑名称">✏️</button>
+          <button class="chat-action-btn" onclick="event.stopPropagation();editChat('${id}')" title="编辑">✏️</button>
           <button class="chat-action-btn" onclick="event.stopPropagation();deleteChat('${id}')" title="删除">🗑️</button>
         </div>
       </div>`;
@@ -2970,19 +2971,103 @@ function selectChat(id) {
   closeSidebar();
 }
 
-function editChatName(id) {
+function editChat(id) {
   const chat = appData.chats[id];
   if (!chat) return;
-  showModal('编辑聊天名称', chat.name, (val) => {
-    if (val.trim()) {
-      chat.name = val.trim();
-      if (id === currentChatId) {
-        document.getElementById('currentChatName').textContent = chat.name;
+  const overlay = document.getElementById('modalOverlay');
+  const content = document.getElementById('modalContent');
+  content.style.maxWidth = '440px';
+
+  const hasBg = !!(chat.bgImage);
+  let bgPreview = hasBg
+    ? `<img src="${chat.bgImage}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-top:6px;">`
+    : '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">未设置（将使用角色图片或全局背景）</div>';
+
+  let html = '<h3>编辑聊天</h3>';
+  html += '<div class="character-form">';
+  html += '<div class="form-group"><label>聊天名称</label>';
+  html += `<input type="text" id="editChatNameInput" value="${escHtml(chat.name)}">`;
+  html += '</div>';
+  html += '<div class="form-group"><label>聊天背景图片</label>';
+  html += '<div style="display:flex;gap:8px;align-items:center;">';
+  html += '<button class="btn-sm btn-primary" onclick="document.getElementById(\'editChatBgFile\').click()">📷 上传</button>';
+  html += `<button class="btn-sm btn-danger" onclick="clearEditChatBg('${id}')" id="editChatBgClearBtn" style="${hasBg ? '' : 'display:none;'}">🗑️ 清除</button>`;
+  html += '</div>';
+  html += `<div id="editChatBgPreview">${bgPreview}</div>`;
+  html += `<input type="file" id="editChatBgFile" accept="image/*" style="display:none" onchange="handleEditChatBgUpload(event, '${id}')">`;
+  html += '</div>';
+  html += '</div>';
+  html += '<div class="modal-btns">';
+  html += `<button class="btn-sm btn-primary" onclick="saveEditChat('${id}')">保存</button>`;
+  html += '<button class="btn-sm btn-ghost" onclick="closeModal()">取消</button>';
+  html += '</div>';
+
+  content.innerHTML = html;
+  overlay.classList.add('show');
+  overlay._onConfirm = null;
+  // 临时存储背景图数据
+  overlay._editChatBg = chat.bgImage || '';
+}
+
+function handleEditChatBgUpload(event, chatId) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('请选择图片文件', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    compressImage(e.target.result, (compressedUrl) => {
+      const overlay = document.getElementById('modalOverlay');
+      overlay._editChatBg = compressedUrl;
+      const preview = document.getElementById('editChatBgPreview');
+      if (preview) {
+        preview.innerHTML = `<img src="${compressedUrl}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-top:6px;">`;
       }
-      saveData();
-      renderChatList();
-    }
-  });
+      const clearBtn = document.getElementById('editChatBgClearBtn');
+      if (clearBtn) clearBtn.style.display = '';
+    });
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function clearEditChatBg(chatId) {
+  const overlay = document.getElementById('modalOverlay');
+  overlay._editChatBg = '';
+  const preview = document.getElementById('editChatBgPreview');
+  if (preview) {
+    preview.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">未设置（将使用角色图片或全局背景）</div>';
+  }
+  const clearBtn = document.getElementById('editChatBgClearBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
+}
+
+function saveEditChat(id) {
+  const chat = appData.chats[id];
+  if (!chat) return;
+  const nameInput = document.getElementById('editChatNameInput');
+  const newName = nameInput ? nameInput.value.trim() : '';
+  const newBg = document.getElementById('modalOverlay')._editChatBg;
+
+  if (!newName) {
+    showToast('请输入聊天名称', 'error');
+    return;
+  }
+
+  chat.name = newName;
+  chat.bgImage = newBg || '';
+
+  if (id === currentChatId) {
+    document.getElementById('currentChatName').textContent = chat.name;
+    applyChatBgImage(chat.bgImage);
+  }
+
+  saveData();
+  renderChatList();
+  closeModal();
+  showToast('聊天已更新', 'success');
 }
 
 function deleteChat(id) {
