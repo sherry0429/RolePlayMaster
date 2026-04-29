@@ -603,16 +603,18 @@ html, body {
   box-shadow: var(--shadow-sm);
 }
 
-/* 自动话题倒计时 */
+/* 自动话题倒计时 - 在标题栏内显示 */
 .auto-topic-countdown {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--accent);
   background: var(--accent-light);
-  padding: 3px 8px;
+  border: 1px solid var(--accent-medium);
+  padding: 3px 10px;
   border-radius: 10px;
   white-space: nowrap;
   display: none;
   animation: pulse 2s infinite;
+  flex-shrink: 0;
 }
 
 @keyframes pulse {
@@ -2516,10 +2518,6 @@ async function init() {
   initChatNotification();
   // ---- 页面可见性监听 ----
   document.addEventListener('visibilitychange', handleVisibilityChange);
-  // ---- 用户活动监听（重置自动话题计时器） ----
-  ['click', 'keydown', 'touchstart', 'mousemove'].forEach(evt => {
-    document.addEventListener(evt, resetAutoTopicTimer, { passive: true });
-  });
 
   // ---- 聊天通知权限请求（用户勾选时触发） ----
   const chatNotifCheckbox = document.getElementById('chatNotification');
@@ -3120,8 +3118,10 @@ function editMessage(idx) {
 
     // 如果是用户消息，编辑保存后触发新的 AI 请求
     if (isUser) {
-      // 编辑消息相当于用户发送了消息，重置自动话题计数
+      // 编辑消息相当于用户发送了消息，重置自动话题计数和计时器
       autoTopicCount = 0;
+      lastActivityTime = Date.now();
+      updateCountdownDisplay();
       requestAI();
     }
   });
@@ -3157,8 +3157,10 @@ function sendMessage() {
   const input = document.getElementById('userInput');
   const text = input.value.trim();
   if (!text) return;
-  // 用户发送消息，重置自动话题触发计数
+  // 用户发送消息，重置自动话题触发计数和计时器
   autoTopicCount = 0;
+  lastActivityTime = Date.now();
+  updateCountdownDisplay();
   if (!currentChatId) {
     newChat();
   }
@@ -5063,14 +5065,16 @@ function updateCountdownDisplay() {
     return;
   }
 
-  // 如果页面可见，隐藏倒计时
-  if (!document.hidden) {
+  // 如果没有当前聊天，隐藏倒计时
+  if (!currentChatId || !appData.chats[currentChatId]) {
     countdownEl.style.display = 'none';
     return;
   }
 
-  // 如果达到触发上限，隐藏倒计时
   const maxCount = appData.settings.autoTopicMaxCount || 5;
+  const countText = `${autoTopicCount}/${maxCount}`;
+
+  // 如果达到触发上限，显示"已达上限"并隐藏
   if (autoTopicCount >= maxCount) {
     countdownEl.style.display = 'none';
     return;
@@ -5083,7 +5087,7 @@ function updateCountdownDisplay() {
   const remainingMs = intervalMs - idleMs;
 
   if (remainingMs <= 0) {
-    countdownEl.textContent = '⏱️ 即将开始新话题...';
+    countdownEl.textContent = `⏱️ 即将开始新话题 (${countText})`;
     countdownEl.style.display = 'inline-block';
     return;
   }
@@ -5093,7 +5097,7 @@ function updateCountdownDisplay() {
   const minutes = Math.floor(remainingSec / 60);
   const seconds = remainingSec % 60;
 
-  countdownEl.textContent = `⏱️ ${minutes}分${seconds}秒后开始新话题`;
+  countdownEl.textContent = `⏱️ ${minutes}分${seconds}秒 (${countText})`;
   countdownEl.style.display = 'inline-block';
 }
 
@@ -5109,9 +5113,8 @@ function checkAutoTopic() {
   // 检查触发次数上限
   const maxCount = appData.settings.autoTopicMaxCount || 5;
   if (autoTopicCount >= maxCount) return;
-  // 检查用户是否在页面上
+  // 检查用户是否在页面上，在的话不触发，但不重置计时器
   if (!document.hidden) {
-    lastActivityTime = Date.now();
     return;
   }
   // 检查是否已经超过指定分钟无操作
