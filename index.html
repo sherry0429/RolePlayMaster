@@ -1716,6 +1716,9 @@ const DEFAULT_API_HOST = 'https://api.deepseek.com';
 const DEFAULT_MODEL = 'deepseek-chat';
 const COMPRESS_THRESHOLD = 300; // 每超过多少条消息触发一次摘要压缩
 const STORAGE_KEY = 'aichat_data'; // localStorage 主键
+// ==================== Push 通知服务器 ====================
+// 与 CHAT_SYNC_URL 使用同一域，无需额外配置
+const PUSH_SERVER_BASE = 'https://poecurrency.top';
 
 // ==================== 全局状态 ====================
 let appData = null;     // 应用数据
@@ -1902,6 +1905,26 @@ function init() {
   ['click', 'keydown', 'touchstart', 'mousemove'].forEach(evt => {
     document.addEventListener(evt, resetAutoTopicTimer, { passive: true });
   });
+
+  // ---- 聊天通知权限请求（用户勾选时触发） ----
+  const chatNotifCheckbox = document.getElementById('chatNotification');
+  if (chatNotifCheckbox) {
+    chatNotifCheckbox.addEventListener('change', async (e) => {
+      if (e.target.checked) {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          e.target.checked = false;
+          appData.settings.chatNotification = false;
+          saveData();
+        }
+      } else {
+        // 用户取消勾选，注销 Push 订阅
+        await unsubscribePush();
+        appData.settings.chatNotification = false;
+        saveData();
+      }
+    });
+  }
 }
 
 // ==================== PWA ====================
@@ -1960,7 +1983,8 @@ function showPwaBanner() {
     banner.innerHTML = `
       <span>📱 添加到桌面，获得更好体验</span>
       <div style="display:flex;gap:8px">
-        <button onclick="installPwa()" style="padding:4px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">安装</button>
+        <button onclick="installPwa()" style="padding:4px 12px;backgrou
+        nd:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">安装</button>
         <button onclick="hidePwaBanner()" style="padding:4px 10px;background:transparent;color:var(--text-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;font-size:13px">稍后</button>
       </div>
     `;
@@ -3870,34 +3894,186 @@ async function triggerAutoTopic() {
   lastActivityTime = Date.now();
 }
 
-// ==================== 聊天通知 ====================
+// ==================== 聊天通知（Web Push 版）====================
 let notificationPermissionGranted = false;
+let serviceWorkerRegistration = null;
+let pushSubscription = null; // 当前的 PushSubscription 对象
 
-function initChatNotification() {
-  if (appData.settings.chatNotification) {
-    requestNotificationPermission();
-  }
+// ── 工具：将 VAPID 公钥（base64url）转换为 Uint8Array ──
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 
-async function requestNotificationPermission() {
-  if (!('Notification' in window)) {
-    showToast('当前浏览器不支持系统通知', 'error');
+// ── 初始化：获取 SW 注册 + 恢复已有 Push 订阅 ──
+function initChatNotification() {
+  if (!('serviceWorker' in navigator) || !('Notification' in window) || !('PushManager' in window)) {
+    console.warn('[通知] 当前环境不支持 Push 通知');
     return;
   }
+
+  navigator.serviceWorker.ready.then(async registration => {
+    serviceWorkerRegistration = registration;
+    console.log('[通知] SW 就绪');
+
+    // 恢复已有订阅（刷新页面后不需要重新订阅）
+    pushSubscription = await registration.pushManager.getSubscription();
+    if (pushSubscription) {
+      console.log('[通知] 已有 Push 订阅，无需重新订阅');
+      notificationPermissionGranted = true;
+    }
+  }).catch(err => {
+    console.warn('[通知] SW ready 失败', err);
+  });
+
+  // 检查已有权限状态
   if (Notification.permission === 'granted') {
     notificationPermissionGranted = true;
-  } else if (Notification.permission !== 'denied') {
-    const permission = await Notification.requestPermission();
-    notificationPermissionGranted = permission === 'granted';
-    if (!notificationPermissionGranted) {
-      showToast('系统通知权限被拒绝', 'error');
+  }
+
+  // 监听 SW 推送的心跳消息（页面可见时由页面负责触发 autoTopic）
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.type === 'PUSH_HEARTBEAT') {
+      console.log('[通知] 收到心跳，尝试触发 autoTopic');
+      // 复用已有的自动话题逻辑：只在页面可见且空闲时触发
+      if (appData && appData.settings && appData.settings.autoTopic) {
+        triggerAutoTopic();
+      }
     }
+  });
+}
+
+// ── 平台检测 ──
+function checkNotificationPlatformSupport() {
+  if (!('Notification' in window) || !('PushManager' in window)) {
+    showToast('当前浏览器不支持推送通知', 'error');
+    return false;
+  }
+  // iOS 需要添加到主屏幕
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.navigator.standalone === true
+    || window.matchMedia('(display-mode: standalone)').matches;
+  if (isIOS && !isStandalone) {
+    showToast('iOS 需先将应用添加到主屏幕，再开启通知', 'error');
+    return false;
+  }
+  return true;
+}
+
+// ── 当用户勾选"聊天通知"时调用 ──
+async function requestNotificationPermission() {
+  if (!checkNotificationPlatformSupport()) return false;
+
+  if (Notification.permission === 'denied') {
+    showToast('通知权限已被拒绝，请在浏览器/系统设置中手动允许', 'error');
+    return false;
+  }
+
+  // 请求通知权限（必须在用户手势中调用）
+  let permission = Notification.permission;
+  if (permission !== 'granted') {
+    try {
+      permission = await Notification.requestPermission();
+    } catch (e) {
+      console.error('[通知] requestPermission 失败', e);
+      return false;
+    }
+  }
+  if (permission !== 'granted') {
+    showToast('通知权限被拒绝', 'error');
+    return false;
+  }
+  notificationPermissionGranted = true;
+
+  // 订阅 Push
+  await subscribePush();
+  return notificationPermissionGranted;
+}
+
+// ── 向服务器注册 Push 订阅 ──
+async function subscribePush() {
+  if (!serviceWorkerRegistration) {
+    console.warn('[通知] SW 未就绪，无法订阅 Push');
+    return;
+  }
+
+  const token = appData.settings.syncToken;
+  if (!token) {
+    showToast('请先在设置中填写同步 Token，用于绑定推送', 'error');
+    return;
+  }
+
+  try {
+    // 1. 拿到服务器的 VAPID 公钥
+    const keyResp = await fetch(`${PUSH_SERVER_BASE}/api/push/vapid-public-key`);
+    if (!keyResp.ok) throw new Error('获取 VAPID 公钥失败: ' + keyResp.status);
+    const { publicKey } = await keyResp.json();
+
+    // 2. 订阅（若已订阅则先取消旧的）
+    const existing = await serviceWorkerRegistration.pushManager.getSubscription();
+    if (existing) await existing.unsubscribe();
+
+    pushSubscription = await serviceWorkerRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+    console.log('[通知] Push 订阅成功', pushSubscription.endpoint);
+
+    // 3. 上报订阅到服务器
+    const regResp = await fetch(`${PUSH_SERVER_BASE}/api/push/subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        token,
+        subscription: pushSubscription.toJSON()
+      })
+    });
+    if (!regResp.ok) throw new Error('上报订阅失败: ' + regResp.status);
+
+    showToast('推送通知已启用 ✅', 'success');
+  } catch (e) {
+    console.error('[通知] subscribePush 失败', e);
+    showToast('Push 订阅失败: ' + e.message, 'error');
+    notificationPermissionGranted = false;
   }
 }
 
-function sendChatNotification(content) {
+// ── 取消 Push 订阅（用户取消勾选时调用）──
+async function unsubscribePush() {
+  if (!pushSubscription) return;
+  const endpoint = pushSubscription.endpoint;
+  try {
+    await pushSubscription.unsubscribe();
+    pushSubscription = null;
+    notificationPermissionGranted = false;
+
+    const token = appData.settings.syncToken;
+    if (token) {
+      fetch(`${PUSH_SERVER_BASE}/api/push/unsubscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ endpoint })
+      }).catch(() => {});
+    }
+    console.log('[通知] Push 订阅已取消');
+  } catch (e) {
+    console.error('[通知] unsubscribePush 失败', e);
+  }
+}
+
+// ── 页面可见时展示 AI 生成的通知（autoTopic 触发后调用）──
+async function sendChatNotification(content) {
   if (!appData.settings.chatNotification) return;
   if (!notificationPermissionGranted) return;
+  if (!serviceWorkerRegistration) return;
 
   // 从内容中提取说话人
   let speakerName = '';
@@ -3906,41 +4082,38 @@ function sendChatNotification(content) {
   if (speakerMatch) {
     speakerName = speakerMatch[1];
     const charInfo = findCharacter(speakerName);
-    if (charInfo && charInfo.avatar) {
+    // 【方案B修复】icon 不支持 data URL，只使用真实路径
+    if (charInfo && charInfo.avatar && !charInfo.avatar.startsWith('data:')) {
       speakerAvatar = charInfo.avatar;
     }
   }
 
-  // 截断内容（超过50字隐藏剩余部分）
-  let displayContent = content;
-  if (displayContent.length > 50) {
-    displayContent = displayContent.slice(0, 50) + '...';
-  }
-  // 移除【】标记以简化通知内容
+  let displayContent = content.length > 50 ? content.slice(0, 50) + '...' : content;
   displayContent = displayContent.replace(/【.+?】/g, '').trim();
 
   const title = speakerName ? `${speakerName} 发来了消息` : 'AI Chat 新消息';
+  const options = {
+    body: displayContent,
+    icon: speakerAvatar || 'icons/icon-192.png', // 已过滤 data URL
+    badge: 'icons/icon-96.png',
+    tag: 'aichat-notification',
+    renotify: true,
+    requireInteraction: false,
+    silent: false
+  };
+
+  console.log('[通知] 发送前台通知', title);
 
   try {
-    const options = {
-      body: displayContent,
-      icon: speakerAvatar || 'icons/icon-192.png',
-      badge: 'icons/icon-96.png',
-      tag: 'aichat-notification',
-      renotify: true
-    };
-
-    const notification = new Notification(title, options);
-
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
-
-    // 5秒后自动关闭
-    setTimeout(() => notification.close(), 5000);
+    // 通过 SW 发送（支持 PWA 后台）
+    await serviceWorkerRegistration.showNotification(title, options);
+    // SW 通知不会自动关闭，手动清理
+    setTimeout(() => {
+      serviceWorkerRegistration.getNotifications({ tag: 'aichat-notification' })
+        .then(ns => ns.forEach(n => n.close()));
+    }, 5000);
   } catch (e) {
-    console.error('通知发送失败', e);
+    console.error('[通知] 通知发送失败', e);
   }
 }
 
