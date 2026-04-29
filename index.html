@@ -3589,7 +3589,7 @@ async function compressChat() {
   }
   compressMessages.push({
     role: 'user',
-    content: '请对以上对话内容进行分析，更新角色设定，背景故事，当前状态。输出新的system_prompt，不要输出多余内容。'
+    content: '请对以上对话内容进行分析，输出所有system prompt的所有部分。并单独更新角色设定，背景故事，当前状态这三部分。直接输出结果，不需要额外说明。'
   });
 
   // 记录压缩请求日志
@@ -4782,7 +4782,7 @@ function generateGroupSystemPrompt(selectedChars) {
 - 用户：根据关系和性格有对应亲密称呼，默认为你。
 - 推动符合当前世界观下的合理剧情发展。
 - 在需要时自动完成各角色之间的对话、必要时包括行动和内在心理描写。
-- 回复时以角色名字用【】开头。如果是旁白则直接加在文本开始或结尾。
+- 回复时以角色名字用【】开头。如果是旁白则直接加在文本结尾。
 
 # 角色设定
 ${charDescList}
