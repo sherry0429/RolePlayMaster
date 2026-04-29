@@ -1593,7 +1593,7 @@ html, body {
         </div>
         <div class="checkbox-group">
           <input type="checkbox" id="chatNotification">
-          <label for="chatNotification">聊天通知（离线时弹出系统通知）</label>
+          <label for="chatNotification">聊天通知</label>
         </div>
         <div class="sync-token-group">
           <label>同步 Token</label>
@@ -3898,7 +3898,6 @@ async function requestNotificationPermission() {
 function sendChatNotification(content) {
   if (!appData.settings.chatNotification) return;
   if (!notificationPermissionGranted) return;
-  if (!document.hidden) return; // 用户在页面上，不需要通知
 
   // 从内容中提取说话人
   let speakerName = '';
