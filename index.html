@@ -1691,7 +1691,13 @@ html, body {
         </div>
         <div class="checkbox-group">
           <input type="checkbox" id="autoTopic">
-          <label for="autoTopic">自动找话题（10分钟无操作触发）</label>
+          <label for="autoTopic">自动找话题</label>
+        </div>
+        <div class="form-group" id="autoTopicConfig" style="display:none;">
+          <label>触发间隔（分钟，默认10）</label>
+          <input type="number" id="autoTopicInterval" placeholder="10" min="1" max="120">
+          <label style="margin-top:4px;">触发次数上限（默认5，用户输入后重置）</label>
+          <input type="number" id="autoTopicMaxCount" placeholder="5" min="1" max="100">
         </div>
         <div class="checkbox-group">
           <input type="checkbox" id="chatNotification">
@@ -1714,11 +1720,11 @@ html, body {
 
     <!-- 数据操作区 -->
     <div class="data-section">
-      <button class="btn-sm btn-ghost" onclick="syncToCloud()">📤 同步到云端</button>
-      <button class="btn-sm btn-ghost" onclick="exportDataAsFile()">💾 导出文件</button>
-      <button class="btn-sm btn-ghost" onclick="importData()">📥 导入</button>
+      <button class="btn-sm btn-ghost" onclick="syncToCloud()">同步到云端</button>
+      <button class="btn-sm btn-ghost" onclick="syncFromCloud()" id="cloudSyncBtn">从云端拉取</button>
+      <button class="btn-sm btn-ghost" onclick="exportDataAsFile()">导出</button>
+      <button class="btn-sm btn-ghost" onclick="importData()">导入</button>
       <button class="btn-sm btn-ghost" onclick="shareLink()">🔗 分享</button>
-      <button class="btn-sm btn-ghost" onclick="syncFromCloud()" id="cloudSyncBtn">☁️ 从云端拉取</button>
       <input type="file" id="importFile" accept=".txt,.json" style="display:none" onchange="handleImport(event)">
     </div>
 
@@ -1801,8 +1807,11 @@ html, body {
     <h3>🎭 角色图库</h3>
     <div style="display:flex;gap:8px;align-items:center;">
       <button class="mode-switch-btn" id="charSelectModeBtn" onclick="toggleCharSelectMode()">👥 群聊</button>
+      <button class="gallery-add-btn" onclick="exportCharacters()">导出</button>
+      <button class="gallery-add-btn" onclick="importCharacters()">导入</button>
       <button class="gallery-add-btn" onclick="addCharacter()">➕ 新增</button>
       <button class="log-drawer-close" onclick="closeGalleryDrawer()">✕</button>
+      <input type="file" id="charImportFile" accept=".json" style="display:none" onchange="handleCharImport(event)">
     </div>
   </div>
   <div class="gallery-drawer-body" id="galleryDrawerBody">
@@ -1861,7 +1870,9 @@ function createDefaultData() {
       syncToken: '',
       cloudSyncHost: '',
       autoTopic: false,
-      chatNotification: false
+      chatNotification: false,
+      autoTopicInterval: 10,
+      autoTopicMaxCount: 5
     },
     chats: {},       // { id: { name, bgImage, messages: [], spVersions: [] } }
     chatOrder: [],   // 聊天 ID 有序列表
@@ -1897,6 +1908,8 @@ function loadData() {
       if (appData.settings.syncToken === undefined) appData.settings.syncToken = '';
       if (appData.settings.autoTopic === undefined) appData.settings.autoTopic = false;
       if (appData.settings.chatNotification === undefined) appData.settings.chatNotification = false;
+      if (appData.settings.autoTopicInterval === undefined) appData.settings.autoTopicInterval = 10;
+      if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
       if (!appData.characters) appData.characters = [];
       return true; // localStorage 有数据
@@ -1989,6 +2002,11 @@ function init() {
   document.getElementById('speakerMode').checked = appData.settings.speakerMode !== false;
   document.getElementById('autoTopic').checked = !!appData.settings.autoTopic;
   document.getElementById('chatNotification').checked = !!appData.settings.chatNotification;
+  document.getElementById('autoTopicInterval').value = appData.settings.autoTopicInterval || 10;
+  document.getElementById('autoTopicMaxCount').value = appData.settings.autoTopicMaxCount || 5;
+  toggleAutoTopicConfig();
+  // autoTopic checkbox 联动
+  document.getElementById('autoTopic').addEventListener('change', toggleAutoTopicConfig);
   document.getElementById('syncToken').value = appData.settings.syncToken || '';
   document.getElementById('cloudSyncHost').value = appData.settings.cloudSyncHost || '';
   // 全局背景
@@ -2267,6 +2285,12 @@ function toggleSettings() {
   form.classList.toggle('open');
 }
 
+function toggleAutoTopicConfig() {
+  const config = document.getElementById('autoTopicConfig');
+  const checked = document.getElementById('autoTopic').checked;
+  config.style.display = checked ? '' : 'none';
+}
+
 function saveSettings() {
   appData.settings.apiHost = document.getElementById('apiHost').value.trim() || DEFAULT_API_HOST;
   appData.settings.apiKey = document.getElementById('apiKey').value.trim();
@@ -2277,6 +2301,11 @@ function saveSettings() {
   appData.settings.speakerMode = document.getElementById('speakerMode').checked;
   appData.settings.autoTopic = document.getElementById('autoTopic').checked;
   appData.settings.chatNotification = document.getElementById('chatNotification').checked;
+  // 自动话题配置
+  const interval = parseInt(document.getElementById('autoTopicInterval').value, 10);
+  appData.settings.autoTopicInterval = (interval >= 1) ? interval : 10;
+  const maxCount = parseInt(document.getElementById('autoTopicMaxCount').value, 10);
+  appData.settings.autoTopicMaxCount = (maxCount >= 1) ? maxCount : 5;
   appData.settings.syncToken = document.getElementById('syncToken').value.trim();
   appData.settings.cloudSyncHost = document.getElementById('cloudSyncHost').value.trim();
   // 重新初始化自动话题和通知
@@ -2295,12 +2324,13 @@ function resetSettings() {
   document.getElementById('speakerMode').checked = true;
   document.getElementById('autoTopic').checked = false;
   document.getElementById('chatNotification').checked = false;
-  document.getElementById('syncToken').value = '';
-  document.getElementById('cloudSyncHost').value = '';
+  document.getElementById('autoTopicInterval').value = 10;
+  document.getElementById('autoTopicMaxCount').value = 5;
+  toggleAutoTopicConfig();
   appData.settings = {
     apiHost: DEFAULT_API_HOST, apiKey: '', bgImage: '', compressThreshold: COMPRESS_THRESHOLD,
     speakerMode: true, syncToken: '', cloudSyncHost: '',
-    autoTopic: false, chatNotification: false
+    autoTopic: false, chatNotification: false, autoTopicInterval: 10, autoTopicMaxCount: 5
   };
   if (currentChatId) appData.chats[currentChatId].bgImage = '';
   applyBgImage('');
@@ -2602,6 +2632,8 @@ function sendMessage() {
   const input = document.getElementById('userInput');
   const text = input.value.trim();
   if (!text) return;
+  // 用户发送消息，重置自动话题触发计数
+  autoTopicCount = 0;
   if (!currentChatId) {
     newChat();
   }
@@ -3028,7 +3060,7 @@ async function compressChat() {
   }
   compressMessages.push({
     role: 'user',
-    content: '请对以上对话内容进行分析，提取关键信息，更新角色设定，背景故事，当前状态。保留其余内容，输出新的system_prompt'
+    content: '请对以上对话内容进行分析，更新角色设定，背景故事，当前状态。输出新的system_prompt，不要输出多余内容。'
   });
 
   // 记录压缩请求日志
@@ -3284,6 +3316,8 @@ function handleImport(event) {
       if (!data.settings.syncToken) data.settings.syncToken = '';
       if (!data.settings.autoTopic) data.settings.autoTopic = false;
       if (!data.settings.chatNotification) data.settings.chatNotification = false;
+      if (data.settings.autoTopicInterval === undefined) data.settings.autoTopicInterval = 10;
+      if (data.settings.autoTopicMaxCount === undefined) data.settings.autoTopicMaxCount = 5;
       // 如果是分享精简数据（_shareLite 标记），需要转换为完整结构
       if (data._shareLite) {
         data = expandShareData(data);
@@ -3861,6 +3895,104 @@ function deleteCharacter(idx) {
   showToast('角色已删除');
 }
 
+// ==================== 角色单独导入导出 ====================
+function exportCharacters() {
+  const chars = appData.characters || [];
+  if (chars.length === 0) {
+    showToast('没有角色可导出', 'error');
+    return;
+  }
+  try {
+    // 导出为 JSON，头像已经是 base64 Data URL，直接保留
+    const exportData = {
+      type: 'SimpleGirlFriend_characters',
+      version: 1,
+      exportTime: new Date().toISOString(),
+      characters: JSON.parse(JSON.stringify(chars))
+    };
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `characters_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`已导出 ${chars.length} 个角色`, 'success');
+  } catch (e) {
+    console.error('角色导出失败', e);
+    showToast('角色导出失败: ' + e.message, 'error');
+  }
+}
+
+function importCharacters() {
+  document.getElementById('charImportFile').click();
+}
+
+function handleCharImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const rawText = e.target.result.trim();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (jsonErr) {
+        throw new Error('JSON 格式无效');
+      }
+
+      // 验证格式
+      if (!data.characters || !Array.isArray(data.characters)) {
+        throw new Error('无效的角色数据格式，需要包含 characters 数组');
+      }
+
+      // 验证每个角色至少有 name
+      const validChars = data.characters.filter(c => c && c.name);
+      if (validChars.length === 0) {
+        throw new Error('未找到有效角色数据');
+      }
+
+      // 检查重复：同名角色询问是否覆盖
+      if (!appData.characters) appData.characters = [];
+      let added = 0, updated = 0;
+      for (const char of validChars) {
+        const existIdx = appData.characters.findIndex(c => c.name === char.name);
+        if (existIdx >= 0) {
+          // 同名覆盖
+          appData.characters[existIdx] = {
+            ...appData.characters[existIdx],
+            name: char.name,
+            avatar: char.avatar || appData.characters[existIdx].avatar || '',
+            description: char.description !== undefined ? char.description : appData.characters[existIdx].description
+          };
+          updated++;
+        } else {
+          // 新增
+          appData.characters.push({
+            id: char.id || Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+            name: char.name,
+            avatar: char.avatar || '',
+            description: char.description || ''
+          });
+          added++;
+        }
+      }
+
+      saveData();
+      galleryCurrentPage = 0;
+      renderGalleryContent();
+      if (currentChatId) renderMessages();
+      showToast(`角色导入完成：新增 ${added} 个，更新 ${updated} 个`, 'success');
+    } catch (err) {
+      showToast('角色导入失败: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
 function showCharacterForm(idx, charData) {
   const overlay = document.getElementById('modalOverlay');
   const content = document.getElementById('modalContent');
@@ -4323,6 +4455,9 @@ function applyImportedData(data) {
   document.getElementById('speakerMode').checked = appData.settings.speakerMode !== false;
   document.getElementById('autoTopic').checked = !!appData.settings.autoTopic;
   document.getElementById('chatNotification').checked = !!appData.settings.chatNotification;
+  document.getElementById('autoTopicInterval').value = appData.settings.autoTopicInterval || 10;
+  document.getElementById('autoTopicMaxCount').value = appData.settings.autoTopicMaxCount || 5;
+  toggleAutoTopicConfig();
   document.getElementById('syncToken').value = appData.settings.syncToken || '';
   document.getElementById('cloudSyncHost').value = appData.settings.cloudSyncHost || '';
   applyBgImage(appData.settings.bgImage);
@@ -4341,12 +4476,14 @@ function applyImportedData(data) {
 // ==================== 自动找话题 ====================
 let autoTopicTimer = null;
 let lastActivityTime = Date.now();
+let autoTopicCount = 0; // 当前连续触发次数
 
 function initAutoTopic() {
   if (autoTopicTimer) {
     clearInterval(autoTopicTimer);
     autoTopicTimer = null;
   }
+  autoTopicCount = 0;
   if (appData.settings.autoTopic) {
     // 每分钟检查一次是否需要触发
     autoTopicTimer = setInterval(checkAutoTopic, 60000);
@@ -4366,14 +4503,18 @@ function checkAutoTopic() {
   if (!appData.settings.autoTopic) return;
   if (!currentChatId || !appData.chats[currentChatId]) return;
   if (isStreaming || isCompressing) return;
+  // 检查触发次数上限
+  const maxCount = appData.settings.autoTopicMaxCount || 5;
+  if (autoTopicCount >= maxCount) return;
   // 检查用户是否在页面上
   if (!document.hidden) {
     lastActivityTime = Date.now();
     return;
   }
-  // 检查是否已经超过 10 分钟无操作
+  // 检查是否已经超过指定分钟无操作
+  const intervalMin = appData.settings.autoTopicInterval || 10;
   const idleMs = Date.now() - lastActivityTime;
-  if (idleMs < 10 * 60 * 1000) return;
+  if (idleMs < intervalMin * 60 * 1000) return;
   // 触发自动话题
   triggerAutoTopic();
 }
@@ -4407,7 +4548,7 @@ async function triggerAutoTopic() {
 
   messages.push({
     role: 'user',
-    content: `[系统提示：用户已经离开10分钟了，请随机选择一个角色${charHint}发起一个话题，或者让两个角色之间进行闲聊。请用【角色名】的格式来标记说话人。直接输出内容，不需要额外的说明。]`
+    content: `[系统提示：用户已经离开${appData.settings.autoTopicInterval || 10}分钟了，请随机选择一个角色${charHint}发起一个话题，或者让两个角色之间进行闲聊。请用【角色名】的格式来标记说话人。直接输出内容，不需要额外的说明。]`
   });
 
   try {
@@ -4445,6 +4586,7 @@ async function triggerAutoTopic() {
 
   // 重置活动时间，避免频繁触发
   lastActivityTime = Date.now();
+  autoTopicCount++;
 }
 
 // ==================== 聊天通知（Web Push 版）====================
@@ -4492,7 +4634,10 @@ function initChatNotification() {
       console.log('[通知] 收到心跳，尝试触发 autoTopic');
       // 复用已有的自动话题逻辑：只在页面可见且空闲时触发
       if (appData && appData.settings && appData.settings.autoTopic) {
-        triggerAutoTopic();
+        const maxCount = appData.settings.autoTopicMaxCount || 5;
+        if (autoTopicCount < maxCount) {
+          triggerAutoTopic();
+        }
       }
     }
   });
