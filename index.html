@@ -5113,10 +5113,6 @@ function checkAutoTopic() {
   // 检查触发次数上限
   const maxCount = appData.settings.autoTopicMaxCount || 5;
   if (autoTopicCount >= maxCount) return;
-  // 检查用户是否在页面上，在的话不触发，但不重置计时器
-  if (!document.hidden) {
-    return;
-  }
   // 检查是否已经超过指定分钟无操作
   const intervalMin = appData.settings.autoTopicInterval || 10;
   const idleMs = Date.now() - lastActivityTime;
