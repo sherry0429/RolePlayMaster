@@ -3324,8 +3324,11 @@ function findCharacter(name) {
 
 function scrollToBottom() {
   const area = document.getElementById('chatArea');
+  // 使用双重 requestAnimationFrame 确保浏览器已完成布局计算
   requestAnimationFrame(() => {
-    area.scrollTop = area.scrollHeight;
+    requestAnimationFrame(() => {
+      area.scrollTop = area.scrollHeight;
+    });
   });
 }
 
@@ -5761,6 +5764,12 @@ function updateCountdownDisplay() {
 function handleVisibilityChange() {
   // 页面可见性变化时，更新倒计时显示
   updateCountdownDisplay();
+  
+  // 如果页面变为可见，立即检查是否需要触发自动话题
+  // 修复移动端浏览器后台节流 setInterval 导致的问题
+  if (!document.hidden) {
+    checkAutoTopic();
+  }
 }
 
 function checkAutoTopic() {
@@ -5779,7 +5788,9 @@ function checkAutoTopic() {
 }
 
 async function triggerAutoTopic() {
-  const chat = appData.chats[currentChatId];
+  // 保存当前聊天ID，防止异步等待期间用户切换聊天导致渲染错误
+  const chatIdAtStart = currentChatId;
+  const chat = appData.chats[chatIdAtStart];
   if (!chat) return;
 
   const apiKey = appData.settings.apiKey;
@@ -5832,8 +5843,10 @@ async function triggerAutoTopic() {
     if (content) {
       chat.messages.push({ role: 'assistant', content: content });
       saveData();
-      // 重新渲染消息
-      if (currentChatId) renderMessages();
+      // 只有当用户没有切换聊天时，才重新渲染消息
+      if (currentChatId === chatIdAtStart) {
+        renderMessages();
+      }
       // 发送通知
       if (appData.settings.chatNotification) {
         sendChatNotification(content);
