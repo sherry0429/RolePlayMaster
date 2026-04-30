@@ -527,6 +527,117 @@ html, body {
   margin-left: 4px;
 }
 
+/* 聊天列表角色头像 */
+.chat-avatars {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+.chat-avatar-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--border-color);
+  margin-left: -6px;
+}
+.chat-avatar-img:first-child {
+  margin-left: 0;
+}
+.chat-avatar-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1.5px solid var(--accent-medium);
+  margin-left: -6px;
+}
+.chat-avatar-placeholder:first-child {
+  margin-left: 0;
+}
+.chat-avatar-extra {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+  border: 1.5px solid var(--border-color);
+  margin-left: -6px;
+}
+.chat-item.active .chat-avatar-img {
+  border-color: rgba(255,255,255,0.4);
+}
+.chat-item.active .chat-avatar-placeholder {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border-color: rgba(255,255,255,0.4);
+}
+.chat-item.active .chat-avatar-extra {
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.8);
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* 编辑聊天弹窗 - 角色标签/选择 */
+.chat-char-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chat-char-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.chat-char-tag-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.chat-char-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chat-char-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chat-char-check:hover {
+  border-color: var(--accent-medium);
+  background: var(--accent-light);
+}
+.chat-char-check input[type="checkbox"] {
+  margin-right: 2px;
+}
+
 .chat-item:hover .chat-actions {
   display: flex;
 }
@@ -2368,6 +2479,7 @@ function createChat(id, name) {
   return {
     name: name,
     bgImage: '',
+    characters: [],      // [{ name, avatar }] 关联角色图库，创建后不可修改
     messages: [],        // [{ role, content }]
     spVersions: [        // System Prompt 版本列表
       { version: 0, content: '', lastIndex: -1 } // 初始空版本
@@ -2397,6 +2509,14 @@ async function loadData() {
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
       if (!appData.characters) appData.characters = [];
+      // 兼容旧版：为每个聊天补全 characters 字段
+      if (appData.chats) {
+        for (const id of Object.keys(appData.chats)) {
+          if (appData.chats[id].characters === undefined) {
+            appData.chats[id].characters = [];
+          }
+        }
+      }
       return true; // IndexedDB 有数据
     }
 
@@ -2417,6 +2537,14 @@ async function loadData() {
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
       if (!appData.characters) appData.characters = [];
+      // 兼容旧版：为每个聊天补全 characters 字段
+      if (appData.chats) {
+        for (const id of Object.keys(appData.chats)) {
+          if (appData.chats[id].characters === undefined) {
+            appData.chats[id].characters = [];
+          }
+        }
+      }
 
       // 迁移到 IndexedDB
       await saveToDB(STORAGE_KEY, appData);
@@ -2740,26 +2868,33 @@ function applyChatBgImage(url) {
 }
 
 /**
- * 从当前聊天的 system_prompt 中提取【角色名】，在角色图库中找到匹配角色的图片
- * 优先返回当前聊天的角色图片，如果多个角色则随机选一个
+ * 从当前聊天的关联角色或 system_prompt 中获取角色图片
+ * 优先使用 chat.characters（已关联角色），回退到从 system_prompt 提取
  */
 function getChatCharacterImage() {
   if (!currentChatId || !appData.chats[currentChatId]) return null;
-  if (!appData.characters || appData.characters.length === 0) return null;
 
   const chat = appData.chats[currentChatId];
-  // 从最新的 system_prompt 中提取【角色名】
+
+  // 优先使用聊天框关联的角色
+  if (chat.characters && chat.characters.length > 0) {
+    const chars = chat.characters.filter(c => c.avatar);
+    if (chars.length > 0) {
+      return chars[Math.floor(Math.random() * chars.length)].avatar;
+    }
+  }
+
+  // 回退：从 system_prompt 中提取【角色名】匹配角色图库
+  if (!appData.characters || appData.characters.length === 0) return null;
   const sp = getCurrentSpVersion();
   const spContent = sp.content || '';
   const speakerNames = extractSpeakerNames(spContent);
 
-  // 在角色图库中找到匹配的角色（有头像的）
   const matchedChars = speakerNames
     .map(name => appData.characters.find(c => c.name === name && c.avatar))
     .filter(Boolean);
 
   if (matchedChars.length > 0) {
-    // 随机选一个匹配的角色图片
     return matchedChars[Math.floor(Math.random() * matchedChars.length)].avatar;
   }
 
@@ -2973,8 +3108,24 @@ function renderChatList() {
     const chat = appData.chats[id];
     if (!chat) continue;
     const active = id === currentChatId ? 'active' : '';
+    // 渲染角色头像（最多显示3个，多余显示+N）
+    let avatarHtml = '';
+    const chars = chat.characters || [];
+    if (chars.length > 0) {
+      const showChars = chars.slice(0, 3);
+      const extraCount = chars.length - showChars.length;
+      const avatars = showChars.map(c => {
+        if (c.avatar) {
+          return `<img src="${escHtml(c.avatar)}" alt="${escHtml(c.name)}" class="chat-avatar-img">`;
+        }
+        return `<span class="chat-avatar-placeholder">${escHtml(c.name.charAt(0) || '?')}</span>`;
+      }).join('');
+      const extraBadge = extraCount > 0 ? `<span class="chat-avatar-extra">+${extraCount}</span>` : '';
+      avatarHtml = `<div class="chat-avatars">${avatars}${extraBadge}</div>`;
+    }
     html += `
       <div class="chat-item ${active}" onclick="selectChat('${id}')">
+        ${avatarHtml}
         <span class="chat-name">${escHtml(chat.name)}</span>
         <div class="chat-actions">
           <button class="chat-action-btn" onclick="event.stopPropagation();editChat('${id}')" title="编辑">✏️</button>
@@ -3038,11 +3189,38 @@ function editChat(id) {
     ? `<img src="${chat.bgImage}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-top:6px;">`
     : '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">未设置（将使用角色图片或全局背景）</div>';
 
+  // 角色属性区域
+  let charSectionHtml = '';
+  const chars = chat.characters || [];
+  if (chars.length > 0) {
+    // 已设置角色，只读显示
+    const charTags = chars.map(c => {
+      if (c.avatar) {
+        return `<span class="chat-char-tag"><img src="${escHtml(c.avatar)}" class="chat-char-tag-avatar">${escHtml(c.name)}</span>`;
+      }
+      return `<span class="chat-char-tag">${escHtml(c.name)}</span>`;
+    }).join('');
+    charSectionHtml = `<div class="form-group"><label>关联角色</label><div class="chat-char-tags">${charTags}</div><div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">角色已锁定，不可修改</div></div>`;
+  } else {
+    // 旧版聊天，允许选择角色（设置一次后锁定）
+    const allChars = appData.characters || [];
+    if (allChars.length > 0) {
+      const charOptions = allChars.map((c, i) => {
+        const avatarHtml = c.avatar
+          ? `<img src="${escHtml(c.avatar)}" class="chat-char-tag-avatar">`
+          : '';
+        return `<label class="chat-char-check"><input type="checkbox" value="${i}" data-char-select>${avatarHtml}${escHtml(c.name)}</label>`;
+      }).join('');
+      charSectionHtml = `<div class="form-group"><label>关联角色 <span style="font-size:11px;color:var(--text-secondary);">（设置后不可修改）</span></label><div class="chat-char-checks">${charOptions}</div></div>`;
+    }
+  }
+
   let html = '<h3>编辑聊天</h3>';
   html += '<div class="character-form">';
   html += '<div class="form-group"><label>聊天名称</label>';
   html += `<input type="text" id="editChatNameInput" value="${escHtml(chat.name)}">`;
   html += '</div>';
+  html += charSectionHtml;
   html += '<div class="form-group"><label>聊天背景图片</label>';
   html += '<div style="display:flex;gap:8px;align-items:center;">';
   html += '<button class="btn-sm btn-primary" onclick="document.getElementById(\'editChatBgFile\').click()">📷 上传</button>';
@@ -3113,6 +3291,18 @@ function saveEditChat(id) {
 
   chat.name = newName;
   chat.bgImage = newBg || '';
+
+  // 处理旧版聊天的角色关联（仅当 characters 为空时允许设置，设置后锁定）
+  if (!chat.characters || chat.characters.length === 0) {
+    const checkedBoxes = document.querySelectorAll('[data-char-select]:checked');
+    if (checkedBoxes.length > 0) {
+      chat.characters = [...checkedBoxes].map(cb => {
+        const charIdx = parseInt(cb.value);
+        const c = appData.characters[charIdx];
+        return c ? { name: c.name, avatar: c.avatar || '' } : null;
+      }).filter(Boolean);
+    }
+  }
 
   if (id === currentChatId) {
     document.getElementById('currentChatName').textContent = chat.name;
@@ -4502,6 +4692,14 @@ function handleImport(event) {
       if (!data.settings.chatNotification) data.settings.chatNotification = false;
       if (data.settings.autoTopicInterval === undefined) data.settings.autoTopicInterval = 10;
       if (data.settings.autoTopicMaxCount === undefined) data.settings.autoTopicMaxCount = 5;
+      // 兼容旧版：为每个聊天补全 characters 字段
+      if (data.chats) {
+        for (const id of Object.keys(data.chats)) {
+          if (data.chats[id].characters === undefined) {
+            data.chats[id].characters = [];
+          }
+        }
+      }
       // 如果是分享精简数据（_shareLite 标记），需要转换为完整结构
       if (data._shareLite) {
         data = expandShareData(data);
@@ -4551,6 +4749,7 @@ function buildShareLiteData() {
     lite.chats[id] = {
       name: chat.name,
       bgImage: chat.bgImage,
+      characters: chat.characters || [],  // 保留角色关联
       messages: [],  // 不分享聊天记录
       spVersions: [{ version: latestSp.version, content: latestSp.content, lastIndex: -1 }],
       spViewIndex: 0
@@ -4576,6 +4775,7 @@ function expandShareData(liteData) {
     full.chats[id] = {
       name: chat.name,
       bgImage: chat.bgImage || '',
+      characters: chat.characters || [],
       messages: [],
       spVersions: chat.spVersions || [{ version: 0, content: '', lastIndex: -1 }],
       spViewIndex: 0
@@ -4647,6 +4847,14 @@ async function checkShareData() {
           if (!appData.chatCounter) appData.chatCounter = appData.chatOrder.length;
           if (!appData.theme) appData.theme = 'light';
           if (!appData.characters) appData.characters = [];
+          // 兼容旧版：为每个聊天补全 characters 字段
+          if (appData.chats) {
+            for (const id of Object.keys(appData.chats)) {
+              if (appData.chats[id].characters === undefined) {
+                appData.chats[id].characters = [];
+              }
+            }
+          }
         }
         saveData();
         applyImportedData(data);
@@ -5398,6 +5606,8 @@ async function confirmCharSelect() {
   const id = 'chat_' + Date.now() + '_' + appData.chatCounter;
   const chatName = selectedChars.map(c => c.name).join(' & ');
   appData.chats[id] = createChat(id, chatName);
+  // 关联角色：将选中角色的 name/avatar 写入聊天属性，创建后不可修改
+  appData.chats[id].characters = selectedChars.map(c => ({ name: c.name, avatar: c.avatar || '' }));
   appData.chatOrder.push(id);
 
   // 自动生成 System Prompt
@@ -5633,6 +5843,14 @@ async function syncFromCloud() {
     if (!data.chatCounter) data.chatCounter = data.chatOrder.length;
     if (!data.theme) data.theme = 'light';
     if (!data.characters) data.characters = [];
+    // 兼容旧版：为每个聊天补全 characters 字段
+    if (data.chats) {
+      for (const id of Object.keys(data.chats)) {
+        if (data.chats[id].characters === undefined) {
+          data.chats[id].characters = [];
+        }
+      }
+    }
     if (data._shareLite) {
       data = expandShareData(data);
     }
@@ -5817,8 +6035,16 @@ async function triggerAutoTopic() {
     messages.push({ role: chat.messages[i].role, content: chat.messages[i].content });
   }
 
-  // 构建自动话题提示
-  const charNames = (appData.characters || []).map(c => c.name).filter(Boolean);
+  // 构建自动话题提示 - 优先使用聊天框关联的角色，避免发散到角色图库全部角色
+  let charNames = [];
+  if (chat.characters && chat.characters.length > 0) {
+    charNames = chat.characters.map(c => c.name).filter(Boolean);
+  } else {
+    // 兼容旧版：聊天框没有角色属性时，回退到从 system prompt 提取
+    const spContent = sp.content || '';
+    const speakerNames = extractSpeakerNames(spContent);
+    charNames = speakerNames;
+  }
   const charHint = charNames.length > 0
     ? `可选角色有：${charNames.join('、')}。`
     : '';
