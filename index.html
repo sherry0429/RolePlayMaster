@@ -2081,8 +2081,8 @@ html, body {
           <label for="autoTopic">自动找话题</label>
         </div>
         <div class="form-group" id="autoTopicConfig" style="display:none;">
-          <label>触发间隔（分钟，默认10）</label>
-          <input type="number" id="autoTopicInterval" placeholder="10" min="1" max="120">
+          <label>触发间隔（分钟，支持小数，最小0.1=6秒，默认10）</label>
+          <input type="number" id="autoTopicInterval" placeholder="10" min="0.1" step="0.1" max="120">
           <label style="margin-top:4px;">触发次数上限（默认5，用户输入后重置）</label>
           <input type="number" id="autoTopicMaxCount" placeholder="5" min="1" max="100">
         </div>
@@ -2875,8 +2875,8 @@ function saveSettings() {
   appData.settings.autoTopic = document.getElementById('autoTopic').checked;
   appData.settings.chatNotification = document.getElementById('chatNotification').checked;
   // 自动话题配置
-  const interval = parseInt(document.getElementById('autoTopicInterval').value, 10);
-  appData.settings.autoTopicInterval = (interval >= 1) ? interval : 10;
+  const interval = parseFloat(document.getElementById('autoTopicInterval').value);
+  appData.settings.autoTopicInterval = (interval >= 0.1) ? interval : 10;
   const maxCount = parseInt(document.getElementById('autoTopicMaxCount').value, 10);
   appData.settings.autoTopicMaxCount = (maxCount >= 1) ? maxCount : 5;
   appData.settings.syncToken = document.getElementById('syncToken').value.trim();
@@ -5697,8 +5697,8 @@ function initAutoTopic() {
   }
   autoTopicCount = 0;
   if (appData.settings.autoTopic) {
-    // 每分钟检查一次是否需要触发
-    autoTopicTimer = setInterval(checkAutoTopic, 60000);
+    // 每秒检查一次是否需要触发（支持小数分钟，最小0.1=6秒）
+    autoTopicTimer = setInterval(checkAutoTopic, 1000);
     // 每秒更新倒计时显示
     updateCountdownDisplay();
     autoTopicCountdownTimer = setInterval(updateCountdownDisplay, 1000);
@@ -5757,7 +5757,14 @@ function updateCountdownDisplay() {
   const minutes = Math.floor(remainingSec / 60);
   const seconds = remainingSec % 60;
 
-  countdownEl.textContent = `⏱️ ${minutes}分${seconds}秒 (${countText})`;
+  // 智能显示：如果间隔小于1分钟，只显示秒
+  let timeText;
+  if (minutes > 0) {
+    timeText = `${minutes}分${seconds}秒`;
+  } else {
+    timeText = `${seconds}秒`;
+  }
+  countdownEl.textContent = `⏱️ ${timeText} (${countText})`;
   countdownEl.style.display = 'inline-block';
 }
 
@@ -5816,9 +5823,16 @@ async function triggerAutoTopic() {
     ? `可选角色有：${charNames.join('、')}。`
     : '';
 
+  // 格式化时间间隔显示
+  const formatInterval = (min) => {
+    if (min >= 1) return `${min}分钟`;
+    return `${Math.round(min * 60)}秒`;
+  };
+  const intervalText = formatInterval(appData.settings.autoTopicInterval || 10);
+
   messages.push({
     role: 'user',
-    content: `[系统提示：用户已经离开${appData.settings.autoTopicInterval || 10}分钟了，请随机选择一个角色${charHint}发起一个话题，或者让两个角色之间进行闲聊。请用【角色名】的格式来标记说话人。直接输出内容，不需要额外的说明。]`
+    content: `[系统提示：用户已经离开${intervalText}了，请随机选择一个角色${charHint}发起一个话题，或者让两个角色之间进行闲聊。请用【角色名】的格式来标记说话人。直接输出内容，不需要额外的说明。]`
   });
 
   try {
