@@ -5899,6 +5899,7 @@ let autoTopicTimer = null;
 let lastActivityTime = Date.now();
 let autoTopicCount = 0; // 当前连续触发次数
 let autoTopicCountdownTimer = null; // 倒计时定时器
+let isAutoTopicRunning = false; // 互斥锁，防止并发触发
 
 // ==================== 消息分页渲染 ====================
 let renderedMessageCount = 20; // 当前渲染的消息数量
@@ -5914,6 +5915,7 @@ function initAutoTopic() {
     autoTopicCountdownTimer = null;
   }
   autoTopicCount = 0;
+  isAutoTopicRunning = false;
   if (appData.settings.autoTopic) {
     // 每秒检查一次是否需要触发（支持小数分钟，最小0.1=6秒）
     autoTopicTimer = setInterval(checkAutoTopic, 1000);
@@ -6000,7 +6002,7 @@ function handleVisibilityChange() {
 function checkAutoTopic() {
   if (!appData.settings.autoTopic) return;
   if (!currentChatId || !appData.chats[currentChatId]) return;
-  if (isStreaming || isCompressing) return;
+  if (isStreaming || isCompressing || isAutoTopicRunning) return;
   // 检查触发次数上限
   const maxCount = appData.settings.autoTopicMaxCount || 5;
   if (autoTopicCount >= maxCount) return;
@@ -6013,13 +6015,23 @@ function checkAutoTopic() {
 }
 
 async function triggerAutoTopic() {
+  // 互斥锁：防止并发触发（async 等待期间 setInterval 可能再次调用）
+  if (isAutoTopicRunning) return;
+  isAutoTopicRunning = true;
+
+  // 立即重置活动时间和递增计数，防止 await 期间被重复触发
+  const realAwayMs = Date.now() - lastActivityTime;
+  lastActivityTime = Date.now();
+  autoTopicCount++;
+  updateCountdownDisplay();
+
   // 保存当前聊天ID，防止异步等待期间用户切换聊天导致渲染错误
   const chatIdAtStart = currentChatId;
   const chat = appData.chats[chatIdAtStart];
-  if (!chat) return;
+  if (!chat) { isAutoTopicRunning = false; return; }
 
   const apiKey = appData.settings.apiKey;
-  if (!apiKey) return;
+  if (!apiKey) { isAutoTopicRunning = false; return; }
 
   const apiHost = appData.settings.apiHost || DEFAULT_API_HOST;
   const url = apiHost.replace(/\/+$/, '') + '/chat/completions';
@@ -6059,8 +6071,6 @@ async function triggerAutoTopic() {
     const mins = totalMin % 60;
     return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
   };
-  // 计算用户真正离开的时间（从用户最后一次活动到现在，而非单次间隔）
-  const realAwayMs = Date.now() - lastActivityTime;
   const awayText = formatDuration(realAwayMs);
 
   messages.push({
@@ -6112,13 +6122,9 @@ async function triggerAutoTopic() {
     }
   } catch (e) {
     console.error('自动话题失败', e);
+  } finally {
+    isAutoTopicRunning = false;
   }
-
-  // 重置活动时间，避免频繁触发
-  lastActivityTime = Date.now();
-  autoTopicCount++;
-  // 更新倒计时显示
-  updateCountdownDisplay();
 }
 
 // ==================== 聊天通知（Web Push 版）====================
