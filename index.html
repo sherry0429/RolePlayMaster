@@ -6050,16 +6050,34 @@ async function triggerAutoTopic() {
     : '';
 
   // 格式化时间间隔显示
-  const formatInterval = (min) => {
-    if (min >= 1) return `${min}分钟`;
-    return `${Math.round(min * 60)}秒`;
+  const formatDuration = (ms) => {
+    const totalSec = Math.round(ms / 1000);
+    if (totalSec < 60) return `${totalSec}秒`;
+    const totalMin = Math.round(totalSec / 60);
+    if (totalMin < 60) return `${totalMin}分钟`;
+    const hours = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
   };
-  const intervalText = formatInterval(appData.settings.autoTopicInterval || 10);
+  // 计算用户真正离开的时间（从用户最后一次活动到现在，而非单次间隔）
+  const realAwayMs = Date.now() - lastActivityTime;
+  const awayText = formatDuration(realAwayMs);
 
   messages.push({
     role: 'user',
-    content: `[系统提示：用户已经离开${intervalText}了，请随机选择一个角色${charHint}发起一个话题，或者让两个角色之间进行闲聊。请用【角色名】的格式来标记说话人。直接输出内容，不需要额外的说明。]`
+    content: `[系统提示：用户已经离开${awayText}了，请随机选择一个角色${charHint}发起一个话题，或者让多个角色之间根据之前的话题进行闲聊。请用【角色名】的格式来标记说话人。直接输出内容，不需要额外的说明。]`
   });
+
+  // 记录自动话题请求日志
+  requestLog.push({
+    time: new Date().toLocaleString(),
+    chatId: chatIdAtStart,
+    chatName: chat.name + ' [自动话题]',
+    messages: JSON.parse(JSON.stringify(messages))
+  });
+  if (requestLog.length > 3) {
+    requestLog = requestLog.slice(-3);
+  }
 
   try {
     const response = await fetch(url, {
