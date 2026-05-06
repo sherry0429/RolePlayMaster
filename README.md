@@ -1,4 +1,4 @@
-# SimpleGirlFriend
+# RolePlayMaster
 
 单文件 AI 聊天 PWA -- 所有代码在 `index.html` 中，零依赖，零构建，即开即用。
 
