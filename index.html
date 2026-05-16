@@ -161,7 +161,7 @@ html, body {
 
 /* ==================== 背景图片层 ==================== */
 #bg-layer {
-  position: fixed;
+  position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
   background-size: cover;
@@ -180,7 +180,6 @@ html, body {
   height: 100dvh;
   height: var(--app-height, 100dvh);
   position: relative;
-  z-index: 1;
 }
 
 /* ==================== 左侧边栏 ==================== */
@@ -528,6 +527,117 @@ html, body {
   margin-left: 4px;
 }
 
+/* 聊天列表角色头像 */
+.chat-avatars {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+.chat-avatar-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--border-color);
+  margin-left: -6px;
+}
+.chat-avatar-img:first-child {
+  margin-left: 0;
+}
+.chat-avatar-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1.5px solid var(--accent-medium);
+  margin-left: -6px;
+}
+.chat-avatar-placeholder:first-child {
+  margin-left: 0;
+}
+.chat-avatar-extra {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+  border: 1.5px solid var(--border-color);
+  margin-left: -6px;
+}
+.chat-item.active .chat-avatar-img {
+  border-color: rgba(255,255,255,0.4);
+}
+.chat-item.active .chat-avatar-placeholder {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border-color: rgba(255,255,255,0.4);
+}
+.chat-item.active .chat-avatar-extra {
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.8);
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* 编辑聊天弹窗 - 角色标签/选择 */
+.chat-char-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chat-char-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.chat-char-tag-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.chat-char-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chat-char-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chat-char-check:hover {
+  border-color: var(--accent-medium);
+  background: var(--accent-light);
+}
+.chat-char-check input[type="checkbox"] {
+  margin-right: 2px;
+}
+
 .chat-item:hover .chat-actions {
   display: flex;
 }
@@ -586,7 +696,8 @@ html, body {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  background: var(--bg-primary);
+  background: transparent;
+  position: relative;
 }
 
 /* 顶部菜单栏 */
@@ -601,6 +712,8 @@ html, body {
   flex-shrink: 0;
   transition: background-color 0.3s;
   box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: 1;
 }
 
 /* 自动话题倒计时 - 在标题栏内显示 */
@@ -952,6 +1065,9 @@ html, body {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .chat-area::-webkit-scrollbar {
@@ -1182,6 +1298,8 @@ html, body {
   align-items: flex-end;
   flex-shrink: 0;
   transition: background-color 0.3s;
+  position: relative;
+  z-index: 1;
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.04);
 }
 
@@ -1201,7 +1319,7 @@ html, body {
   resize: none;
   outline: none;
   max-height: 120px;
-  min-height: 44px;
+  min-height: 56px;
   font-family: inherit;
   transition: all 0.25s ease;
   box-shadow: var(--shadow-sm);
@@ -1248,6 +1366,8 @@ html, body {
   padding: 6px 16px;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
   transition: background-color 0.3s;
 }
@@ -1423,6 +1543,50 @@ html, body {
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(30px); }
   to { opacity: 1; transform: translateX(0); }
+}
+
+/* 重放按钮 */
+.replay-btn {
+  flex-shrink: 0;
+}
+
+.replay-btn.replaying {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+  animation: replayPulse 1.2s infinite;
+}
+
+@keyframes replayPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+/* 重放进度条 */
+.replay-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 0 2px 0 0;
+  transition: width 0.3s ease;
+  z-index: 2;
+}
+
+/* 重放遮罩提示 */
+.replay-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.02);
+  z-index: 2;
+  pointer-events: none;
+  display: none;
+}
+
+.replay-overlay.show {
+  display: block;
 }
 
 /* ==================== 移动端适配 ==================== */
@@ -1741,6 +1905,13 @@ html, body {
   box-shadow: var(--shadow-md);
 }
 
+.msg-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 .speaker-segment .msg-avatar img {
   width: 100%;
   height: 100%;
@@ -1968,9 +2139,6 @@ html, body {
 </head>
 <body>
 
-<!-- 背景图片层 -->
-<div id="bg-layer"></div>
-
 <!-- Toast 通知容器 -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -2012,15 +2180,6 @@ html, body {
           <input type="file" id="bgImageFile" accept="image/*" style="display:none" onchange="handleBgImageUpload(event, false)">
         </div>
         <div class="form-group">
-          <label>当前聊天背景图片</label>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button class="btn-sm btn-primary" onclick="document.getElementById('chatBgImageFile').click()">📷 上传</button>
-            <button class="btn-sm btn-danger" onclick="clearChatBgImage()" id="clearChatBgBtn" style="display:none;">🗑️ 清除</button>
-            <span id="chatBgImageStatus" style="font-size:12px;color:var(--text-secondary);"></span>
-          </div>
-          <input type="file" id="chatBgImageFile" accept="image/*" style="display:none" onchange="handleBgImageUpload(event, true)">
-        </div>
-        <div class="form-group">
           <label>摘要压缩阈值（每多少条消息触发一次 System Prompt 更新）</label>
           <input type="number" id="compressThreshold" placeholder="300" min="10" max="9999">
         </div>
@@ -2033,8 +2192,8 @@ html, body {
           <label for="autoTopic">自动找话题</label>
         </div>
         <div class="form-group" id="autoTopicConfig" style="display:none;">
-          <label>触发间隔（分钟，默认10）</label>
-          <input type="number" id="autoTopicInterval" placeholder="10" min="1" max="120">
+          <label>触发间隔（分钟，支持小数，最小0.1=6秒，默认10）</label>
+          <input type="number" id="autoTopicInterval" placeholder="10" min="0.1" step="0.1" max="120">
           <label style="margin-top:4px;">触发次数上限（默认5，用户输入后重置）</label>
           <input type="number" id="autoTopicMaxCount" placeholder="5" min="1" max="100">
         </div>
@@ -2090,14 +2249,18 @@ html, body {
 
   <!-- ========== 右侧主区域 ========== -->
   <div class="main-area">
+    <!-- 背景图片层 - 覆盖主区域 -->
+    <div id="bg-layer"></div>
     <!-- 顶部栏 -->
     <div class="top-bar">
       <button class="menu-btn" onclick="toggleSidebar()" title="菜单">☰</button>
       <span class="current-chat-name" id="currentChatName">AI Chat</span>
+      <button class="menu-btn replay-btn" id="replayBtn" onclick="toggleReplay()" title="重放">🔄</button>
       <span class="auto-topic-countdown" id="autoTopicCountdown" style="display:none;"></span>
       <button class="menu-btn" onclick="openGalleryDrawer()" title="角色图库">🎭</button>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="切换主题">🌙</button>
       <button class="log-btn" onclick="openLogDrawer()" title="请求日志">📋</button>
+      <div class="replay-progress" id="replayProgress" style="width:0;"></div>
     </div>
 
     <!-- 聊天消息区域 -->
@@ -2316,6 +2479,7 @@ function createChat(id, name) {
   return {
     name: name,
     bgImage: '',
+    characters: [],      // [{ name, avatar }] 关联角色图库，创建后不可修改
     messages: [],        // [{ role, content }]
     spVersions: [        // System Prompt 版本列表
       { version: 0, content: '', lastIndex: -1 } // 初始空版本
@@ -2345,6 +2509,14 @@ async function loadData() {
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
       if (!appData.characters) appData.characters = [];
+      // 兼容旧版：为每个聊天补全 characters 字段
+      if (appData.chats) {
+        for (const id of Object.keys(appData.chats)) {
+          if (appData.chats[id].characters === undefined) {
+            appData.chats[id].characters = [];
+          }
+        }
+      }
       return true; // IndexedDB 有数据
     }
 
@@ -2365,6 +2537,14 @@ async function loadData() {
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
       if (!appData.characters) appData.characters = [];
+      // 兼容旧版：为每个聊天补全 characters 字段
+      if (appData.chats) {
+        for (const id of Object.keys(appData.chats)) {
+          if (appData.chats[id].characters === undefined) {
+            appData.chats[id].characters = [];
+          }
+        }
+      }
 
       // 迁移到 IndexedDB
       await saveToDB(STORAGE_KEY, appData);
@@ -2589,6 +2769,10 @@ function initPwaInstall() {
 function showPwaBanner() {
   // 如果已经是 standalone 模式（已安装），不显示
   if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
+  // 桌面端浏览器（Windows/Mac/Linux）不需要安装 PWA，浏览器本身已够好用
+  const ua = navigator.userAgent || navigator.vendor || '';
+  const isDesktop = /Windows|Macintosh|Linux/.test(ua) && !/Android|iPhone|iPad|iPod/.test(ua);
+  if (isDesktop) return;
   let banner = document.getElementById('pwaBanner');
   if (!banner) {
     banner = document.createElement('div');
@@ -2641,24 +2825,93 @@ function applyBgImage(url) {
   const layer = document.getElementById('bg-layer');
   if (url && url.trim()) {
     layer.style.backgroundImage = `url(${url})`;
+    layer.style.backgroundSize = 'cover';
+    layer.style.backgroundPosition = 'center';
     layer.style.opacity = '0.15';
   } else {
-    layer.style.backgroundImage = 'none';
-    layer.style.opacity = '0';
+    // 全局背景未设置时，用当前聊天角色缺省背景
+    const fallbackUrl = getChatCharacterImage();
+    if (fallbackUrl) {
+      layer.style.backgroundImage = `url(${fallbackUrl})`;
+      layer.style.backgroundSize = 'cover';
+      layer.style.backgroundPosition = 'center';
+      layer.style.opacity = '0.12';
+    } else {
+      layer.style.backgroundImage = 'none';
+      layer.style.opacity = '0';
+    }
   }
 }
 
 function applyChatBgImage(url) {
   const layer = document.getElementById('bg-layer');
-  // 优先使用聊天专属背景，其次全局背景
+  // 优先级：聊天专属背景 > 全局背景 > 当前聊天角色缺省背景
   const finalUrl = (url && url.trim()) ? url : appData.settings.bgImage;
   if (finalUrl && finalUrl.trim()) {
     layer.style.backgroundImage = `url(${finalUrl})`;
+    layer.style.backgroundSize = 'cover';
+    layer.style.backgroundPosition = 'center';
     layer.style.opacity = '0.15';
   } else {
-    layer.style.backgroundImage = 'none';
-    layer.style.opacity = '0';
+    // 缺省背景：从当前聊天的 system_prompt 提取角色名，匹配角色图库图片
+    const fallbackUrl = getChatCharacterImage();
+    if (fallbackUrl) {
+      layer.style.backgroundImage = `url(${fallbackUrl})`;
+      layer.style.backgroundSize = 'cover';
+      layer.style.backgroundPosition = 'center';
+      layer.style.opacity = '0.12'; // 缺省背景稍淡一点
+    } else {
+      layer.style.backgroundImage = 'none';
+      layer.style.opacity = '0';
+    }
   }
+}
+
+/**
+ * 从当前聊天的关联角色或 system_prompt 中获取角色图片
+ * 优先使用 chat.characters（已关联角色），回退到从 system_prompt 提取
+ */
+function getChatCharacterImage() {
+  if (!currentChatId || !appData.chats[currentChatId]) return null;
+
+  const chat = appData.chats[currentChatId];
+
+  // 优先使用聊天框关联的角色
+  if (chat.characters && chat.characters.length > 0) {
+    const chars = chat.characters.filter(c => c.avatar);
+    if (chars.length > 0) {
+      return chars[Math.floor(Math.random() * chars.length)].avatar;
+    }
+  }
+
+  // 回退：从 system_prompt 中提取【角色名】匹配角色图库
+  if (!appData.characters || appData.characters.length === 0) return null;
+  const sp = getCurrentSpVersion();
+  const spContent = sp.content || '';
+  const speakerNames = extractSpeakerNames(spContent);
+
+  const matchedChars = speakerNames
+    .map(name => appData.characters.find(c => c.name === name && c.avatar))
+    .filter(Boolean);
+
+  if (matchedChars.length > 0) {
+    return matchedChars[Math.floor(Math.random() * matchedChars.length)].avatar;
+  }
+
+  return null;
+}
+
+/**
+ * 从文本中提取【】括号内的角色名（去重）
+ */
+function extractSpeakerNames(text) {
+  const names = new Set();
+  const regex = /【(.+?)】/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    names.add(match[1]);
+  }
+  return Array.from(names);
 }
 
 // ==================== 背景图片上传 ====================
@@ -2721,31 +2974,14 @@ function clearBgImage() {
   showToast('全局背景已清除');
 }
 
-function clearChatBgImage() {
-  if (currentChatId && appData.chats[currentChatId]) {
-    appData.chats[currentChatId].bgImage = '';
-    applyChatBgImage('');
-    updateBgImageStatus();
-    saveData();
-    showToast('聊天背景已清除');
-  }
-}
-
 function updateBgImageStatus() {
   const bgStatus = document.getElementById('bgImageStatus');
   const clearBgBtn = document.getElementById('clearBgBtn');
-  const chatBgStatus = document.getElementById('chatBgImageStatus');
-  const clearChatBgBtn = document.getElementById('clearChatBgBtn');
 
   if (bgStatus) {
     const hasBg = !!(appData.settings.bgImage);
     bgStatus.textContent = hasBg ? '✅ 已设置' : '未设置';
     if (clearBgBtn) clearBgBtn.style.display = hasBg ? 'inline-block' : 'none';
-  }
-  if (chatBgStatus) {
-    const hasChatBg = !!(currentChatId && appData.chats[currentChatId]?.bgImage);
-    chatBgStatus.textContent = hasChatBg ? '✅ 已设置' : '未设置';
-    if (clearChatBgBtn) clearChatBgBtn.style.display = hasChatBg ? 'inline-block' : 'none';
   }
 }
 
@@ -2774,8 +3010,8 @@ function saveSettings() {
   appData.settings.autoTopic = document.getElementById('autoTopic').checked;
   appData.settings.chatNotification = document.getElementById('chatNotification').checked;
   // 自动话题配置
-  const interval = parseInt(document.getElementById('autoTopicInterval').value, 10);
-  appData.settings.autoTopicInterval = (interval >= 1) ? interval : 10;
+  const interval = parseFloat(document.getElementById('autoTopicInterval').value);
+  appData.settings.autoTopicInterval = (interval >= 0.1) ? interval : 10;
   const maxCount = parseInt(document.getElementById('autoTopicMaxCount').value, 10);
   appData.settings.autoTopicMaxCount = (maxCount >= 1) ? maxCount : 5;
   appData.settings.syncToken = document.getElementById('syncToken').value.trim();
@@ -2790,29 +3026,78 @@ function saveSettings() {
 }
 
 function resetSettings() {
-  document.getElementById('apiHost').value = DEFAULT_API_HOST;
-  document.getElementById('apiKey').value = '';
-  document.getElementById('compressThreshold').value = COMPRESS_THRESHOLD;
-  document.getElementById('speakerMode').checked = true;
-  document.getElementById('autoTopic').checked = false;
-  document.getElementById('chatNotification').checked = false;
-  document.getElementById('autoTopicInterval').value = 10;
-  document.getElementById('autoTopicMaxCount').value = 5;
-  toggleAutoTopicConfig();
-  appData.settings = {
-    apiHost: DEFAULT_API_HOST, apiKey: '', bgImage: '', compressThreshold: COMPRESS_THRESHOLD,
-    speakerMode: true, syncToken: '', cloudSyncHost: '',
-    autoTopic: false, chatNotification: false, autoTopicInterval: 10, autoTopicMaxCount: 5
-  };
-  if (currentChatId) appData.chats[currentChatId].bgImage = '';
-  applyBgImage('');
-  if (currentChatId) applyChatBgImage('');
-  updateBgImageStatus();
-  initAutoTopic();
-  initChatNotification();
-  if (currentChatId) renderMessages();
-  saveData();
-  showToast('已重置为默认设置');
+  // 弹出确认提示
+  const overlay = document.getElementById('modalOverlay');
+  const content = document.getElementById('modalContent');
+  content.style.maxWidth = '400px';
+
+  let html = '<h3>⚠️ 重置所有数据</h3>';
+  html += '<div style="color:var(--text-secondary);font-size:14px;line-height:1.6;margin-bottom:12px;">';
+  html += '此操作将<strong style="color:var(--danger)">清空所有数据</strong>，包括：';
+  html += '<ul style="margin:8px 0;padding-left:20px;">';
+  html += '<li>所有聊天记录和 System Prompt</li>';
+  html += '<li>所有角色图库数据</li>';
+  html += '<li>所有设置（API Key、背景图等）</li>';
+  html += '<li>IndexedDB 和 localStorage 中的全部数据</li>';
+  html += '</ul>';
+  html += '页面将恢复到最初始状态，此操作<strong style="color:var(--danger)">不可撤销</strong>。';
+  html += '</div>';
+  html += '<div class="modal-btns">';
+  html += '<button class="btn-sm btn-danger" onclick="confirmResetAll()">确认重置</button>';
+  html += '<button class="btn-sm btn-ghost" onclick="closeModal()">取消</button>';
+  html += '</div>';
+
+  content.innerHTML = html;
+  overlay.classList.add('show');
+  overlay._onConfirm = null;
+}
+
+async function confirmResetAll() {
+  closeModal();
+  try {
+    // 清空 IndexedDB
+    await deleteFromDB(STORAGE_KEY);
+    // 清空 localStorage 中所有相关数据
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('useIndexedDB');
+    localStorage.removeItem('sidebarCollapsed');
+    // 删除整个 IndexedDB 数据库
+    indexedDB.deleteDatabase(DB_NAME);
+    // 重置内存数据为默认值
+    appData = createDefaultData();
+    currentChatId = null;
+    isStreaming = false;
+    isCompressing = false;
+    _streamingCache = null;
+    _streamingScrolledOnce = false;
+    abortController = null;
+    requestLog = [];
+    // 重新初始化 UI
+    document.getElementById('currentChatName').textContent = 'AI Chat';
+    document.getElementById('chatArea').innerHTML = '<div class="welcome-msg">👋 欢迎使用 AI Chat<br>点击左侧 + 开始新对话</div>';
+    applyBgImage('');
+    updateBgImageStatus();
+    renderChatList();
+    updateSpDisplay();
+    // 重置设置表单
+    document.getElementById('apiHost').value = DEFAULT_API_HOST;
+    document.getElementById('apiKey').value = '';
+    document.getElementById('compressThreshold').value = COMPRESS_THRESHOLD;
+    document.getElementById('speakerMode').checked = true;
+    document.getElementById('autoTopic').checked = false;
+    document.getElementById('chatNotification').checked = false;
+    document.getElementById('autoTopicInterval').value = 10;
+    document.getElementById('autoTopicMaxCount').value = 5;
+    document.getElementById('syncToken').value = '';
+    document.getElementById('cloudSyncHost').value = '';
+    toggleAutoTopicConfig();
+    initAutoTopic();
+    initChatNotification();
+    showToast('所有数据已重置为初始状态', 'success');
+  } catch (e) {
+    console.error('重置失败', e);
+    showToast('重置失败: ' + e.message, 'error');
+  }
 }
 
 // ==================== 聊天管理 ====================
@@ -2823,11 +3108,27 @@ function renderChatList() {
     const chat = appData.chats[id];
     if (!chat) continue;
     const active = id === currentChatId ? 'active' : '';
+    // 渲染角色头像（最多显示3个，多余显示+N）
+    let avatarHtml = '';
+    const chars = chat.characters || [];
+    if (chars.length > 0) {
+      const showChars = chars.slice(0, 3);
+      const extraCount = chars.length - showChars.length;
+      const avatars = showChars.map(c => {
+        if (c.avatar) {
+          return `<img src="${escHtml(c.avatar)}" alt="${escHtml(c.name)}" class="chat-avatar-img">`;
+        }
+        return `<span class="chat-avatar-placeholder">${escHtml(c.name.charAt(0) || '?')}</span>`;
+      }).join('');
+      const extraBadge = extraCount > 0 ? `<span class="chat-avatar-extra">+${extraCount}</span>` : '';
+      avatarHtml = `<div class="chat-avatars">${avatars}${extraBadge}</div>`;
+    }
     html += `
       <div class="chat-item ${active}" onclick="selectChat('${id}')">
+        ${avatarHtml}
         <span class="chat-name">${escHtml(chat.name)}</span>
         <div class="chat-actions">
-          <button class="chat-action-btn" onclick="event.stopPropagation();editChatName('${id}')" title="编辑名称">✏️</button>
+          <button class="chat-action-btn" onclick="event.stopPropagation();editChat('${id}')" title="编辑">✏️</button>
           <button class="chat-action-btn" onclick="event.stopPropagation();deleteChat('${id}')" title="删除">🗑️</button>
         </div>
       </div>`;
@@ -2855,6 +3156,8 @@ function newChat() {
 
 function selectChat(id) {
   if (!appData.chats[id]) return;
+  // 如果正在重放，先停止
+  if (isReplaying) stopReplay();
   currentChatId = id;
   const chat = appData.chats[id];
   // 重置消息渲染数量
@@ -2874,19 +3177,142 @@ function selectChat(id) {
   closeSidebar();
 }
 
-function editChatName(id) {
+function editChat(id) {
   const chat = appData.chats[id];
   if (!chat) return;
-  showModal('编辑聊天名称', chat.name, (val) => {
-    if (val.trim()) {
-      chat.name = val.trim();
-      if (id === currentChatId) {
-        document.getElementById('currentChatName').textContent = chat.name;
+  const overlay = document.getElementById('modalOverlay');
+  const content = document.getElementById('modalContent');
+  content.style.maxWidth = '440px';
+
+  const hasBg = !!(chat.bgImage);
+  let bgPreview = hasBg
+    ? `<img src="${chat.bgImage}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-top:6px;">`
+    : '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">未设置（将使用角色图片或全局背景）</div>';
+
+  // 角色属性区域
+  let charSectionHtml = '';
+  const chars = chat.characters || [];
+  if (chars.length > 0) {
+    // 已设置角色，只读显示
+    const charTags = chars.map(c => {
+      if (c.avatar) {
+        return `<span class="chat-char-tag"><img src="${escHtml(c.avatar)}" class="chat-char-tag-avatar">${escHtml(c.name)}</span>`;
       }
-      saveData();
-      renderChatList();
+      return `<span class="chat-char-tag">${escHtml(c.name)}</span>`;
+    }).join('');
+    charSectionHtml = `<div class="form-group"><label>关联角色</label><div class="chat-char-tags">${charTags}</div><div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">角色已锁定，不可修改</div></div>`;
+  } else {
+    // 旧版聊天，允许选择角色（设置一次后锁定）
+    const allChars = appData.characters || [];
+    if (allChars.length > 0) {
+      const charOptions = allChars.map((c, i) => {
+        const avatarHtml = c.avatar
+          ? `<img src="${escHtml(c.avatar)}" class="chat-char-tag-avatar">`
+          : '';
+        return `<label class="chat-char-check"><input type="checkbox" value="${i}" data-char-select>${avatarHtml}${escHtml(c.name)}</label>`;
+      }).join('');
+      charSectionHtml = `<div class="form-group"><label>关联角色 <span style="font-size:11px;color:var(--text-secondary);">（设置后不可修改）</span></label><div class="chat-char-checks">${charOptions}</div></div>`;
     }
-  });
+  }
+
+  let html = '<h3>编辑聊天</h3>';
+  html += '<div class="character-form">';
+  html += '<div class="form-group"><label>聊天名称</label>';
+  html += `<input type="text" id="editChatNameInput" value="${escHtml(chat.name)}">`;
+  html += '</div>';
+  html += charSectionHtml;
+  html += '<div class="form-group"><label>聊天背景图片</label>';
+  html += '<div style="display:flex;gap:8px;align-items:center;">';
+  html += '<button class="btn-sm btn-primary" onclick="document.getElementById(\'editChatBgFile\').click()">📷 上传</button>';
+  html += `<button class="btn-sm btn-danger" onclick="clearEditChatBg('${id}')" id="editChatBgClearBtn" style="${hasBg ? '' : 'display:none;'}">🗑️ 清除</button>`;
+  html += '</div>';
+  html += `<div id="editChatBgPreview">${bgPreview}</div>`;
+  html += `<input type="file" id="editChatBgFile" accept="image/*" style="display:none" onchange="handleEditChatBgUpload(event, '${id}')">`;
+  html += '</div>';
+  html += '</div>';
+  html += '<div class="modal-btns">';
+  html += `<button class="btn-sm btn-primary" onclick="saveEditChat('${id}')">保存</button>`;
+  html += '<button class="btn-sm btn-ghost" onclick="closeModal()">取消</button>';
+  html += '</div>';
+
+  content.innerHTML = html;
+  overlay.classList.add('show');
+  overlay._onConfirm = null;
+  // 临时存储背景图数据
+  overlay._editChatBg = chat.bgImage || '';
+}
+
+function handleEditChatBgUpload(event, chatId) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('请选择图片文件', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    compressImage(e.target.result, (compressedUrl) => {
+      const overlay = document.getElementById('modalOverlay');
+      overlay._editChatBg = compressedUrl;
+      const preview = document.getElementById('editChatBgPreview');
+      if (preview) {
+        preview.innerHTML = `<img src="${compressedUrl}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-top:6px;">`;
+      }
+      const clearBtn = document.getElementById('editChatBgClearBtn');
+      if (clearBtn) clearBtn.style.display = '';
+    });
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function clearEditChatBg(chatId) {
+  const overlay = document.getElementById('modalOverlay');
+  overlay._editChatBg = '';
+  const preview = document.getElementById('editChatBgPreview');
+  if (preview) {
+    preview.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">未设置（将使用角色图片或全局背景）</div>';
+  }
+  const clearBtn = document.getElementById('editChatBgClearBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
+}
+
+function saveEditChat(id) {
+  const chat = appData.chats[id];
+  if (!chat) return;
+  const nameInput = document.getElementById('editChatNameInput');
+  const newName = nameInput ? nameInput.value.trim() : '';
+  const newBg = document.getElementById('modalOverlay')._editChatBg;
+
+  if (!newName) {
+    showToast('请输入聊天名称', 'error');
+    return;
+  }
+
+  chat.name = newName;
+  chat.bgImage = newBg || '';
+
+  // 处理旧版聊天的角色关联（仅当 characters 为空时允许设置，设置后锁定）
+  if (!chat.characters || chat.characters.length === 0) {
+    const checkedBoxes = document.querySelectorAll('[data-char-select]:checked');
+    if (checkedBoxes.length > 0) {
+      chat.characters = [...checkedBoxes].map(cb => {
+        const charIdx = parseInt(cb.value);
+        const c = appData.characters[charIdx];
+        return c ? { name: c.name, avatar: c.avatar || '' } : null;
+      }).filter(Boolean);
+    }
+  }
+
+  if (id === currentChatId) {
+    document.getElementById('currentChatName').textContent = chat.name;
+    applyChatBgImage(chat.bgImage);
+  }
+
+  saveData();
+  renderChatList();
+  closeModal();
+  showToast('聊天已更新', 'success');
 }
 
 function deleteChat(id) {
@@ -3088,14 +3514,339 @@ function findCharacter(name) {
 
 function scrollToBottom() {
   const area = document.getElementById('chatArea');
+  // 使用双重 requestAnimationFrame 确保浏览器已完成布局计算
   requestAnimationFrame(() => {
-    area.scrollTop = area.scrollHeight;
+    requestAnimationFrame(() => {
+      area.scrollTop = area.scrollHeight;
+    });
+  });
+}
+
+// ==================== 重放功能 ====================
+let isReplaying = false;
+let _replayGen = 0; // 代际计数器，每次 start/stop 递增，异步循环检测代际是否一致来决定是否继续
+
+function toggleReplay() {
+  if (isReplaying) {
+    stopReplay();
+  } else {
+    startReplay();
+  }
+}
+
+/**
+ * 将消息列表展开为"回放单元"列表
+ * 用户消息 → 一个单元（type: 'user'）
+ * AI 消息（无说话人标签）→ 一个单元（type: 'ai'）
+ * AI 消息（有说话人标签）→ 拆为多个单元（type: 'speaker'），包括 preamble
+ */
+function buildReplayUnits(messages) {
+  const speakerMode = appData.settings.speakerMode !== false;
+  const units = [];
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    if (msg.role === 'user') {
+      units.push({ type: 'user', msgIdx: i, content: msg.content });
+    } else if (speakerMode && hasSpeakerTags(msg.content)) {
+      // 拆分为说话人段落
+      const segments = parseSpeakerSegments(msg.content);
+      // 检查【】之前是否有 preamble
+      const firstBracket = msg.content.indexOf('【');
+      if (firstBracket > 0) {
+        const preamble = msg.content.slice(0, firstBracket).trim();
+        if (preamble) {
+          units.push({ type: 'speaker', msgIdx: i, speaker: null, text: preamble });
+        }
+      }
+      for (const seg of segments) {
+        units.push({ type: 'speaker', msgIdx: i, speaker: seg.speaker, text: seg.text });
+      }
+    } else {
+      units.push({ type: 'ai', msgIdx: i, content: msg.content });
+    }
+  }
+  return units;
+}
+
+async function startReplay() {
+  if (!currentChatId || !appData.chats[currentChatId]) {
+    showToast('请先选择一个聊天', 'error');
+    return;
+  }
+  const chat = appData.chats[currentChatId];
+  if (!chat.messages || chat.messages.length === 0) {
+    showToast('当前聊天没有消息', 'error');
+    return;
+  }
+  if (isStreaming || isCompressing) {
+    showToast('请等待当前操作完成', 'error');
+    return;
+  }
+
+  // 递增代际，使之前可能仍在运行的旧循环失效
+  const myGen = ++_replayGen;
+  isReplaying = true;
+
+  // 更新按钮状态
+  const btn = document.getElementById('replayBtn');
+  btn.innerHTML = '⏹';
+  btn.title = '停止重放';
+  btn.classList.add('replaying');
+
+  // 禁用输入
+  document.getElementById('userInput').disabled = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  // 清空聊天区域
+  const area = document.getElementById('chatArea');
+  area.innerHTML = '';
+
+  const messages = chat.messages;
+  const units = buildReplayUnits(messages);
+  const total = units.length;
+  const progressBar = document.getElementById('replayProgress');
+
+  // 当前正在构建的 AI 消息容器（同一 msgIdx 的 speaker 段落共用一个 message 容器）
+  let currentAiMsgIdx = -1;
+  let currentAiMsgEl = null;
+
+  for (let i = 0; i < total; i++) {
+    // 代际不一致说明已被 stop 或被新的 start 取代，立即退出
+    if (myGen !== _replayGen) break;
+
+    const unit = units[i];
+
+    // 更新进度条
+    const pct = Math.round(((i + 1) / total) * 100);
+    progressBar.style.width = pct + '%';
+
+    if (unit.type === 'user') {
+      // 关闭上一个 AI 消息容器
+      currentAiMsgIdx = -1;
+      currentAiMsgEl = null;
+
+      // 用户消息：即时出现
+      appendReplayUserMessage(unit.content, unit.msgIdx);
+      scrollToBottom();
+      await replayDelay(350, myGen);
+      if (myGen !== _replayGen) break;
+
+    } else if (unit.type === 'ai') {
+      // 关闭上一个 AI 消息容器
+      currentAiMsgIdx = -1;
+      currentAiMsgEl = null;
+
+      // 普通AI消息：先显示打字指示器
+      showReplayTyping('🤖');
+      scrollToBottom();
+
+      const typingMs = Math.min(500 + unit.content.length * 8, 2200);
+      await replayDelay(typingMs, myGen);
+      if (myGen !== _replayGen) break;
+
+      removeReplayTyping();
+      appendReplayAiMessage(unit.content, unit.msgIdx);
+      scrollToBottom();
+      await replayDelay(350, myGen);
+
+    } else if (unit.type === 'speaker') {
+      // 说话人段落：需要与同一 msgIdx 的其他段落共用一个 message 容器
+      if (currentAiMsgIdx !== unit.msgIdx || !currentAiMsgEl) {
+        // 新的 AI 消息容器
+        currentAiMsgIdx = unit.msgIdx;
+        currentAiMsgEl = createReplayAiMsgContainer(unit.msgIdx);
+        area.appendChild(currentAiMsgEl);
+      }
+
+      // 先显示该说话人的打字指示器
+      const typingAvatar = unit.speaker
+        ? (findCharacter(unit.speaker)?.avatar
+          ? `<img src="${escHtml(findCharacter(unit.speaker).avatar)}" alt="${escHtml(unit.speaker)}">`
+          : escHtml(unit.speaker.charAt(0)))
+        : '🤖';
+      showReplayTyping(typingAvatar);
+      scrollToBottom();
+
+      const typingMs = Math.min(400 + unit.text.length * 10, 1800);
+      await replayDelay(typingMs, myGen);
+      if (myGen !== _replayGen) break;
+
+      removeReplayTyping();
+
+      // 追加说话人段落到当前消息容器
+      appendReplaySpeakerSegment(currentAiMsgEl, unit);
+      scrollToBottom();
+      await replayDelay(300, myGen);
+    }
+  }
+
+  // 只有当前代际仍一致时才执行收尾（避免 stop 后的旧循环也执行收尾）
+  if (myGen === _replayGen) {
+    finishReplay();
+  }
+}
+
+function stopReplay() {
+  // 递增代际使当前运行的异步循环失效
+  _replayGen++;
+  finishReplay();
+  // 恢复正常消息渲染
+  renderMessages();
+}
+
+function finishReplay() {
+  isReplaying = false;
+
+  const btn = document.getElementById('replayBtn');
+  btn.innerHTML = '🔄';
+  btn.title = '重放';
+  btn.classList.remove('replaying');
+
+  // 恢复输入
+  document.getElementById('userInput').disabled = false;
+  document.getElementById('sendBtn').disabled = false;
+
+  // 隐藏进度条
+  const progressBar = document.getElementById('replayProgress');
+  progressBar.style.width = '0';
+}
+
+/**
+ * 创建 AI 消息的外层容器（供说话人段落共用）
+ */
+function createReplayAiMsgContainer(msgIdx) {
+  const div = document.createElement('div');
+  div.className = 'message ai';
+  div.dataset.idx = msgIdx;
+
+  const avatarDiv = document.createElement('div');
+  avatarDiv.className = 'msg-avatar';
+  avatarDiv.textContent = '🤖';
+
+  const bodyDiv = document.createElement('div');
+  bodyDiv.className = 'msg-body';
+
+  div.appendChild(avatarDiv);
+  div.appendChild(bodyDiv);
+  return div;
+}
+
+/**
+ * 在聊天区域追加一条用户消息
+ */
+function appendReplayUserMessage(content, msgIdx) {
+  const area = document.getElementById('chatArea');
+  const contentHtml = escHtml(content);
+  area.insertAdjacentHTML('beforeend', `
+    <div class="message user" data-idx="${msgIdx}">
+      <div class="msg-avatar">👤</div>
+      <div class="msg-body">
+        <div class="msg-bubble">${contentHtml}</div>
+      </div>
+    </div>`);
+}
+
+/**
+ * 在聊天区域追加一条普通 AI 消息（无说话人标签）
+ */
+function appendReplayAiMessage(content, msgIdx) {
+  const area = document.getElementById('chatArea');
+  const contentHtml = renderMarkdown(content);
+  area.insertAdjacentHTML('beforeend', `
+    <div class="message ai" data-idx="${msgIdx}">
+      <div class="msg-avatar">🤖</div>
+      <div class="msg-body">
+        <div class="msg-bubble">${contentHtml}</div>
+      </div>
+    </div>`);
+}
+
+/**
+ * 在 AI 消息容器内追加一个说话人段落
+ */
+function appendReplaySpeakerSegment(msgEl, unit) {
+  const bodyDiv = msgEl.querySelector('.msg-body');
+  if (!bodyDiv) return;
+
+  const segEl = document.createElement('div');
+  segEl.className = 'speaker-segment';
+
+  // 头像
+  const avatarDiv = document.createElement('div');
+  avatarDiv.className = 'msg-avatar';
+  if (unit.speaker) {
+    const charInfo = findCharacter(unit.speaker);
+    if (charInfo && charInfo.avatar) {
+      avatarDiv.innerHTML = `<img src="${escHtml(charInfo.avatar)}" alt="${escHtml(unit.speaker)}">`;
+    } else {
+      avatarDiv.innerHTML = `<span>${escHtml(unit.speaker.charAt(0))}</span>`;
+    }
+  } else {
+    avatarDiv.textContent = '🤖';
+  }
+
+  // 内容
+  const contentDiv = document.createElement('div');
+  if (unit.speaker) {
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'speaker-name';
+    nameDiv.textContent = unit.speaker;
+    contentDiv.appendChild(nameDiv);
+  }
+  const bubbleDiv = document.createElement('div');
+  bubbleDiv.className = 'speaker-bubble';
+  bubbleDiv.innerHTML = renderMarkdown(unit.text);
+  contentDiv.appendChild(bubbleDiv);
+
+  segEl.appendChild(avatarDiv);
+  segEl.appendChild(contentDiv);
+  bodyDiv.appendChild(segEl);
+}
+
+/**
+ * 显示重放时的打字指示器，avatarHtml 可以是 emoji 或 <img> 标签
+ */
+function showReplayTyping(avatarHtml) {
+  const area = document.getElementById('chatArea');
+  const avatar = avatarHtml || '🤖';
+  area.insertAdjacentHTML('beforeend', `
+    <div class="message ai" id="replayTyping">
+      <div class="msg-avatar">${avatar}</div>
+      <div class="msg-body">
+        <div class="msg-bubble">
+          <div class="typing-indicator"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    </div>`);
+}
+
+/**
+ * 移除打字指示器
+ */
+function removeReplayTyping() {
+  const el = document.getElementById('replayTyping');
+  if (el) el.remove();
+}
+
+/**
+ * 可中断的延迟函数，代际不一致时立即返回
+ */
+function replayDelay(ms, gen) {
+  return new Promise(resolve => {
+    // 如果代际已经不一致，立即返回
+    if (gen !== _replayGen) { resolve(); return; }
+    const timer = setTimeout(resolve, ms);
+    // 每 50ms 检查代际是否被更改
+    const check = setInterval(() => {
+      if (gen !== _replayGen) { clearInterval(check); clearTimeout(timer); resolve(); }
+    }, 50);
   });
 }
 
 // ==================== 消息编辑与删除 ====================
 function editMessage(idx) {
-  if (!currentChatId || isStreaming || isCompressing) return;
+  if (!currentChatId || isStreaming || isCompressing || isReplaying) return;
   const chat = appData.chats[currentChatId];
   if (!chat || idx >= chat.messages.length) return;
   const msg = chat.messages[idx];
@@ -3128,7 +3879,7 @@ function editMessage(idx) {
 }
 
 function deleteMessage(idx) {
-  if (!currentChatId || isStreaming || isCompressing) return;
+  if (!currentChatId || isStreaming || isCompressing || isReplaying) return;
   const chat = appData.chats[currentChatId];
   if (!chat || idx >= chat.messages.length) return;
   if (!confirm('确定删除这条消息吗？')) return;
@@ -3153,7 +3904,7 @@ function autoResizeInput() {
 }
 
 function sendMessage() {
-  if (isStreaming || isCompressing) return;
+  if (isStreaming || isCompressing || isReplaying) return;
   const input = document.getElementById('userInput');
   const text = input.value.trim();
   if (!text) return;
@@ -3272,6 +4023,7 @@ async function requestAI() {
   renderMessages();
 
   isStreaming = true;
+  _streamingScrolledOnce = false; // 重置首次滚动标记
   document.getElementById('sendBtn').style.display = 'none';
   document.getElementById('stopBtn').style.display = 'flex';
   abortController = new AbortController();
@@ -3352,6 +4104,7 @@ async function requestAI() {
 
 // 流式阶段增量更新：记录已渲染的 segment 摘要，避免重绘已完成的气泡
 let _streamingCache = null; // { msgIdx, segments: [{speaker, textLen}] }
+let _streamingScrolledOnce = false; // 当前流式输出是否已触发过首次自动滚动
 
 function updateStreamingMessage(idx, content) {
   const msgEl = document.querySelector(`.message[data-idx="${idx}"] .msg-body`);
@@ -3368,7 +4121,7 @@ function updateStreamingMessage(idx, content) {
       const bubble = msgEl.querySelector('.msg-bubble');
       if (bubble) bubble.innerHTML = renderMarkdown(content);
       _streamingCache = null;
-      scrollToBottom();
+      if (!_streamingScrolledOnce) { scrollToBottom(); _streamingScrolledOnce = true; }
       return;
     }
 
@@ -3404,6 +4157,8 @@ function updateStreamingMessage(idx, content) {
         msgEl.insertBefore(segEl, actionsEl);
       });
       _streamingCache = { msgIdx: idx, segments: newSegments.map(s => ({ speaker: s.speaker, textLen: s.text.length })) };
+      // 首次渲染 segment 时触发一次自动滚动
+      if (!_streamingScrolledOnce) { scrollToBottom(); _streamingScrolledOnce = true; }
     } else {
       // 同一条消息的增量更新
       const prevSegments = prevCache.segments;
@@ -3470,7 +4225,8 @@ function updateStreamingMessage(idx, content) {
     _streamingCache = null;
   }
 
-  scrollToBottom();
+  // 只有首次才自动滚动，后续增量更新不滚动，避免消息一直往下刷
+  if (!_streamingScrolledOnce) { scrollToBottom(); _streamingScrolledOnce = true; }
 }
 
 /**
@@ -3548,6 +4304,92 @@ function getCurrentSpVersion() {
   return chat.spVersions[0] || { content: '', lastIndex: -1 };
 }
 
+/**
+ * 清理并修复 AI 返回的 system_prompt
+ * 1. 去除 ```...``` 代码块包裹
+ * 2. 如果 AI 返回了 JSON 格式（如 {"system_prompt": "..."}），提取其中的值
+ * 3. 去除多余的前导文字（AI 可能输出 "好的，这是..." 之类的）
+ * 4. 如果缺少 # 任务定义 或 # 回复样例，从 previousSp 中补充
+ */
+function cleanAndRepairSp(raw, previousSp) {
+  if (!raw) return raw;
+
+  let cleaned = raw.trim();
+
+  // 第一步：去除 ```...``` 代码块包裹（支持 ```json、```markdown 等）
+  cleaned = cleaned.replace(/^```[a-zA-Z]*\s*\n?/i, '');
+  cleaned = cleaned.replace(/\n?```\s*$/i, '');
+  cleaned = cleaned.trim();
+
+  // 第二步：检测并提取 JSON 格式的内容
+  // AI 可能返回 {"system_prompt": "..."} 或 {"content": "..."} 等 JSON 结构
+  if (/^[\{\[]/.test(cleaned)) {
+    try {
+      const jsonObj = JSON.parse(cleaned);
+      // 尝试常见字段名
+      const extracted = jsonObj.system_prompt || jsonObj.systemPrompt
+        || jsonObj.content || jsonObj.prompt || jsonObj.text || '';
+      if (extracted && typeof extracted === 'string') {
+        cleaned = extracted.trim();
+      }
+    } catch (e) {
+      // JSON 解析失败，尝试正则提取 system_prompt 值
+      const spMatch = cleaned.match(/"system_prompt"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
+      if (spMatch) {
+        try {
+          // 将 JSON 字符串中的转义序列还原
+          cleaned = JSON.parse('"' + spMatch[1] + '"').trim();
+        } catch (e2) {
+          // 正则提取也失败，保留原文本
+        }
+      }
+    }
+  }
+
+  // 第三步：去除多余的前导文字，截取从第一个 # 标题开始
+  const firstHeadingIdx = cleaned.search(/^#\s+/m);
+  if (firstHeadingIdx > 0) {
+    cleaned = cleaned.substring(firstHeadingIdx).trim();
+  }
+
+  // 第四步：从 previousSp 提取各 section，补充缺失部分
+  const prevTaskDef = extractSection(previousSp, '任务定义');
+  const prevReplyExample = extractSection(previousSp, '回复样例');
+
+  // 检查是否缺少 # 任务定义
+  const hasTaskDef = /^#\s*任务定义/m.test(cleaned);
+  if (!hasTaskDef && prevTaskDef) {
+    cleaned = '# 任务定义\n' + prevTaskDef + '\n\n' + cleaned;
+  }
+
+  // 检查是否缺少 # 回复样例
+  const hasReplyExample = /^#\s*回复样例/m.test(cleaned);
+  if (!hasReplyExample && prevReplyExample) {
+    cleaned = cleaned.trimEnd() + '\n\n# 回复样例\n' + prevReplyExample;
+  }
+
+  return cleaned;
+}
+
+/**
+ * 从 system_prompt 文本中提取指定 section 的内容（不含标题行）
+ */
+function extractSection(spText, sectionName) {
+  if (!spText) return '';
+  const regex = new RegExp(`^#\\s*${sectionName}\\s*\\n([\\s\\S]*?)(?=^#\\s|$(?!\\n))`, 'm');
+  const match = spText.match(regex);
+  return match ? match[1].trim() : '';
+}
+
+/**
+ * 从 system_prompt 文本中删除指定 section（含标题行）
+ */
+function removeSection(spText, sectionName) {
+  if (!spText) return '';
+  const regex = new RegExp(`^#\\s*${sectionName}\\s*\\n([\\s\\S]*?)(?=^#\\s|$)`, 'm');
+  return spText.replace(regex, '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 function checkCompress() {
   if (!currentChatId) return;
   const chat = appData.chats[currentChatId];
@@ -3589,7 +4431,7 @@ async function compressChat() {
   }
   compressMessages.push({
     role: 'user',
-    content: '请对以上对话内容进行分析，输出所有system prompt的所有部分。并单独更新角色设定，背景故事，当前状态这三部分。直接输出结果，不需要额外说明。'
+    content: '请对以上对话内容进行分析总结，输出system_prompt，包括任务定义，角色设定，背景故事，当前状态，回复样例。更新角色设定，背景故事，当前状态，绝对不要修改任务定义，回复样例。直接输出内容，不需要额外的说明。'
   });
 
   // 记录压缩请求日志
@@ -3620,9 +4462,12 @@ async function compressChat() {
     if (!response.ok) throw new Error('压缩请求失败');
 
     const result = await response.json();
-    const summary = result.choices?.[0]?.message?.content || '';
+    let summary = result.choices?.[0]?.message?.content || '';
 
     if (summary) {
+      // 清理并修复 AI 返回的 system_prompt
+      summary = cleanAndRepairSp(summary, sp.content);
+
       // 如果当前查看的不是最新版本，删除当前版本之后的所有版本
       const currentVi = chat.spViewIndex;
       chat.spVersions = chat.spVersions.slice(0, currentVi + 1);
@@ -3847,6 +4692,14 @@ function handleImport(event) {
       if (!data.settings.chatNotification) data.settings.chatNotification = false;
       if (data.settings.autoTopicInterval === undefined) data.settings.autoTopicInterval = 10;
       if (data.settings.autoTopicMaxCount === undefined) data.settings.autoTopicMaxCount = 5;
+      // 兼容旧版：为每个聊天补全 characters 字段
+      if (data.chats) {
+        for (const id of Object.keys(data.chats)) {
+          if (data.chats[id].characters === undefined) {
+            data.chats[id].characters = [];
+          }
+        }
+      }
       // 如果是分享精简数据（_shareLite 标记），需要转换为完整结构
       if (data._shareLite) {
         data = expandShareData(data);
@@ -3896,6 +4749,7 @@ function buildShareLiteData() {
     lite.chats[id] = {
       name: chat.name,
       bgImage: chat.bgImage,
+      characters: chat.characters || [],  // 保留角色关联
       messages: [],  // 不分享聊天记录
       spVersions: [{ version: latestSp.version, content: latestSp.content, lastIndex: -1 }],
       spViewIndex: 0
@@ -3921,6 +4775,7 @@ function expandShareData(liteData) {
     full.chats[id] = {
       name: chat.name,
       bgImage: chat.bgImage || '',
+      characters: chat.characters || [],
       messages: [],
       spVersions: chat.spVersions || [{ version: 0, content: '', lastIndex: -1 }],
       spViewIndex: 0
@@ -3992,6 +4847,14 @@ async function checkShareData() {
           if (!appData.chatCounter) appData.chatCounter = appData.chatOrder.length;
           if (!appData.theme) appData.theme = 'light';
           if (!appData.characters) appData.characters = [];
+          // 兼容旧版：为每个聊天补全 characters 字段
+          if (appData.chats) {
+            for (const id of Object.keys(appData.chats)) {
+              if (appData.chats[id].characters === undefined) {
+                appData.chats[id].characters = [];
+              }
+            }
+          }
         }
         saveData();
         applyImportedData(data);
@@ -4743,6 +5606,8 @@ async function confirmCharSelect() {
   const id = 'chat_' + Date.now() + '_' + appData.chatCounter;
   const chatName = selectedChars.map(c => c.name).join(' & ');
   appData.chats[id] = createChat(id, chatName);
+  // 关联角色：将选中角色的 name/avatar 写入聊天属性，创建后不可修改
+  appData.chats[id].characters = selectedChars.map(c => ({ name: c.name, avatar: c.avatar || '' }));
   appData.chatOrder.push(id);
 
   // 自动生成 System Prompt
@@ -4863,9 +5728,14 @@ ${charDescList}
     if (!response.ok) throw new Error('初始化请求失败');
 
     const result = await response.json();
-    const content = result.choices?.[0]?.message?.content || '';
+    let content = result.choices?.[0]?.message?.content || '';
 
     if (content) {
+      // 清理 AI 返回的内容：去除 markdown 包裹和多余人话
+      content = cleanAndRepairSp(content, '');
+      // autoInitGroupChat 的 fullSp 已硬编码任务定义，需要去掉 AI 可能自带的
+      content = removeSection(content, '任务定义');
+
       // 更新 System Prompt 为完整版本
       const fullSp = `# 任务定义
 你现在是一个多角色扮演模拟引擎，负责驱动一个叙事世界。你的任务是：
@@ -4973,6 +5843,14 @@ async function syncFromCloud() {
     if (!data.chatCounter) data.chatCounter = data.chatOrder.length;
     if (!data.theme) data.theme = 'light';
     if (!data.characters) data.characters = [];
+    // 兼容旧版：为每个聊天补全 characters 字段
+    if (data.chats) {
+      for (const id of Object.keys(data.chats)) {
+        if (data.chats[id].characters === undefined) {
+          data.chats[id].characters = [];
+        }
+      }
+    }
     if (data._shareLite) {
       data = expandShareData(data);
     }
@@ -5037,8 +5915,8 @@ function initAutoTopic() {
   }
   autoTopicCount = 0;
   if (appData.settings.autoTopic) {
-    // 每分钟检查一次是否需要触发
-    autoTopicTimer = setInterval(checkAutoTopic, 60000);
+    // 每秒检查一次是否需要触发（支持小数分钟，最小0.1=6秒）
+    autoTopicTimer = setInterval(checkAutoTopic, 1000);
     // 每秒更新倒计时显示
     updateCountdownDisplay();
     autoTopicCountdownTimer = setInterval(updateCountdownDisplay, 1000);
@@ -5097,13 +5975,26 @@ function updateCountdownDisplay() {
   const minutes = Math.floor(remainingSec / 60);
   const seconds = remainingSec % 60;
 
-  countdownEl.textContent = `⏱️ ${minutes}分${seconds}秒 (${countText})`;
+  // 智能显示：如果间隔小于1分钟，只显示秒
+  let timeText;
+  if (minutes > 0) {
+    timeText = `${minutes}分${seconds}秒`;
+  } else {
+    timeText = `${seconds}秒`;
+  }
+  countdownEl.textContent = `⏱️ ${timeText} (${countText})`;
   countdownEl.style.display = 'inline-block';
 }
 
 function handleVisibilityChange() {
   // 页面可见性变化时，更新倒计时显示
   updateCountdownDisplay();
+  
+  // 如果页面变为可见，立即检查是否需要触发自动话题
+  // 修复移动端浏览器后台节流 setInterval 导致的问题
+  if (!document.hidden) {
+    checkAutoTopic();
+  }
 }
 
 function checkAutoTopic() {
@@ -5122,7 +6013,9 @@ function checkAutoTopic() {
 }
 
 async function triggerAutoTopic() {
-  const chat = appData.chats[currentChatId];
+  // 保存当前聊天ID，防止异步等待期间用户切换聊天导致渲染错误
+  const chatIdAtStart = currentChatId;
+  const chat = appData.chats[chatIdAtStart];
   if (!chat) return;
 
   const apiKey = appData.settings.apiKey;
@@ -5142,16 +6035,49 @@ async function triggerAutoTopic() {
     messages.push({ role: chat.messages[i].role, content: chat.messages[i].content });
   }
 
-  // 构建自动话题提示
-  const charNames = (appData.characters || []).map(c => c.name).filter(Boolean);
+  // 构建自动话题提示 - 优先使用聊天框关联的角色，避免发散到角色图库全部角色
+  let charNames = [];
+  if (chat.characters && chat.characters.length > 0) {
+    charNames = chat.characters.map(c => c.name).filter(Boolean);
+  } else {
+    // 兼容旧版：聊天框没有角色属性时，回退到从 system prompt 提取
+    const spContent = sp.content || '';
+    const speakerNames = extractSpeakerNames(spContent);
+    charNames = speakerNames;
+  }
   const charHint = charNames.length > 0
     ? `可选角色有：${charNames.join('、')}。`
     : '';
 
+  // 格式化时间间隔显示
+  const formatDuration = (ms) => {
+    const totalSec = Math.round(ms / 1000);
+    if (totalSec < 60) return `${totalSec}秒`;
+    const totalMin = Math.round(totalSec / 60);
+    if (totalMin < 60) return `${totalMin}分钟`;
+    const hours = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
+  };
+  // 计算用户真正离开的时间（从用户最后一次活动到现在，而非单次间隔）
+  const realAwayMs = Date.now() - lastActivityTime;
+  const awayText = formatDuration(realAwayMs);
+
   messages.push({
     role: 'user',
-    content: `[系统提示：用户已经离开${appData.settings.autoTopicInterval || 10}分钟了，请随机选择一个角色${charHint}发起一个话题，或者让两个角色之间进行闲聊。请用【角色名】的格式来标记说话人。直接输出内容，不需要额外的说明。]`
+    content: `[系统提示：用户已经离开用户已经离开很久了，如果没有话题，则随机选择一个角色${charHint}发起一个话题，否则让多个角色之间根据之前的话题进行讨论，延续讨论的进展。请用【角色名】的格式来标记说话人。直接输出内容，不需要额外的说明。]`
   });
+
+  // 记录自动话题请求日志
+  requestLog.push({
+    time: new Date().toLocaleString(),
+    chatId: chatIdAtStart,
+    chatName: chat.name + ' [自动话题]',
+    messages: JSON.parse(JSON.stringify(messages))
+  });
+  if (requestLog.length > 3) {
+    requestLog = requestLog.slice(-3);
+  }
 
   try {
     const response = await fetch(url, {
@@ -5175,8 +6101,10 @@ async function triggerAutoTopic() {
     if (content) {
       chat.messages.push({ role: 'assistant', content: content });
       saveData();
-      // 重新渲染消息
-      if (currentChatId) renderMessages();
+      // 只有当用户没有切换聊天时，才重新渲染消息
+      if (currentChatId === chatIdAtStart) {
+        renderMessages();
+      }
       // 发送通知
       if (appData.settings.chatNotification) {
         sendChatNotification(content);
