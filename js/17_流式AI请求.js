@@ -360,17 +360,26 @@ function stopStreaming() {
  * @returns {{ cleanContent: string, triggerCharacters: string[] }}
  */
 function extractAndStripPhotoTrigger(content) {
-  var triggerRegex = /<trigger\s+type="photo"\s+character="([^"]+)"\s*\/>\s*$/;
+  // 全局匹配所有 photo trigger
+  var triggerRegex = /<trigger\s+type="photo"\s+character="([^"]+)"\s*\/>/g;
+
   var characters = [];
-  var remaining = content;
   var match;
 
-  // 循环剥离末尾的拍照标签，直到没有更多标签
-  while ((match = remaining.match(triggerRegex)) !== null) {
-    characters.unshift(match[1]); // unshift 保持标签从左到右的顺序
-    remaining = remaining.replace(triggerRegex, '').trim();
+  // 提取所有角色
+  while ((match = triggerRegex.exec(content)) !== null) {
+    characters.push(match[1]);
   }
 
-  return { cleanContent: remaining, triggerCharacters: characters };
+  // 删除所有 trigger 标签
+  var cleanContent = content
+    .replace(triggerRegex, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return {
+    cleanContent,
+    triggerCharacters: characters
+  };
 }
 
