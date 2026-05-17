@@ -44,6 +44,25 @@ function buildAutoTopicPrompt(charHint) {
   return PROMPT_AUTO_TOPIC_TEMPLATE.replace('{charHint}', charHint || '');
 }
 
+// ==================== 自动拍照触发 ====================
+// 创建群聊时追加到 system_prompt 末尾（见 29_群聊功能.js）
+// 让 AI 根据场景/外貌变化或用户要求，自动标记需要拍照的角色
+var PROMPT_AUTO_PHOTO_TRIGGER = `
+根据当前聊天记录，当目前发生：
+1. 场景发生显著变化（进入新地点、天气变化、时间推移等）
+2. 角色外貌或衣着发生改变（换装、受伤、妆容变化等）
+3. 用户明确要求某个角色拍照时
+4. 剧情发展到值得留影的重要时刻
+在消息结尾附加拍照标记：
+拍照标记格式：
+<trigger type="photo" character="角色名" />
+
+注意：
+- 拍照标记不要放在对话内容中，它只是附加在末尾的系统指令
+- 每个角色最多包含一个标记
+- 拍照标记后面不要再跟其他对话内容
+`;
+
 // ==================== 显示在日志中的友好名称 ====================
 var LOG_NAME_MEMORY = ' [压缩记忆]';
 var LOG_NAME_PHOTO = ' [拍照]';

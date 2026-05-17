@@ -123,6 +123,33 @@ async function requestAI(extraMessages) {
     document.getElementById('sendBtn').style.display = 'flex';
     document.getElementById('stopBtn').style.display = 'none';
     abortController = null;
+
+    // 检查 AI 回复中是否有自动拍照触发标签（仅群聊场景）
+    if (chat && chat.characters && chat.characters.length > 0 && chat.messages[aiMsgIdx] && chat.messages[aiMsgIdx].content) {
+      var rawContent = chat.messages[aiMsgIdx].content;
+      var parsed = extractAndStripPhotoTrigger(rawContent);
+      if (parsed.triggerCharacters && parsed.triggerCharacters.length > 0) {
+        // 有拍照触发：剥离标签后保存，异步触发拍照
+        chat.messages[aiMsgIdx].content = parsed.cleanContent;
+        var chars = parsed.triggerCharacters;
+        for (var pi = 0; pi < chars.length; pi++) {
+          var char = chars[pi];
+          addProgramLog(LOG_TYPE_PHOTO, {
+            summary: 'AI 自动触发拍照（' + char + '）',
+            chatName: chat.name,
+            detail: '由 AI 回复末尾的 trigger 标签自动触发，角色：' + char
+          });
+          showToast('📸 ' + char + ' 开始拍照...', 'success');
+          // 每个拍照按顺序错开延迟，避免并发冲突
+          (function(c) {
+            setTimeout(function() {
+              triggerTakePhoto(c);
+            }, 100 + pi * 500);
+          })(char);
+        }
+      }
+    }
+
     saveData();
     renderMessages();
     // 检查是否需要摘要压缩
@@ -135,6 +162,10 @@ var _streamingCache = null; // { msgIdx, segments: [{speaker, textLen}] }
 var _streamingScrolledOnce = false; // 当前流式输出是否已触发过首次自动滚动
 
 function updateStreamingMessage(idx, content) {
+  // 剥离拍照触发标签（仅用于显示，不保存到 chat.messages）
+  content = content.replace(/<trigger\s+type="photo"\s+character="[^"]*"\s*\/>/g, '').trim();
+  if (!content) return;
+
   var msgEl = document.querySelector(`.message[data-idx="${idx}"] .msg-body`);
   if (!msgEl) return;
 
@@ -319,5 +350,27 @@ function stopStreaming() {
   if (abortController) {
     abortController.abort();
   }
+}
+
+/**
+ * 从 AI 回复内容中提取并剥离拍照触发 XML 标签
+ * 标签格式：<trigger type="photo" character="角色名" />
+ * 标签必须在回复末尾才生效，支持多个标签连续出现（多角色场景）
+ * @param {string} content - AI 原始回复内容
+ * @returns {{ cleanContent: string, triggerCharacters: string[] }}
+ */
+function extractAndStripPhotoTrigger(content) {
+  var triggerRegex = /<trigger\s+type="photo"\s+character="([^"]+)"\s*\/>\s*$/;
+  var characters = [];
+  var remaining = content;
+  var match;
+
+  // 循环剥离末尾的拍照标签，直到没有更多标签
+  while ((match = remaining.match(triggerRegex)) !== null) {
+    characters.unshift(match[1]); // unshift 保持标签从左到右的顺序
+    remaining = remaining.replace(triggerRegex, '').trim();
+  }
+
+  return { cleanContent: remaining, triggerCharacters: characters };
 }
 

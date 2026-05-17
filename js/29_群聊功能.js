@@ -148,7 +148,7 @@ function generateGroupSystemPrompt(selectedChars) {
 - 推动符合当前世界观下的合理剧情发展。
 - 在需要时自动完成各角色之间的对话、必要时包括行动和内在心理描写。
 - 回复时以角色名字用【】开头。如果是旁白则直接加在文本结尾。回复消息除了角色名字用【】包括外，不要再使用【】。
-
+- ${PROMPT_AUTO_PHOTO_TRIGGER}
 
 # 角色设定
 ${charDescList}
@@ -160,7 +160,8 @@ ${charDescList}
 无
 
 # 回复样例
-（待AI生成）`;
+（待AI生成）
+`;
 }
 
 async function autoInitGroupChat(chatId, selectedChars) {
@@ -225,12 +226,14 @@ async function autoInitGroupChat(chatId, selectedChars) {
 - 用户：根据关系和性格有对应亲密称呼，默认为你。
 - 推动符合当前世界观下的合理剧情发展。
 - 在需要时自动完成各角色之间的对话、必要时包括行动和内在心理描写。
-- 回复时以角色名字用【】开头。如果是旁白则直接加在文本开始或结尾。
+- 回复时以角色名字用【】开头。如果是旁白则直接加在文本开始或结尾。除角色名外消息内不再存在【】字符
+- ${PROMPT_AUTO_PHOTO_TRIGGER}
 
 ${content}
 
 # 当前状态
-无`;
+无
+`;
 
       chat.spVersions[0].content = fullSp;
       saveData();

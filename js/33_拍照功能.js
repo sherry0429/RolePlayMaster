@@ -11,9 +11,11 @@
 /**
  * 触发拍照（入口函数）
  * 点击「拍照」按钮或输入 /拍照 命令时调用
+ * 也由 AI 自动拍照触发标签调用（传角色名跳过 AI 分析）
  * 拍照是异步后台任务，不阻塞聊天
+ * @param {string} [characterName] - 可选，指定角色名则直接为该角色拍照
  */
-async function triggerTakePhoto() {
+async function triggerTakePhoto(characterName) {
   // 状态检查：只阻止并发拍照，不阻塞聊天
   if (isPhotoShooting) {
     showToast('正在拍照中，请等待完成', 'error');
@@ -37,6 +39,11 @@ async function triggerTakePhoto() {
   if (!apiKey) {
     showToast('请先设置 API Key', 'error');
     return;
+  }
+
+  // 如果有指定角色名，直接为该角色拍照（跳过 AI 角色分析）
+  if (characterName) {
+    return await takePhotoForCharacter(characterName);
   }
 
   isPhotoShooting = true;
@@ -197,9 +204,159 @@ async function triggerTakePhoto() {
 }
 
 /**
- * 构建拍照用的 AI 请求消息
+ * 为指定角色直接拍照（跳过 AI 角色分析阶段，直接让 AI 生成该角色的图像 prompt）
+ * 由 triggerTakePhoto(characterName) 中的角色名分支调用
  */
-function buildPhotoRequestMessages(chat, sp) {
+async function takePhotoForCharacter(characterName) {
+  isPhotoShooting = true;
+  photoAbortController = new AbortController();
+  showPhotoProgress('🤳 ' + characterName + ' 正在拍摄...');
+
+  try {
+    var chat = appData.chats[currentChatId];
+    var sp = getCurrentSpVersion();
+
+    // 1. 构建 AI 请求消息（指定角色，只关注该角色）
+    var messages = buildPhotoRequestMessages(chat, sp, characterName);
+
+    // 记录日志
+    addProgramLog(LOG_TYPE_PHOTO, {
+      summary: 'AI 自动拍照（' + characterName + '）',
+      chatName: chat.name + LOG_NAME_PHOTO,
+      detail: messages
+    });
+
+    // 2. 发送 AI 请求，获取该角色的图像 prompt
+    var apiKey = appData.settings.apiKey;
+    var apiHost = appData.settings.apiHost || DEFAULT_API_HOST;
+    var url = apiHost.replace(/\/+$/, '') + '/chat/completions';
+
+    updatePhotoProgress('🧠 AI 正在生成 ' + characterName + ' 的外貌描述...');
+
+    var response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: DEFAULT_MODEL,
+        messages: messages,
+        stream: false
+      }),
+      signal: photoAbortController.signal
+    });
+
+    if (!response.ok) {
+      var errText = await response.text();
+      throw new Error('AI 请求失败: ' + response.status + ' ' + errText);
+    }
+
+    var result = await response.json();
+    var aiContent = (result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content) || '';
+    if (!aiContent) {
+      throw new Error('AI 返回内容为空');
+    }
+
+    // 记录日志
+    addProgramLog(LOG_TYPE_PHOTO, {
+      summary: 'AI 返回 ' + characterName + ' 的图像描述',
+      chatName: chat.name + LOG_NAME_PHOTO,
+      detail: aiContent
+    });
+
+    // 3. 解析 AI 返回的 prompt
+    var prompts = parsePhotoPrompts(aiContent);
+    if (prompts.length === 0) {
+      prompts = [{ prompt: aiContent, characterName: characterName }];
+    }
+
+    // 4. 生成图片
+    var comfyuiEnabled = appData.settings.comfyui && appData.settings.comfyui.enabled;
+    if (!chat.photos) chat.photos = [];
+
+    for (var i = 0; i < prompts.length; i++) {
+      var item = prompts[i];
+      updatePhotoProgress('📸 ' + (item.characterName || characterName) + ' 正在拍摄 (' + (i + 1) + '/' + prompts.length + ')');
+
+      var photoData = null;
+      if (comfyuiEnabled && appData.settings.comfyui.workflowJson) {
+        addProgramLog(LOG_TYPE_PHOTO, {
+          summary: 'ComfyUI 生成图片 (' + (item.characterName || characterName) + ')',
+          chatName: chat.name + LOG_NAME_PHOTO,
+          detail: '角色：' + (item.characterName || characterName) +
+            '\nWidth: ' + (appData.settings.comfyui.defaultWidth || 512) +
+            '\nHeight: ' + (appData.settings.comfyui.defaultHeight || 768) +
+            '\n\nPrompt:\n' + item.prompt
+        });
+        photoData = await callComfyUI(
+          item.prompt,
+          appData.settings.comfyui.defaultWidth || 512,
+          appData.settings.comfyui.defaultHeight || 768,
+          photoAbortController.signal
+        );
+      }
+
+      var photoObj;
+      if (photoData && photoData.dataUrl) {
+        var thumbUrl = await generateThumbnail(photoData.dataUrl, 200, 200);
+        photoObj = {
+          id: 'photo_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8),
+          dataUrl: photoData.dataUrl,
+          thumbUrl: thumbUrl,
+          prompt: item.prompt,
+          characterName: item.characterName || characterName,
+          createdAt: Date.now(),
+          afterMessageIndex: chat.messages.length - 1
+        };
+        chat.photos.push(photoObj);
+        await saveData();
+      } else {
+        photoObj = {
+          id: 'photo_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8),
+          dataUrl: '',
+          prompt: item.prompt,
+          characterName: item.characterName || characterName,
+          createdAt: Date.now(),
+          afterMessageIndex: chat.messages.length - 1
+        };
+        chat.photos.push(photoObj);
+        await saveData();
+        showToast('图片生成失败（ComfyUI 未响应或未配置）', 'error');
+      }
+      renderPhotoMessage(photoObj);
+    }
+
+    // 5. 拍照完成
+    renderMessages();
+    addProgramLog(LOG_TYPE_PHOTO_DONE, {
+      summary: '拍照完成',
+      chatName: chat.name,
+      detail: characterName + ' 已拍摄 ' + prompts.length + ' 张照片'
+    });
+    showToast('📸 ' + characterName + ' 已拍摄 ' + prompts.length + ' 张照片', 'success');
+
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      showToast('拍照已取消');
+    } else {
+      console.error('拍照失败', e);
+      showToast('拍照失败: ' + e.message, 'error');
+    }
+  } finally {
+    isPhotoShooting = false;
+    photoAbortController = null;
+    hidePhotoProgress();
+  }
+}
+
+/**
+ * 构建拍照用的 AI 请求消息
+ * @param {object} chat - 聊天对象
+ * @param {object} sp - 当前 system prompt 版本
+ * @param {string} [specificCharacter] - 可选，指定角色名则只关注该角色
+ */
+function buildPhotoRequestMessages(chat, sp, specificCharacter) {
   var messages = [];
 
   // System Prompt
@@ -220,6 +377,10 @@ function buildPhotoRequestMessages(chat, sp) {
   var charNames = [];
   if (chat.characters && chat.characters.length > 0) {
     charNames = chat.characters.map(function(c) { return c.name; }).filter(Boolean);
+  }
+  // 如果指定了角色，只保留该角色
+  if (specificCharacter) {
+    charNames = charNames.filter(function(n) { return n === specificCharacter; });
   }
 
   // 获取角色外貌设定（从 SP 中提取，支持多角色）
@@ -291,9 +452,20 @@ function buildPhotoRequestMessages(chat, sp) {
     }
   }
 
+  // 如果指定了角色，只保留该角色的外貌设定
+  if (specificCharacter) {
+    appearanceSections = appearanceSections.filter(function(s) {
+      return s.characterName === specificCharacter;
+    });
+  }
+
   // 构建拍照指令
   var userContent = PROMPT_TAKE_PHOTO_PREAMBLE + '\n';
-  userContent += PROMPT_TAKE_PHOTO_BODY + '\n';
+  if (specificCharacter) {
+    userContent += '请根据以上对话中角色的外貌设定，推算角色「' + specificCharacter + '」的当前外貌和状态。\n';
+  } else {
+    userContent += PROMPT_TAKE_PHOTO_BODY + '\n';
+  }
   userContent += roleList + '\n';
   userContent += appearanceGuide + '\n';
   userContent += PROMPT_TAKE_PHOTO_INSTRUCTION;

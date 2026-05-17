@@ -5,6 +5,14 @@
  * 保持全局兼容模式
  */
 
+/**
+ * 剥离消息中的拍照触发标签（防御性处理，虽然保存时已剥离）
+ */
+function stripTriggerTags(content) {
+  if (typeof content !== 'string') return content;
+  return content.replace(/<trigger\s+type="photo"\s+character="[^"]*"\s*\/>/g, '').trim();
+}
+
 // 渲染消息（只渲染最近 renderedMessageCount 条）
 function renderMessages(shouldScrollToBottom = true) {
   var area = document.getElementById('chatArea');
@@ -36,13 +44,14 @@ function renderMessages(shouldScrollToBottom = true) {
   // 只渲染最近的消息，并在每个消息之后检查是否有对应的照片
   for (var idx = startIndex; idx < totalMessages; idx++) {
     var msg = chat.messages[idx];
+    var msgContent = stripTriggerTags(msg.content);
     var isUser = msg.role === 'user';
     var avatar = isUser ? '👤' : '🤖';
     var cls = isUser ? 'user' : 'ai';
-    var contentHtml = isUser ? escHtml(msg.content) : renderMarkdown(msg.content);
+    var contentHtml = isUser ? escHtml(msgContent) : renderMarkdown(msgContent);
 
     // 说话人区分：仅对 AI 消息生效
-    if (!isUser && speakerMode && hasSpeakerTags(msg.content)) {
+    if (!isUser && speakerMode && hasSpeakerTags(msgContent)) {
       html += `
         <div class="message ${cls}" data-idx="${idx}">
           <div class="msg-avatar">${avatar}</div>
