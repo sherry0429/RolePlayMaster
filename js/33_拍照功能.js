@@ -462,7 +462,7 @@ function buildPhotoRequestMessages(chat, sp, specificCharacter) {
   // 构建拍照指令
   var userContent = PROMPT_TAKE_PHOTO_PREAMBLE + '\n';
   if (specificCharacter) {
-    userContent += '请根据以上对话中角色的外貌设定，推算角色「' + specificCharacter + '」的当前外貌和状态。\n';
+    userContent += '请根据以上对话中角色的外貌设定和聊天记录，推算角色「' + specificCharacter + '」的当前外貌和状态。\n';
   } else {
     userContent += PROMPT_TAKE_PHOTO_BODY + '\n';
   }
@@ -579,14 +579,14 @@ async function callComfyUI(prompt, width, height, signal) {
     if (comfyui.nodeIds.width) {
       var widthNode = findComfyNodeById(workflow, comfyui.nodeIds.width);
       if (widthNode) {
-        setComfyNodeInput(widthNode, width);
+        setComfyNodeInput(widthNode, width, 'width');
       }
     }
     // 替换高度节点
     if (comfyui.nodeIds.height) {
       var heightNode = findComfyNodeById(workflow, comfyui.nodeIds.height);
       if (heightNode) {
-        setComfyNodeInput(heightNode, height);
+        setComfyNodeInput(heightNode, height, 'height');
       }
     }
 
@@ -680,9 +680,18 @@ function findComfyNodeById(workflow, nodeId) {
 /**
  * 设置 ComfyUI 节点的输入值
  */
-function setComfyNodeInput(node, value) {
+function setComfyNodeInput(node, value, inputName) {
   if (!node || !node.inputs) return;
-  // 尝试找到第一个非连接的输入字段
+
+  // 新模式：指定 inputName
+  if (inputName) {
+    if (node.inputs.hasOwnProperty(inputName)) {
+      node.inputs[inputName] = value;
+    }
+    return;
+  }
+
+  // 旧模式：自动修改第一个普通输入
   for (var key in node.inputs) {
     if (!Array.isArray(node.inputs[key])) {
       node.inputs[key] = value;
