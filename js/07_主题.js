@@ -13,7 +13,7 @@ function toggleTheme() {
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
-  document.getElementById('themeBtn').textContent = theme === 'dark' ? '☀️' : '🌙';
+  document.getElementById('themeBtn').innerHTML = theme === 'dark' ? '☀️ 主题' : '🌙 主题';
   // 无背景图时更新背景层
   applyBgImage(appData.settings.bgImage);
 }

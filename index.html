@@ -188,12 +188,12 @@
     <div class="top-bar">
       <button class="menu-btn" onclick="toggleSidebar()" title="菜单">☰</button>
       <span class="current-chat-name" id="currentChatName">AI Chat</span>
-      <button class="menu-btn replay-btn" id="replayBtn" onclick="toggleReplay()" title="重放">🔄</button>
+      <button class="toolbar-btn replay-btn" id="replayBtn" onclick="toggleReplay()" title="重放">🔄 重放</button>
       <span class="auto-topic-countdown" id="autoTopicCountdown" style="display:none;"></span>
-      <button class="menu-btn" onclick="openGalleryDrawer()" title="角色图库">🎭</button>
-      <button class="menu-btn" onclick="openAlbumDrawer()" title="相册">🖼️</button>
-      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="切换主题">🌙</button>
-      <button class="log-btn" onclick="openLogDrawer()" title="程序日志">📋</button>
+      <button class="toolbar-btn" onclick="openGalleryDrawer()" title="角色图库">🎭 角色管理</button>
+      <button class="toolbar-btn" onclick="openAlbumDrawer()" title="相册">🖼️ 相册</button>
+      <button class="toolbar-btn theme-btn" onclick="toggleTheme()" id="themeBtn" title="切换主题">🌙 主题</button>
+      <button class="toolbar-btn" onclick="openLogDrawer()" title="程序日志">📋 日志</button>
       <div class="replay-progress" id="replayProgress" style="width:0;"></div>
     </div>
 

@@ -139,7 +139,7 @@ async function triggerTakePhoto() {
 
       var photoObj;
       if (photoData && photoData.dataUrl) {
-        var thumbUrl = await generateThumbnail(photoData.dataUrl, 120, 120);
+        var thumbUrl = await generateThumbnail(photoData.dataUrl, 200, 200);
         photoObj = {
           id: 'photo_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8),
           dataUrl: photoData.dataUrl,
@@ -659,15 +659,15 @@ function cancelPhoto() {
  * @returns {Promise<string>} 缩略图 data URL
  */
 function generateThumbnail(dataUrl, maxWidth, maxHeight) {
-  maxWidth = maxWidth || 120;
-  maxHeight = maxHeight || 120;
+  maxWidth = maxWidth || 200;
+  maxHeight = maxHeight || 200;
   return new Promise(function(resolve, reject) {
     var img = new Image();
     img.onload = function() {
       var canvas = document.createElement('canvas');
       var width = img.width;
       var height = img.height;
-      // 等比例缩放
+      // 等比例缩放，最大 200x200（足够清晰且文件小）
       if (width > height) {
         if (width > maxWidth) {
           height = Math.round(height * maxWidth / width);
@@ -682,8 +682,11 @@ function generateThumbnail(dataUrl, maxWidth, maxHeight) {
       canvas.width = width;
       canvas.height = height;
       var ctx = canvas.getContext('2d');
+      // 使用较高品质，避免缩略图模糊
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.5));
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
     };
     img.onerror = function() {
       // 缩略图生成失败时回退到原图

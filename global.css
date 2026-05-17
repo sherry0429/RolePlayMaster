@@ -715,9 +715,34 @@ html, body {
   font-size: 18px;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.25s ease;
+  flex-shrink: 0;
 }
 
 .menu-btn:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 工具栏操作按钮（图标+文字） */
+.toolbar-btn {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.toolbar-btn:hover {
   background: var(--accent-light);
   border-color: var(--accent);
   transform: translateY(-2px);
@@ -733,44 +758,10 @@ html, body {
   white-space: nowrap;
 }
 
-.theme-toggle {
-  width: 38px; height: 38px;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 18px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.25s ease;
-}
-
-.theme-toggle:hover {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-}
+/* .theme-toggle 已迁移至 .toolbar-btn */
 
 /* ==================== 右侧 Log 抽屉 ==================== */
-.log-btn {
-  width: 38px; height: 38px;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 18px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.25s ease;
-}
-
-.log-btn:hover {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-}
+/* .log-btn 已迁移至 .toolbar-btn */
 
 /* 抽屉遮罩 */
 .drawer-backdrop {
