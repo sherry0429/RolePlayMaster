@@ -45,9 +45,6 @@ async function triggerTakePhoto() {
   // 显示拍摄进度条
   showPhotoProgress('🤳 正在构思画面...');
 
-  // 记录拍照时的消息位置（照片将渲染在此位置之前的所有消息之后）
-  var photoShootIndex = chat.messages.length;
-
   try {
     // 1. 构建 AI 请求消息
     var sp = getCurrentSpVersion();
@@ -147,8 +144,8 @@ async function triggerTakePhoto() {
           prompt: item.prompt,
           characterName: item.characterName || '',
           createdAt: Date.now(),
-          // 设置为 photoShootIndex - 1，使照片渲染在最后一条历史消息之后
-          afterMessageIndex: photoShootIndex - 1
+          // 使用当前最新消息索引，使照片像新消息一样出现在对话末尾
+          afterMessageIndex: chat.messages.length - 1
         };
         chat.photos.push(photoObj);
         await saveData();
@@ -159,7 +156,7 @@ async function triggerTakePhoto() {
           prompt: item.prompt,
           characterName: item.characterName || '',
           createdAt: Date.now(),
-          afterMessageIndex: photoShootIndex - 1
+          afterMessageIndex: chat.messages.length - 1
         };
         chat.photos.push(photoObj);
         await saveData();
