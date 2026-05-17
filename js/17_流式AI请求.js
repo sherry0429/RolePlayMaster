@@ -5,7 +5,7 @@
  * 保持全局兼容模式
  */
 
-async function requestAI() {
+async function requestAI(extraMessages) {
   if (isStreaming || isCompressing) return;
   var chat = appData.chats[currentChatId];
   if (!chat) return;
@@ -30,17 +30,19 @@ async function requestAI() {
   for (var i = startIdx; i < chat.messages.length; i++) {
     messages.push({ role: chat.messages[i].role, content: chat.messages[i].content });
   }
-
-  // 记录本次请求日志（深拷贝，最多保留 3 条）
-  requestLog.push({
-    time: new Date().toLocaleString(),
-    chatId: currentChatId,
-    chatName: chat.name,
-    messages: JSON.parse(JSON.stringify(messages))
-  });
-  if (requestLog.length > 3) {
-    requestLog = requestLog.slice(-3);
+  // 如果有额外上下文消息（不保存到 chat.messages），追加到最后
+  if (extraMessages && extraMessages.length > 0) {
+    for (var ei = 0; ei < extraMessages.length; ei++) {
+      messages.push(extraMessages[ei]);
+    }
   }
+
+  // 记录本次请求日志
+  addProgramLog(LOG_TYPE_REQUEST, {
+    summary: 'AI 对话请求',
+    chatName: chat.name,
+    detail: messages
+  });
 
   // 添加 AI 占位消息
   chat.messages.push({ role: 'assistant', content: '' });

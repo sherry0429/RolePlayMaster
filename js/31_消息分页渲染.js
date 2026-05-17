@@ -178,19 +178,15 @@ async function triggerAutoTopic() {
 
   messages.push({
     role: 'user',
-    content: `[系统提示：用户已经离开用户已经离开很久了，如果没有话题，则随机选择一个角色${charHint}发起一个话题，否则让多个角色之间根据之前的话题进行讨论，延续讨论的进展。请用【角色名】的格式来标记说话人。直接输出内容，不需要额外的说明。]`
+    content: `[系统提示：用户已经离开很久了，${buildAutoTopicPrompt(charHint)}]`
   });
 
-  // 记录自动话题请求日志
-  requestLog.push({
-    time: new Date().toLocaleString(),
-    chatId: chatIdAtStart,
-    chatName: chat.name + ' [自动话题]',
-    messages: JSON.parse(JSON.stringify(messages))
+  // 记录自动话题日志
+  addProgramLog(LOG_TYPE_AUTO_TOPIC, {
+    summary: '自动发起话题',
+    chatName: chat.name + LOG_NAME_AUTO_TOPIC,
+    detail: messages
   });
-  if (requestLog.length > 3) {
-    requestLog = requestLog.slice(-3);
-  }
 
   try {
     var response = await fetch(url, {

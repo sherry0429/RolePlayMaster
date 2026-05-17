@@ -19,7 +19,7 @@ function autoResizeInput() {
 }
 
 function sendMessage() {
-  if (isStreaming || isCompressing || isReplaying || isPhotoShooting) return;
+  if (isStreaming || isCompressing || isReplaying) return;
   var input = document.getElementById('userInput');
   var text = input.value.trim();
   if (!text) return;

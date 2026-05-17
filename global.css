@@ -1026,6 +1026,22 @@ html, body {
   line-height: 1.5;
 }
 
+/* 日志"更多"按钮 */
+.log-more-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 16px;
+  transition: all 0.2s;
+}
+.log-more-btn:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
 /* ==================== 聊天区域 ==================== */
 .chat-area {
   flex: 1;
@@ -2016,26 +2032,42 @@ html, body {
 }
 
 .gallery-drawer-header .mode-switch-btn {
-  padding: 5px 10px;
-  border: 1px solid var(--border-color);
+  padding: 6px 14px;
+  border: none;
   border-radius: 6px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 12px;
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
+  position: relative;
 }
 
 .gallery-drawer-header .mode-switch-btn:hover {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5);
 }
 
+.gallery-drawer-header .mode-switch-btn:active {
+  transform: scale(0.95);
+}
+
+/* 选择中状态的群聊按钮 - 改用绿色渐变突出活跃状态 */
 .gallery-drawer-header .mode-switch-btn.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  animation: modeSwitchPulse 2s infinite;
+}
+
+.gallery-drawer-header .mode-switch-btn.active:hover {
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.55);
+}
+
+@keyframes modeSwitchPulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 2px 16px rgba(16, 185, 129, 0.65); }
 }
 
 /* ==================== 角色编辑弹框 ==================== */
@@ -2139,6 +2171,25 @@ html, body {
   border-radius: 2px;
   animation: progressIndeterminate 1.5s infinite;
 }
+.photo-progress-cancel {
+  width: 24px; height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.photo-progress-cancel:hover {
+  background: var(--danger);
+  color: #fff;
+  transform: scale(1.1);
+}
 @keyframes progressIndeterminate {
   0% { width: 20%; margin-left: -20%; }
   100% { width: 60%; margin-left: 100%; }
@@ -2197,6 +2248,22 @@ html, body {
 .album-drawer-header h3 {
   font-size: 15px;
   font-weight: 600;
+}
+.album-clear-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.album-clear-btn:hover {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
 }
 .album-drawer-body {
   flex: 1;

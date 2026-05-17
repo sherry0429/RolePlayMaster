@@ -100,7 +100,7 @@ async function confirmResetAll() {
     _streamingCache = null;
     _streamingScrolledOnce = false;
     abortController = null;
-    requestLog = [];
+    programLog = [];
     isPhotoShooting = false;
     photoAbortController = null;
     // 重新初始化 UI

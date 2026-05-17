@@ -11,10 +11,15 @@
 /**
  * 触发拍照（入口函数）
  * 点击「拍照」按钮或输入 /拍照 命令时调用
+ * 拍照是异步后台任务，不阻塞聊天
  */
 async function triggerTakePhoto() {
-  // 状态检查
-  if (isStreaming || isCompressing || isPhotoShooting || isReplaying) {
+  // 状态检查：只阻止并发拍照，不阻塞聊天
+  if (isPhotoShooting) {
+    showToast('正在拍照中，请等待完成', 'error');
+    return;
+  }
+  if (isStreaming || isCompressing || isReplaying) {
     showToast('请等待当前操作完成', 'error');
     return;
   }
@@ -40,19 +45,20 @@ async function triggerTakePhoto() {
   // 显示拍摄进度条
   showPhotoProgress('🤳 正在构思画面...');
 
+  // 记录拍照时的消息位置（照片将渲染在此位置之前的所有消息之后）
+  var photoShootIndex = chat.messages.length;
+
   try {
     // 1. 构建 AI 请求消息
     var sp = getCurrentSpVersion();
     var messages = buildPhotoRequestMessages(chat, sp);
 
-    // 记录日志（仅用于调试）
-    requestLog.push({
-      time: new Date().toLocaleString(),
-      chatId: currentChatId,
-      chatName: chat.name + ' [拍照]',
-      messages: JSON.parse(JSON.stringify(messages))
+    // 记录日志
+    addProgramLog(LOG_TYPE_PHOTO, {
+      summary: 'AI 分析角色外貌（拍照）',
+      chatName: chat.name + LOG_NAME_PHOTO,
+      detail: messages
     });
-    if (requestLog.length > 3) requestLog = requestLog.slice(-3);
 
     // 2. 发送 AI 请求，获取生成图像的 prompt
     var apiHost = appData.settings.apiHost || DEFAULT_API_HOST;
@@ -85,6 +91,13 @@ async function triggerTakePhoto() {
       throw new Error('AI 返回内容为空');
     }
 
+    // 记录 AI 返回的图像 prompt 日志（不进入 history_messages，但出现在请求日志中）
+    addProgramLog(LOG_TYPE_PHOTO, {
+      summary: 'AI 返回的图像描述（共解析出 ' + (parsePhotoPrompts(aiContent).length || 1) + ' 张）',
+      chatName: chat.name + LOG_NAME_PHOTO,
+      detail: aiContent
+    });
+
     // 3. 解析 AI 返回的 prompts（按分隔符分割）
     var prompts = parsePhotoPrompts(aiContent);
     if (prompts.length === 0) {
@@ -92,12 +105,14 @@ async function triggerTakePhoto() {
       prompts = [{ prompt: aiContent, characterName: extractPhotoCharacter(aiContent, chat) }];
     }
 
-    // 4. 对每个 prompt 生成图片，每生成一张立即渲染
+    // 4. 对每个 prompt 生成图片
     var comfyuiEnabled = appData.settings.comfyui && appData.settings.comfyui.enabled;
-    var photoShootIndex = chat.messages.length; // 记录拍照时的消息位置
 
     // 确保 photos 数组存在
     if (!chat.photos) chat.photos = [];
+
+    // 收集本轮新生成的照片 ID，用于后续更新 afterMessageIndex
+    var newPhotoIds = [];
 
     for (var i = 0; i < prompts.length; i++) {
       var item = prompts[i];
@@ -105,7 +120,15 @@ async function triggerTakePhoto() {
 
       var photoData = null;
       if (comfyuiEnabled && appData.settings.comfyui.workflowJson) {
-        // 使用 ComfyUI 生成
+        // 记录 ComfyUI 请求日志（不进入 history_messages，但出现在请求日志中）
+        addProgramLog(LOG_TYPE_PHOTO, {
+          summary: 'ComfyUI 生成图片 (' + (item.characterName || '角色') + ')',
+          chatName: chat.name + LOG_NAME_PHOTO,
+          detail: '角色：' + (item.characterName || '未知') +
+            '\nWidth: ' + (appData.settings.comfyui.defaultWidth || 512) +
+            '\nHeight: ' + (appData.settings.comfyui.defaultHeight || 768) +
+            '\n\nPrompt:\n' + item.prompt
+        });
         photoData = await callComfyUI(
           item.prompt,
           appData.settings.comfyui.defaultWidth || 512,
@@ -114,37 +137,51 @@ async function triggerTakePhoto() {
         );
       }
 
+      var photoObj;
       if (photoData && photoData.dataUrl) {
-        var photoObj = {
+        var thumbUrl = await generateThumbnail(photoData.dataUrl, 120, 120);
+        photoObj = {
           id: 'photo_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8),
           dataUrl: photoData.dataUrl,
+          thumbUrl: thumbUrl,
           prompt: item.prompt,
           characterName: item.characterName || '',
           createdAt: Date.now(),
-          afterMessageIndex: photoShootIndex // 记录拍摄时所处的消息位置
+          // 设置为 photoShootIndex - 1，使照片渲染在最后一条历史消息之后
+          afterMessageIndex: photoShootIndex - 1
         };
-        // 保存到相册
         chat.photos.push(photoObj);
         await saveData();
-        // 立即渲染这张图片
-        renderPhotoMessage(photoObj);
       } else {
-        // ComfyUI 失败或未启用，使用文本提示占位
-        var fallbackPhotoObj = {
+        photoObj = {
           id: 'photo_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8),
           dataUrl: '',
           prompt: item.prompt,
           characterName: item.characterName || '',
           createdAt: Date.now(),
-          afterMessageIndex: photoShootIndex
+          afterMessageIndex: photoShootIndex - 1
         };
-        chat.photos.push(fallbackPhotoObj);
+        chat.photos.push(photoObj);
         await saveData();
-        // 即时渲染占位
-        renderPhotoMessage(fallbackPhotoObj);
         showToast('图片生成失败（ComfyUI 未响应或未配置）', 'error');
       }
+      newPhotoIds.push(photoObj.id);
+
+      // 每生成一张照片立即渲染，不等待全部完成
+      // 使用 insertAdjacentHTML 插入到 afterMessageIndex 对应的消息之后
+      renderPhotoMessage(photoObj);
     }
+
+    // 5. 拍照完成，仅重新渲染确保位置准确，不触发 AI 回复
+    // 渲染引擎会根据 chat.photos 中的 afterMessageIndex 重新排列
+    renderMessages();
+
+    // 记录拍照完成日志
+    addProgramLog(LOG_TYPE_PHOTO_DONE, {
+      summary: '拍照完成',
+      chatName: chat.name,
+      detail: '已拍摄 ' + prompts.length + ' 张照片'
+    });
 
     showToast('已拍摄 ' + prompts.length + ' 张照片', 'success');
 
@@ -188,30 +225,84 @@ function buildPhotoRequestMessages(chat, sp) {
     charNames = chat.characters.map(function(c) { return c.name; }).filter(Boolean);
   }
 
-  // 获取角色外貌设定（从 SP 中提取）
-  var appearanceHint = '';
+  // 获取角色外貌设定（从 SP 中提取，支持多角色）
+  var appearanceSections = [];
   if (sp && sp.content) {
-    // 尝试提取外貌描述
-    var appearanceMatch = sp.content.match(/外貌[：:]([\s\S]*?)(?:\n\n|\n#{1,}|$)/);
-    if (appearanceMatch) {
-      appearanceHint = appearanceMatch[1].trim();
+    // 方式1：按【角色名】分段提取外貌
+    // 群聊初始化后 system_prompt 格式为：
+    // 【角色名】
+    //   <外貌>XXXXX</外貌>
+    //   <身份>XXXXX</身份>
+    //   <性格>XXXXX</性格>
+    var charSectionRegex = /【(.+?)】([\s\S]*?)(?=\n【|$)/g;
+    var sectionMatch;
+    while ((sectionMatch = charSectionRegex.exec(sp.content)) !== null) {
+      var charName = sectionMatch[1].trim();
+      var charBody = sectionMatch[2];
+      // 优先尝试 XML 标签格式 <外貌>...</外貌>
+      var appMatch = charBody.match(/<外貌>([\s\S]*?)<\/外貌>/);
+      // 未匹配到 XML 标签，再尝试冒号格式 外貌：
+      if (!appMatch) {
+        appMatch = charBody.match(/外貌[：:]([\s\S]*?)(?:\n\n|\n#{1,}|$)/);
+      }
+      if (appMatch) {
+        appearanceSections.push({
+          characterName: charName,
+          appearance: appMatch[1].trim()
+        });
+      }
+    }
+    // 方式2：如果按角色分段没找到，尝试全局匹配外貌（XML 标签格式优先）
+    if (appearanceSections.length === 0) {
+      // 尝试匹配 <外貌>...</外貌> XML 标签
+      var xmlRegex = /<外貌>([\s\S]*?)<\/外貌>/g;
+      var xmlMatch;
+      while ((xmlMatch = xmlRegex.exec(sp.content)) !== null) {
+        appearanceSections.push({
+          characterName: '',
+          appearance: xmlMatch[1].trim()
+        });
+      }
+      // 仍未匹配到，尝试冒号格式
+      if (appearanceSections.length === 0) {
+        var globalRegex = /外貌[：:]([\s\S]*?)(?:\n\n|\n#{1,}|$)/g;
+        var globalMatch;
+        while ((globalMatch = globalRegex.exec(sp.content)) !== null) {
+          appearanceSections.push({
+            characterName: '',
+            appearance: globalMatch[1].trim()
+          });
+        }
+      }
     }
   }
 
   var roleList = charNames.length > 0 ? '涉及角色：' + charNames.join('、') + '。' : '';
-  var appearanceGuide = appearanceHint ? '角色外貌设定参考：' + appearanceHint : '';
+  var appearanceGuide = '';
+  if (appearanceSections.length > 0) {
+    appearanceGuide = '角色外貌设定参考：\n';
+    for (var ai = 0; ai < appearanceSections.length; ai++) {
+      var sec = appearanceSections[ai];
+      if (sec.characterName) {
+        appearanceGuide += '【' + sec.characterName + '】\n外貌：' + sec.appearance + '\n';
+      } else {
+        appearanceGuide += '外貌：' + sec.appearance + '\n';
+      }
+      if (ai < appearanceSections.length - 1) {
+        appearanceGuide += '---\n';
+      }
+    }
+  }
 
   // 构建拍照指令
-  var userContent = '[系统拍照指令]\n';
-  userContent += '请根据以上对话中角色的外貌设定和当前聊天的剧情进展，推算每个涉及角色的当前外貌和状态。\n';
+  var userContent = PROMPT_TAKE_PHOTO_PREAMBLE + '\n';
+  userContent += PROMPT_TAKE_PHOTO_BODY + '\n';
   userContent += roleList + '\n';
   userContent += appearanceGuide + '\n';
-  userContent += '\n请为每个角色分别返回一段用于图像生成的 prompt（中文，一段描述性文字，不要用英文逗号分隔的词组格式）。\n';
-  userContent += '如果有多个角色，用以下分隔符分隔每个角色的 prompt：\n---\n';
-  userContent += '每个 prompt 的开头用【角色名】标记，例如：\n';
-  userContent += '【林梦】一个穿着白色连衣裙的少女站在樱花树下，阳光透过花瓣洒在她柔顺的黑发上，她微微仰起头，眼神清澈而温柔，面带淡淡的微笑。\n---\n';
-  userContent += '【苏晴】一个短发干练的职场女性，穿着深蓝色西装外套，站在落地窗前眺望城市夜景，手中端着一杯咖啡，神情专注而坚定。\n';
-  userContent += '\n注意：请直接输出 prompt 内容，不要额外说明。prompt 要使用完整的中文句子描述，而不是标签式的词组。';
+  userContent += PROMPT_TAKE_PHOTO_INSTRUCTION;
+  userContent += PROMPT_TAKE_PHOTO_SEPARATOR;
+  userContent += PROMPT_TAKE_PHOTO_EXAMPLE;
+  userContent += PROMPT_TAKE_PHOTO_NOTE;
 
   messages.push({ role: 'user', content: userContent });
 
@@ -220,44 +311,62 @@ function buildPhotoRequestMessages(chat, sp) {
 
 /**
  * 解析 AI 返回的多个 prompt
- * 格式：每段以【角色名】开头，多段用 --- 分隔
+ * 格式：每段以【角色名】开头，多段可用 --- 分隔
+ * 
+ * 解析策略（双保险）：
+ * 1. 先统计【角色名】的数量
+ * 2. 尝试按 --- 分割，如果段数等于角色数，用 --- 分割方案
+ * 3. 如果段数不匹配（AI没返回---），直接用【】正则提取
  */
 function parsePhotoPrompts(content) {
   var prompts = [];
 
-  // 尝试按 --- 分割
-  var sections = content.split(/---+/);
-  
-  sections.forEach(function(section) {
-    section = section.trim();
-    if (!section) return;
+  // Step 1: 统计【角色名】的个数
+  var charNameList = [];
+  var nameRegex = /【(.+?)】/g;
+  var m;
+  while ((m = nameRegex.exec(content)) !== null) {
+    charNameList.push(m[1]);
+  }
+  var charCount = charNameList.length;
 
-    // 尝试提取【角色名】
-    var nameMatch = section.match(/^【(.+?)】/);
-    var characterName = nameMatch ? nameMatch[1] : '';
-    var promptText = nameMatch ? section.slice(nameMatch[0].length).trim() : section;
+  // 没有【】标记，返回空（由调用方兜底）
+  if (charCount === 0) return prompts;
 
-    if (promptText) {
-      prompts.push({
-        prompt: promptText,
-        characterName: characterName
-      });
-    }
-  });
+  // Step 2: 尝试按 --- 分割
+  var rawSections = content.split(/---+/);
+  var sections = [];
+  for (var i = 0; i < rawSections.length; i++) {
+    var s = rawSections[i].trim();
+    if (s) sections.push(s);
+  }
 
-  // 如果分割后只有一段或者没有【】标记，尝试整体解析
-  if (prompts.length === 0) {
-    // 尝试逐行解析【角色名】
-    var lineRegex = /【(.+?)】([\s\S]*?)(?=【|$)/g;
-    var match;
-    while ((match = lineRegex.exec(content)) !== null) {
-      var text = match[2].trim();
-      if (text) {
+  // Step 3: 段数等于角色数 → 使用 --- 分割方案
+  if (sections.length === charCount) {
+    for (var i = 0; i < sections.length; i++) {
+      var section = sections[i];
+      var nameMatch = section.match(/^【(.+?)】/);
+      var characterName = nameMatch ? nameMatch[1] : '';
+      var promptText = nameMatch ? section.slice(nameMatch[0].length).trim() : section;
+      if (promptText) {
         prompts.push({
-          prompt: text,
-          characterName: match[1]
+          prompt: promptText,
+          characterName: characterName
         });
       }
+    }
+    return prompts;
+  }
+
+  // Step 4: 段数不匹配（AI没返回---），直接用【】正则逐段提取
+  var sectionRegex = /【(.+?)】([\s\S]*?)(?=【|$)/g;
+  while ((m = sectionRegex.exec(content)) !== null) {
+    var text = m[2].trim();
+    if (text) {
+      prompts.push({
+        prompt: text,
+        characterName: m[1]
+      });
     }
   }
 
@@ -426,60 +535,29 @@ function blobToBase64(blob) {
 }
 
 /**
- * 渲染单张图片消息（追加到聊天区域，不修改 messages）
+ * 渲染单张图片消息（根据 afterMessageIndex 插入到聊天区域中正确位置）
+ * 用于拍照过程中逐张渲染，不等待全部照片生成完成
  */
 function renderPhotoMessage(photoObj) {
   var area = document.getElementById('chatArea');
   if (!area) return;
 
-  var speakerMode = appData.settings.speakerMode !== false;
-  var charName = photoObj.characterName || '';
+  var html = buildPhotoMessageHtml(photoObj);
 
-  // 构建头像
-  var avatarHtml = '🤖';
-  if (speakerMode && charName) {
-    var charInfo = findCharacter(charName);
-    if (charInfo && charInfo.avatar) {
-      avatarHtml = '<img src="' + escHtml(charInfo.avatar) + '" alt="' + escHtml(charName) + '">';
+  // 根据 afterMessageIndex 找到插入位置：在该索引的消息之后插入
+  var targetIdx = photoObj.afterMessageIndex;
+  if (targetIdx !== undefined) {
+    var targetEl = area.querySelector('.message[data-idx="' + targetIdx + '"]');
+    if (targetEl && targetEl.nextSibling) {
+      targetEl.insertAdjacentHTML('afterend', html);
     } else {
-      avatarHtml = '<span>' + escHtml(charName.charAt(0) || '?') + '</span>';
+      // 没找到目标元素，回退到末尾追加
+      area.insertAdjacentHTML('beforeend', html);
     }
-  }
-
-  var photoHtml = '';
-  if (photoObj.dataUrl) {
-    photoHtml = '<img src="' + photoObj.dataUrl + '" alt="拍照" class="photo-message-img" onclick="zoomPhoto(\'' + escHtml(photoObj.id) + '\')">';
   } else {
-    photoHtml = '<div style="padding:12px;text-align:center;color:var(--text-secondary);font-size:13px;">📷 ' + escHtml(photoObj.prompt) + '</div>';
+    area.insertAdjacentHTML('beforeend', html);
   }
 
-  var html = '';
-  if (speakerMode && charName) {
-    html = '<div class="message ai photo-message" data-photo-id="' + escHtml(photoObj.id) + '">';
-    html += '<div class="msg-avatar">' + avatarHtml + '</div>';
-    html += '<div class="msg-body">';
-    html += '<div class="speaker-segment">';
-    html += '<div class="msg-avatar" style="width:30px;height:30px;font-size:12px;">' + avatarHtml + '</div>';
-    html += '<div>';
-    html += '<div class="speaker-name">' + escHtml(charName) + ' 📷 拍摄了一张照片</div>';
-    html += '<div class="speaker-bubble photo-bubble">' + photoHtml + '</div>';
-    html += '<div class="msg-actions">';
-    html += '<button class="msg-action-btn del" onclick="deletePhotoMessage(\'' + escHtml(photoObj.id) + '\')">🗑️ 删除</button>';
-    html += '</div>';
-    html += '</div></div></div></div>';
-  } else {
-    html = '<div class="message ai photo-message" data-photo-id="' + escHtml(photoObj.id) + '">';
-    html += '<div class="msg-avatar">🤖</div>';
-    html += '<div class="msg-body">';
-    html += '<div class="msg-bubble photo-bubble">' + photoHtml + '</div>';
-    html += '<div class="msg-actions">';
-    html += '<button class="msg-action-btn del" onclick="deletePhotoMessage(\'' + escHtml(photoObj.id) + '\')">🗑️ 删除</button>';
-    html += '</div>';
-    html += '</div></div>';
-  }
-
-  // 追加到末尾
-  area.insertAdjacentHTML('beforeend', html);
   scrollToBottom();
 }
 
@@ -561,6 +639,58 @@ function hidePhotoProgress() {
   var existing = document.getElementById('photoProgressBar');
   if (!existing) return;
   existing.style.display = 'none';
+}
+
+/**
+ * 取消拍摄（手动中止拍照流程）
+ */
+function cancelPhoto() {
+  if (photoAbortController) {
+    photoAbortController.abort();
+  }
+  showToast('已取消拍摄');
+}
+
+/**
+ * 生成缩略图（canvas压缩）
+ * @param {string} dataUrl - 原图 data URL
+ * @param {number} maxWidth - 缩略图最大宽度（默认200）
+ * @param {number} maxHeight - 缩略图最大高度（默认200）
+ * @returns {Promise<string>} 缩略图 data URL
+ */
+function generateThumbnail(dataUrl, maxWidth, maxHeight) {
+  maxWidth = maxWidth || 120;
+  maxHeight = maxHeight || 120;
+  return new Promise(function(resolve, reject) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var width = img.width;
+      var height = img.height;
+      // 等比例缩放
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round(height * maxWidth / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round(width * maxHeight / height);
+          height = maxHeight;
+        }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.5));
+    };
+    img.onerror = function() {
+      // 缩略图生成失败时回退到原图
+      resolve(dataUrl);
+    };
+    img.src = dataUrl;
+  });
 }
 
 /**

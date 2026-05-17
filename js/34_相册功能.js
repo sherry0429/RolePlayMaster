@@ -71,7 +71,8 @@ function renderAlbumPhotos() {
 
     html += '<div class="album-photo-card" data-photo-id="' + escHtml(photo.id) + '">';
     if (photo.dataUrl) {
-      html += '<img src="' + photo.dataUrl + '" alt="照片" class="album-photo-img" onclick="zoomPhoto(\'' + escHtml(photo.id) + '\')">';
+      var thumbSrc = photo.thumbUrl || photo.dataUrl;
+      html += '<img src="' + thumbSrc + '" alt="照片" class="album-photo-img" onclick="zoomPhoto(\'' + escHtml(photo.id) + '\')" loading="lazy">';
     } else {
       html += '<div class="album-photo-placeholder" onclick="copyPhotoPrompt(\'' + escHtml(photo.id) + '\')">📷<br><small>' + escHtml(photo.prompt || '').slice(0, 30) + '</small></div>';
     }
@@ -177,6 +178,31 @@ function downloadAlbumPhoto(photoId) {
   a.click();
   document.body.removeChild(a);
   showToast('照片已下载', 'success');
+}
+
+/**
+ * 清空当前聊天的所有照片
+ */
+function clearAllAlbumPhotos() {
+  if (!currentChatId) return;
+  var chat = appData.chats[currentChatId];
+  if (!chat || !chat.photos || chat.photos.length === 0) {
+    showToast('暂无照片可清空', 'info');
+    return;
+  }
+
+  if (!confirm('确定要清空当前聊天的所有照片吗？此操作不可恢复！')) return;
+
+  chat.photos = [];
+  saveData();
+
+  // 从聊天区域移除所有照片消息
+  var photoEls = document.querySelectorAll('.photo-message');
+  photoEls.forEach(function(el) { el.remove(); });
+
+  // 重新渲染相册
+  renderAlbumPhotos();
+  showToast('所有照片已清空', 'success');
 }
 
 // 点击相册遮罩关闭

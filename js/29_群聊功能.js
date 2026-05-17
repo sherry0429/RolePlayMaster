@@ -128,9 +128,15 @@ async function confirmCharSelect() {
 
 function generateGroupSystemPrompt(selectedChars) {
   var charDescList = selectedChars.map(c => {
-    var desc = `- ${c.name}`;
-    if (c.description) desc += `：${c.description}`;
-    return desc;
+    var lines = [`- ${c.name}`];
+    if (c.description) {
+      lines.push(`  - 身份：${c.description}`);
+    } else {
+      lines.push(`  - 外貌：（待补充）`);
+      lines.push(`  - 身份：（待补充）`);
+      lines.push(`  - 性格：（待补充）`);
+    }
+    return lines.join('\n');
   }).join('\n');
 
   var charNames = selectedChars.map(c => c.name).join('、');
@@ -167,37 +173,14 @@ async function autoInitGroupChat(chatId, selectedChars) {
   var url = apiHost.replace(/\/+$/, '') + '/chat/completions';
 
   var charDescList = selectedChars.map(c => {
-    var desc = `- ${c.name}`;
-    if (c.description) desc += `：${c.description}`;
-    return desc;
+    var lines = [`- ${c.name}`];
+    if (c.description) {
+      lines.push(`  - 身份：${c.description}`);
+    }
+    return lines.join('\n');
   }).join('\n');
 
-  var charNames = selectedChars.map(c => c.name).join('、');
-
-  var initPrompt = `你是一个多角色扮演模拟引擎。现在需要你根据以下角色信息，完成初始化设置：
-
-角色列表：
-${charDescList}
-
-请完成以下任务，直接输出结果，不需要额外说明：
-1. 为每个角色补充详细的设定，**尤其要包含角色的外貌特征描写**（发型、发色、眼睛颜色、脸型、体型、服装风格、标志性配饰等），描写要细致到可以直接用于 AI 图像生成。
-2. 随机生成一句话的初始场景作为背景故事
-3. 为每个角色生成一句回复样例，突出人物性格，用【角色名】开头
-4. 如果角色名是知名二次元角色，则直接套用二次元设定。
-
-外貌描写示例：
-- 林梦：身高165cm，一头柔顺的黑色长发垂至腰际，斜刘海半遮右眼，琥珀色的眼眸清澈见底。鹅蛋脸，皮肤白皙透亮，常穿白色连衣裙配米色开衫，气质温柔似水。
-- 苏晴：身高170cm，清爽的齐耳短发，发尾微翘，染着低调的深棕色。丹凤眼配上细框金丝眼镜，显得干练而锐利。身材高挑匀称，偏爱深色西装套装，气场强大。
-
-输出格式要求：
-# 角色设定
-（每个角色的详细设定，包含外貌、性格、说话风格等）
-
-# 背景故事
-（一句话场景描述）
-
-# 回复样例
-（每个角色一句话，用【角色名】开头）`;
+  var initPrompt = buildGroupInitPrompt(charDescList);
 
   var messages = [
     { role: 'system', content: chat.spVersions[0].content },

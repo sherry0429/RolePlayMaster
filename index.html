@@ -193,7 +193,7 @@
       <button class="menu-btn" onclick="openGalleryDrawer()" title="角色图库">🎭</button>
       <button class="menu-btn" onclick="openAlbumDrawer()" title="相册">🖼️</button>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="切换主题">🌙</button>
-      <button class="log-btn" onclick="openLogDrawer()" title="请求日志">📋</button>
+      <button class="log-btn" onclick="openLogDrawer()" title="程序日志">📋</button>
       <div class="replay-progress" id="replayProgress" style="width:0;"></div>
     </div>
 
@@ -217,6 +217,7 @@
       <div class="photo-progress-track">
         <div class="photo-progress-fill" id="photoProgressFill"></div>
       </div>
+      <button class="photo-progress-cancel" id="photoProgressCancel" onclick="cancelPhoto()" title="取消拍摄">✕</button>
     </div>
 
     <!-- 输入区域 -->
@@ -232,11 +233,11 @@
 <div class="drawer-backdrop" id="logBackdrop"></div>
 <div class="log-drawer" id="logDrawer">
   <div class="log-drawer-header">
-    <h3>📋 请求日志</h3>
+    <h3>📋 程序日志</h3>
     <button class="log-drawer-close" onclick="closeLogDrawer()">✕</button>
   </div>
   <div class="log-drawer-body" id="logDrawerBody">
-    <div class="log-empty">暂无请求日志</div>
+    <div class="log-empty">暂无程序日志</div>
   </div>
 </div>
 
@@ -247,6 +248,7 @@
     <h3>🖼️ 相册</h3>
     <div style="display:flex;gap:8px;align-items:center;">
       <span id="albumChatName" style="font-size:13px;color:var(--text-secondary);"></span>
+      <button class="album-clear-btn" id="albumClearBtn" onclick="clearAllAlbumPhotos()" title="清空当前聊天的所有照片">🗑️ 清空</button>
       <button class="log-drawer-close" onclick="closeAlbumDrawer()">✕</button>
     </div>
   </div>
@@ -288,6 +290,7 @@
 </div>
 
 <script src="./js/01_常量.js"></script>
+<script src="./js/00_prompts.js"></script>
 <script src="./js/02_全局状态.js"></script>
 <script src="./js/03_数据结构.js"></script>
 <script src="./js/04_存储.js"></script>
