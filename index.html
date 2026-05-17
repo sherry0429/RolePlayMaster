@@ -101,6 +101,47 @@
           <label>云端同步地址（含云端导入导出和通知功能）</label>
           <input type="text" id="cloudSyncHost" placeholder="https://poecurrency.top">
         </div>
+        <!-- ComfyUI 设置 -->
+        <div class="settings-section-title" style="margin-top:16px;font-size:13px;font-weight:600;color:var(--text-primary);">🎨 ComfyUI 图像生成</div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="comfyuiEnabled">
+          <label for="comfyuiEnabled">启用 ComfyUI（关闭则使用默认 AI 生成图片）</label>
+        </div>
+        <div class="form-group">
+          <label>ComfyUI 服务器地址</label>
+          <input type="text" id="comfyuiServerUrl" placeholder="http://127.0.0.1:8188">
+        </div>
+        <div class="form-group">
+          <label>上传工作流 JSON</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn-sm btn-primary" onclick="document.getElementById('comfyuiWorkflowFile').click()">📂 上传</button>
+            <span id="comfyuiWorkflowStatus" style="font-size:12px;color:var(--text-secondary);">未上传</span>
+          </div>
+          <input type="file" id="comfyuiWorkflowFile" accept=".json" style="display:none" onchange="handleComfyuiWorkflowUpload(event)">
+        </div>
+        <div class="form-group">
+          <label>提示词节点 ID（工作流中接收正向提示词的节点）</label>
+          <input type="text" id="comfyuiPromptNodeId" placeholder="例如: 6">
+        </div>
+        <div class="form-group">
+          <label>宽度节点 ID（控制生成图像宽度的节点）</label>
+          <input type="text" id="comfyuiWidthNodeId" placeholder="例如: 5">
+        </div>
+        <div class="form-group">
+          <label>高度节点 ID（控制生成图像高度的节点）</label>
+          <input type="text" id="comfyuiHeightNodeId" placeholder="例如: 5">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="form-group" style="flex:1;">
+            <label>默认宽度</label>
+            <input type="number" id="comfyuiDefaultWidth" placeholder="512" min="64" max="2048">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>默认高度</label>
+            <input type="number" id="comfyuiDefaultHeight" placeholder="768" min="64" max="2048">
+          </div>
+        </div>
+        <!-- /ComfyUI 设置 -->
         <div class="btn-row">
           <button class="btn-sm btn-primary" onclick="saveSettings()">保存</button>
           <button class="btn-sm btn-ghost" onclick="resetSettings()">重置默认</button>
@@ -150,6 +191,7 @@
       <button class="menu-btn replay-btn" id="replayBtn" onclick="toggleReplay()" title="重放">🔄</button>
       <span class="auto-topic-countdown" id="autoTopicCountdown" style="display:none;"></span>
       <button class="menu-btn" onclick="openGalleryDrawer()" title="角色图库">🎭</button>
+      <button class="menu-btn" onclick="openAlbumDrawer()" title="相册">🖼️</button>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="切换主题">🌙</button>
       <button class="log-btn" onclick="openLogDrawer()" title="请求日志">📋</button>
       <div class="replay-progress" id="replayProgress" style="width:0;"></div>
@@ -166,6 +208,15 @@
     <div class="quick-actions" id="quickActions">
       <button class="quick-action-btn" onclick="triggerMemory()">🧠 /记忆</button>
       <button class="quick-action-btn" onclick="triggerContinue()">▶ /继续</button>
+      <button class="quick-action-btn" onclick="triggerTakePhoto()">📷 拍照</button>
+    </div>
+
+    <!-- 拍摄进度条 -->
+    <div class="photo-progress" id="photoProgressBar" style="display:none;">
+      <span class="photo-progress-text" id="photoProgressText">📸 拍摄中...</span>
+      <div class="photo-progress-track">
+        <div class="photo-progress-fill" id="photoProgressFill"></div>
+      </div>
     </div>
 
     <!-- 输入区域 -->
@@ -186,6 +237,21 @@
   </div>
   <div class="log-drawer-body" id="logDrawerBody">
     <div class="log-empty">暂无请求日志</div>
+  </div>
+</div>
+
+<!-- 相册抽屉 -->
+<div class="drawer-backdrop" id="albumBackdrop"></div>
+<div class="album-drawer" id="albumDrawer">
+  <div class="album-drawer-header">
+    <h3>🖼️ 相册</h3>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="albumChatName" style="font-size:13px;color:var(--text-secondary);"></span>
+      <button class="log-drawer-close" onclick="closeAlbumDrawer()">✕</button>
+    </div>
+  </div>
+  <div class="album-drawer-body" id="albumDrawerBody">
+    <div class="album-empty">暂无照片，点击「📷 拍照」拍摄第一张</div>
   </div>
 </div>
 
@@ -253,6 +319,8 @@
 <script src="./js/30_自动找话题.js"></script>
 <script src="./js/31_消息分页渲染.js"></script>
 <script src="./js/32_启动.js"></script>
+<script src="./js/33_拍照功能.js"></script>
+<script src="./js/34_相册功能.js"></script>
 <script src="./js/main.js"></script>
 </body>
 </html>

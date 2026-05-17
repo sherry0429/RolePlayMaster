@@ -34,6 +34,8 @@ async function init() {
   document.getElementById('autoTopic').addEventListener('change', toggleAutoTopicConfig);
   document.getElementById('syncToken').value = appData.settings.syncToken || '';
   document.getElementById('cloudSyncHost').value = appData.settings.cloudSyncHost || '';
+  // 加载 ComfyUI 设置
+  loadComfyuiSettings();
   // 全局背景
   applyBgImage(appData.settings.bgImage);
   // 聊天列表

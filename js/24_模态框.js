@@ -87,6 +87,11 @@ function closeModal() {
   overlay._onConfirm = null;
   overlay._isTextarea = null;
   content.style.maxWidth = ''; // 重置弹框宽度
+  content.style.maxHeight = '';
+  content.style.padding = '';
+  content.style.background = '';
+  content.style.border = '';
+  content.style.boxShadow = '';
 }
 
 // 点击遮罩关闭

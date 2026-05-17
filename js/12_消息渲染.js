@@ -33,7 +33,7 @@ function renderMessages(shouldScrollToBottom = true) {
     </div>`;
   }
 
-  // 只渲染最近的消息
+  // 只渲染最近的消息，并在每个消息之后检查是否有对应的照片
   for (var idx = startIndex; idx < totalMessages; idx++) {
     var msg = chat.messages[idx];
     var isUser = msg.role === 'user';
@@ -66,6 +66,25 @@ function renderMessages(shouldScrollToBottom = true) {
             </div>
           </div>
         </div>`;
+    }
+
+    // 在该消息之后插入对应的照片（afterMessageIndex = idx 的）
+    if (chat.photos && chat.photos.length > 0) {
+      var photosHere = chat.photos.filter(function(p) { return p.afterMessageIndex === idx; });
+      for (var pi = 0; pi < photosHere.length; pi++) {
+        html += buildPhotoMessageHtml(photosHere[pi]);
+      }
+    }
+  }
+
+  // 处理 afterMessageIndex 大于等于 totalMessages 的照片（在最后一条消息之后拍摄的）
+  // 以及没有 afterMessageIndex 的旧照片（兼容旧数据）
+  if (chat.photos && chat.photos.length > 0) {
+    var trailingPhotos = chat.photos.filter(function(p) {
+      return p.afterMessageIndex === undefined || p.afterMessageIndex >= totalMessages;
+    });
+    for (var pi = 0; pi < trailingPhotos.length; pi++) {
+      html += buildPhotoMessageHtml(trailingPhotos[pi]);
     }
   }
 

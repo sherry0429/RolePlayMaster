@@ -12,3 +12,7 @@ var isCompressing = false; // 是否正在压缩记忆
 var abortController = null; // 用于中断请求
 var requestLog = [];     // 最近请求日志（内存中，仅保留最近 N 条）
 
+// 拍照功能状态
+var isPhotoShooting = false;   // 是否正在拍摄中
+var photoAbortController = null; // 拍摄请求中止控制器
+
