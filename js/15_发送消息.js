@@ -31,6 +31,23 @@ function sendMessage() {
     newChat();
   }
 
+  // /拍照 命令：触发拍照，不新增用户气泡
+  if (text === '/拍照') {
+    input.value = '';
+    input.style.height = 'auto';
+    if (!currentChatId) {
+      showToast('请先开始一个对话', 'error');
+      return;
+    }
+    var photoChat = appData.chats[currentChatId];
+    if (!photoChat || photoChat.messages.length === 0) {
+      showToast('请先发送消息再拍照', 'error');
+      return;
+    }
+    triggerTakePhoto();
+    return;
+  }
+
   // /记忆 命令：立即触发 System Prompt 更新，消息不进入聊天
   if (text === '/记忆') {
     input.value = '';

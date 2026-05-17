@@ -130,11 +130,18 @@ function handleImport(event) {
       if (!data.settings.chatNotification) data.settings.chatNotification = false;
       if (data.settings.autoTopicInterval === undefined) data.settings.autoTopicInterval = 10;
       if (data.settings.autoTopicMaxCount === undefined) data.settings.autoTopicMaxCount = 5;
-      // 兼容旧版：为每个聊天补全 characters 字段
+      // 兼容新版：补全 comfyui 设置
+      if (!data.settings.comfyui) {
+        data.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768 };
+      }
+      // 兼容旧版：为每个聊天补全 characters 和 photos 字段
       if (data.chats) {
         for (var id of Object.keys(data.chats)) {
           if (data.chats[id].characters === undefined) {
             data.chats[id].characters = [];
+          }
+          if (data.chats[id].photos === undefined) {
+            data.chats[id].photos = [];
           }
         }
       }

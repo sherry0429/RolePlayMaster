@@ -128,9 +128,15 @@ async function confirmCharSelect() {
 
 function generateGroupSystemPrompt(selectedChars) {
   var charDescList = selectedChars.map(c => {
-    var desc = `- ${c.name}`;
-    if (c.description) desc += `：${c.description}`;
-    return desc;
+    var lines = [`- ${c.name}`];
+    if (c.description) {
+      lines.push(`  - 身份：${c.description}`);
+    } else {
+      lines.push(`  - 外貌：（待补充）`);
+      lines.push(`  - 身份：（待补充）`);
+      lines.push(`  - 性格：（待补充）`);
+    }
+    return lines.join('\n');
   }).join('\n');
 
   var charNames = selectedChars.map(c => c.name).join('、');
@@ -141,7 +147,8 @@ function generateGroupSystemPrompt(selectedChars) {
 - 用户：根据关系和性格有对应亲密称呼，默认为你。
 - 推动符合当前世界观下的合理剧情发展。
 - 在需要时自动完成各角色之间的对话、必要时包括行动和内在心理描写。
-- 回复时以角色名字用【】开头。如果是旁白则直接加在文本结尾。
+- 回复时以角色名字用【】开头。如果是旁白则直接加在文本结尾。回复消息除了角色名字用【】包括外，不要再使用【】。
+- ${PROMPT_AUTO_PHOTO_TRIGGER}
 
 # 角色设定
 ${charDescList}
@@ -153,7 +160,8 @@ ${charDescList}
 无
 
 # 回复样例
-（待AI生成）`;
+（待AI生成）
+`;
 }
 
 async function autoInitGroupChat(chatId, selectedChars) {
@@ -167,33 +175,14 @@ async function autoInitGroupChat(chatId, selectedChars) {
   var url = apiHost.replace(/\/+$/, '') + '/chat/completions';
 
   var charDescList = selectedChars.map(c => {
-    var desc = `- ${c.name}`;
-    if (c.description) desc += `：${c.description}`;
-    return desc;
+    var lines = [`- ${c.name}`];
+    if (c.description) {
+      lines.push(`  - 身份：${c.description}`);
+    }
+    return lines.join('\n');
   }).join('\n');
 
-  var charNames = selectedChars.map(c => c.name).join('、');
-
-  var initPrompt = `你是一个多角色扮演模拟引擎。现在需要你根据以下角色信息，完成初始化设置：
-
-角色列表：
-${charDescList}
-
-请完成以下任务，直接输出结果，不需要额外说明：
-1. 为每个角色补充详细的设定（性格、外貌、说话风格、与用户的关系等）
-2. 随机生成一句话的初始场景作为背景故事
-3. 为每个角色生成一句回复样例，突出人物性格，用【角色名】开头
-4. 如果角色名是知名二次元角色，则直接套用二次元设定。
-
-输出格式要求：
-# 角色设定
-（每个角色的详细设定）
-
-# 背景故事
-（一句话场景描述）
-
-# 回复样例
-（每个角色一句话，用【角色名】开头）`;
+  var initPrompt = buildGroupInitPrompt(charDescList);
 
   var messages = [
     { role: 'system', content: chat.spVersions[0].content },
@@ -237,12 +226,14 @@ ${charDescList}
 - 用户：根据关系和性格有对应亲密称呼，默认为你。
 - 推动符合当前世界观下的合理剧情发展。
 - 在需要时自动完成各角色之间的对话、必要时包括行动和内在心理描写。
-- 回复时以角色名字用【】开头。如果是旁白则直接加在文本开始或结尾。
+- 回复时以角色名字用【】开头。如果是旁白则直接加在文本开始或结尾。除角色名外消息内不再存在【】字符
+- ${PROMPT_AUTO_PHOTO_TRIGGER}
 
 ${content}
 
 # 当前状态
-无`;
+无
+`;
 
       chat.spVersions[0].content = fullSp;
       saveData();
@@ -337,13 +328,20 @@ async function syncFromCloud() {
     if (!data.chatCounter) data.chatCounter = data.chatOrder.length;
     if (!data.theme) data.theme = 'light';
     if (!data.characters) data.characters = [];
-    // 兼容旧版：为每个聊天补全 characters 字段
+    // 兼容旧版：为每个聊天补全 characters 和 photos 字段
     if (data.chats) {
       for (var id of Object.keys(data.chats)) {
         if (data.chats[id].characters === undefined) {
           data.chats[id].characters = [];
         }
+        if (data.chats[id].photos === undefined) {
+          data.chats[id].photos = [];
+        }
       }
+    }
+    // 兼容新版：补全 comfyui 设置
+    if (!data.settings.comfyui) {
+      data.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768 };
     }
     if (data._shareLite) {
       data = expandShareData(data);
@@ -375,6 +373,7 @@ function applyImportedData(data) {
   toggleAutoTopicConfig();
   document.getElementById('syncToken').value = appData.settings.syncToken || '';
   document.getElementById('cloudSyncHost').value = appData.settings.cloudSyncHost || '';
+  loadComfyuiSettings();
   applyBgImage(appData.settings.bgImage);
   updateBgImageStatus();
   renderChatList();

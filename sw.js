@@ -1,5 +1,5 @@
 // Service Worker for AI Chat PWA
-const CACHE_NAME = 'ai-chat-v1';
+const CACHE_NAME = 'ai-chat-v2';
 const OFFLINE_URL = './index.html';
 
 // 预缓存的资源列表
@@ -52,6 +52,25 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request).catch(() => {
         return caches.match(OFFLINE_URL);
+      })
+    );
+    return;
+  }
+
+  // 对于 JS 文件：网络优先（保证 F5 能拿到最新版本），离线回退到缓存
+  if (/\.js(\?|$)/.test(url.pathname)) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (!response || response.status !== 200 || response.type === 'opaque') {
+          return response;
+        }
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, responseClone);
+        });
+        return response;
+      }).catch(() => {
+        return caches.match(event.request);
       })
     );
     return;

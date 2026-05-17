@@ -19,7 +19,15 @@ function createDefaultData() {
       autoTopic: false,
       chatNotification: false,
       autoTopicInterval: 10,
-      autoTopicMaxCount: 5
+      autoTopicMaxCount: 5,
+      comfyui: {
+        enabled: false,
+        serverUrl: 'http://127.0.0.1:8188',
+        workflowJson: '',
+        nodeIds: { prompt: '', width: '', height: '' },
+        defaultWidth: 512,
+        defaultHeight: 768
+      }
     },
     chats: {},       // { id: { name, bgImage, messages: [], spVersions: [] } }
     chatOrder: [],   // 聊天 ID 有序列表
@@ -37,7 +45,8 @@ function createChat(id, name) {
     spVersions: [        // System Prompt 版本列表
       { version: 0, content: '', lastIndex: -1 } // 初始空版本
     ],
-    spViewIndex: 0       // 当前查看的版本索引（在 spVersions 数组中的索引）
+    spViewIndex: 0,      // 当前查看的版本索引（在 spVersions 数组中的索引）
+    photos: []           // 相册 [{ id, dataUrl, prompt, characterName, createdAt }]
   };
 }
 

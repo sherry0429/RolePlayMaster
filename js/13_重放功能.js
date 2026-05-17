@@ -21,12 +21,14 @@ function toggleReplay() {
  * 用户消息 → 一个单元（type: 'user'）
  * AI 消息（无说话人标签）→ 一个单元（type: 'ai'）
  * AI 消息（有说话人标签）→ 拆为多个单元（type: 'speaker'），包括 preamble
+ * 照片消息 → 一个单元（type: 'photo'），跟随在关联消息之后
  */
-function buildReplayUnits(messages) {
+function buildReplayUnits(messages, photos) {
   var speakerMode = appData.settings.speakerMode !== false;
   var units = [];
+  var totalMessages = messages.length;
 
-  for (var i = 0; i < messages.length; i++) {
+  for (var i = 0; i < totalMessages; i++) {
     var msg = messages[i];
     if (msg.role === 'user') {
       units.push({ type: 'user', msgIdx: i, content: msg.content });
@@ -47,7 +49,27 @@ function buildReplayUnits(messages) {
     } else {
       units.push({ type: 'ai', msgIdx: i, content: msg.content });
     }
+
+    // 在该消息之后插入关联的照片（photo 单元不带 msgIdx，跟随渲染）
+    if (photos && photos.length > 0) {
+      var photosHere = photos.filter(function(p) { return p.afterMessageIndex === i; });
+      for (var pi = 0; pi < photosHere.length; pi++) {
+        units.push({ type: 'photo', photo: photosHere[pi] });
+      }
+    }
   }
+
+  // 处理 afterMessageIndex >= totalMessages 的照片（最后一条消息之后拍摄的）
+  // 以及没有 afterMessageIndex 的旧照片（兼容旧数据）
+  if (photos && photos.length > 0) {
+    var trailingPhotos = photos.filter(function(p) {
+      return p.afterMessageIndex === undefined || p.afterMessageIndex >= totalMessages;
+    });
+    for (var pi = 0; pi < trailingPhotos.length; pi++) {
+      units.push({ type: 'photo', photo: trailingPhotos[pi] });
+    }
+  }
+
   return units;
 }
 
@@ -72,7 +94,7 @@ async function startReplay() {
 
   // 更新按钮状态
   var btn = document.getElementById('replayBtn');
-  btn.innerHTML = '⏹';
+  btn.innerHTML = '⏹ 重放';
   btn.title = '停止重放';
   btn.classList.add('replaying');
 
@@ -85,7 +107,7 @@ async function startReplay() {
   area.innerHTML = '';
 
   var messages = chat.messages;
-  var units = buildReplayUnits(messages);
+  var units = buildReplayUnits(messages, chat.photos);
   var total = units.length;
   var progressBar = document.getElementById('replayProgress');
 
@@ -160,6 +182,22 @@ async function startReplay() {
       appendReplaySpeakerSegment(currentAiMsgEl, unit);
       scrollToBottom();
       await replayDelay(300, myGen);
+
+    } else if (unit.type === 'photo') {
+      // 照片消息：关闭上一个 AI 消息容器
+      currentAiMsgIdx = -1;
+      currentAiMsgEl = null;
+
+      // 先显示📷打字指示器
+      showReplayTyping('📷');
+      scrollToBottom();
+      await replayDelay(400, myGen);
+      if (myGen !== _replayGen) break;
+
+      removeReplayTyping();
+      appendReplayPhotoMessage(unit.photo);
+      scrollToBottom();
+      await replayDelay(500, myGen);
     }
   }
 
@@ -181,7 +219,7 @@ function finishReplay() {
   isReplaying = false;
 
   var btn = document.getElementById('replayBtn');
-  btn.innerHTML = '🔄';
+  btn.innerHTML = '🔄 重放';
   btn.title = '重放';
   btn.classList.remove('replaying');
 
@@ -284,6 +322,15 @@ function appendReplaySpeakerSegment(msgEl, unit) {
   segEl.appendChild(avatarDiv);
   segEl.appendChild(contentDiv);
   bodyDiv.appendChild(segEl);
+}
+
+/**
+ * 在聊天区域追加一条照片消息（用于重放）
+ */
+function appendReplayPhotoMessage(photoObj) {
+  var area = document.getElementById('chatArea');
+  var html = buildPhotoMessageHtml(photoObj);
+  area.insertAdjacentHTML('beforeend', html);
 }
 
 /**

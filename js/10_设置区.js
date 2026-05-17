@@ -35,6 +35,16 @@ function saveSettings() {
   appData.settings.autoTopicMaxCount = (maxCount >= 1) ? maxCount : 5;
   appData.settings.syncToken = document.getElementById('syncToken').value.trim();
   appData.settings.cloudSyncHost = document.getElementById('cloudSyncHost').value.trim();
+  // ComfyUI 设置
+  appData.settings.comfyui.enabled = document.getElementById('comfyuiEnabled').checked;
+  appData.settings.comfyui.serverUrl = document.getElementById('comfyuiServerUrl').value.trim() || 'http://127.0.0.1:8188';
+  appData.settings.comfyui.nodeIds.prompt = document.getElementById('comfyuiPromptNodeId').value.trim();
+  appData.settings.comfyui.nodeIds.width = document.getElementById('comfyuiWidthNodeId').value.trim();
+  appData.settings.comfyui.nodeIds.height = document.getElementById('comfyuiHeightNodeId').value.trim();
+  var w = parseInt(document.getElementById('comfyuiDefaultWidth').value, 10);
+  appData.settings.comfyui.defaultWidth = (w >= 64 && w <= 2048) ? w : 512;
+  var h = parseInt(document.getElementById('comfyuiDefaultHeight').value, 10);
+  appData.settings.comfyui.defaultHeight = (h >= 64 && h <= 2048) ? h : 768;
   // 重新初始化自动话题和通知
   initAutoTopic();
   initChatNotification();
@@ -90,7 +100,9 @@ async function confirmResetAll() {
     _streamingCache = null;
     _streamingScrolledOnce = false;
     abortController = null;
-    requestLog = [];
+    programLog = [];
+    isPhotoShooting = false;
+    photoAbortController = null;
     // 重新初始化 UI
     document.getElementById('currentChatName').textContent = 'AI Chat';
     document.getElementById('chatArea').innerHTML = '<div class="welcome-msg">👋 欢迎使用 AI Chat<br>点击左侧 + 开始新对话</div>';
@@ -109,6 +121,16 @@ async function confirmResetAll() {
     document.getElementById('autoTopicMaxCount').value = 5;
     document.getElementById('syncToken').value = '';
     document.getElementById('cloudSyncHost').value = '';
+    // 重置 ComfyUI 表单
+    document.getElementById('comfyuiEnabled').checked = false;
+    document.getElementById('comfyuiServerUrl').value = 'http://127.0.0.1:8188';
+    document.getElementById('comfyuiPromptNodeId').value = '';
+    document.getElementById('comfyuiWidthNodeId').value = '';
+    document.getElementById('comfyuiHeightNodeId').value = '';
+    document.getElementById('comfyuiDefaultWidth').value = 512;
+    document.getElementById('comfyuiDefaultHeight').value = 768;
+    document.getElementById('comfyuiWorkflowStatus').textContent = '未上传';
+    document.getElementById('comfyuiWorkflowStatus').style.color = '';
     toggleAutoTopicConfig();
     initAutoTopic();
     initChatNotification();
@@ -116,6 +138,53 @@ async function confirmResetAll() {
   } catch (e) {
     console.error('重置失败', e);
     showToast('重置失败: ' + e.message, 'error');
+  }
+}
+
+// ComfyUI 工作流上传处理
+function handleComfyuiWorkflowUpload(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  if (!file.name.endsWith('.json')) {
+    showToast('请选择 JSON 格式的工作流文件', 'error');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      var text = e.target.result;
+      // JSON 校验
+      JSON.parse(text);
+      // 保存 minified 版本
+      var minified = JSON.stringify(JSON.parse(text));
+      appData.settings.comfyui.workflowJson = minified;
+      document.getElementById('comfyuiWorkflowStatus').textContent = '✅ ' + file.name;
+      document.getElementById('comfyuiWorkflowStatus').style.color = 'var(--success)';
+      showToast('工作流上传成功，请设置节点 ID', 'success');
+    } catch (err) {
+      showToast('JSON 格式无效: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// 加载 ComfyUI 设置到表单
+function loadComfyuiSettings() {
+  var c = appData.settings.comfyui || {};
+  document.getElementById('comfyuiEnabled').checked = !!c.enabled;
+  document.getElementById('comfyuiServerUrl').value = c.serverUrl || 'http://127.0.0.1:8188';
+  document.getElementById('comfyuiPromptNodeId').value = (c.nodeIds && c.nodeIds.prompt) || '';
+  document.getElementById('comfyuiWidthNodeId').value = (c.nodeIds && c.nodeIds.width) || '';
+  document.getElementById('comfyuiHeightNodeId').value = (c.nodeIds && c.nodeIds.height) || '';
+  document.getElementById('comfyuiDefaultWidth').value = c.defaultWidth || 512;
+  document.getElementById('comfyuiDefaultHeight').value = c.defaultHeight || 768;
+  if (c.workflowJson) {
+    document.getElementById('comfyuiWorkflowStatus').textContent = '✅ 已上传';
+    document.getElementById('comfyuiWorkflowStatus').style.color = 'var(--success)';
+  } else {
+    document.getElementById('comfyuiWorkflowStatus').textContent = '未上传';
+    document.getElementById('comfyuiWorkflowStatus').style.color = '';
   }
 }
 

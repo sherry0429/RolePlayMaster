@@ -5,7 +5,7 @@
  * 保持全局兼容模式
  */
 
-async function requestAI() {
+async function requestAI(extraMessages) {
   if (isStreaming || isCompressing) return;
   var chat = appData.chats[currentChatId];
   if (!chat) return;
@@ -30,17 +30,19 @@ async function requestAI() {
   for (var i = startIdx; i < chat.messages.length; i++) {
     messages.push({ role: chat.messages[i].role, content: chat.messages[i].content });
   }
-
-  // 记录本次请求日志（深拷贝，最多保留 3 条）
-  requestLog.push({
-    time: new Date().toLocaleString(),
-    chatId: currentChatId,
-    chatName: chat.name,
-    messages: JSON.parse(JSON.stringify(messages))
-  });
-  if (requestLog.length > 3) {
-    requestLog = requestLog.slice(-3);
+  // 如果有额外上下文消息（不保存到 chat.messages），追加到最后
+  if (extraMessages && extraMessages.length > 0) {
+    for (var ei = 0; ei < extraMessages.length; ei++) {
+      messages.push(extraMessages[ei]);
+    }
   }
+
+  // 记录本次请求日志
+  addProgramLog(LOG_TYPE_REQUEST, {
+    summary: 'AI 对话请求',
+    chatName: chat.name,
+    detail: messages
+  });
 
   // 添加 AI 占位消息
   chat.messages.push({ role: 'assistant', content: '' });
@@ -121,6 +123,33 @@ async function requestAI() {
     document.getElementById('sendBtn').style.display = 'flex';
     document.getElementById('stopBtn').style.display = 'none';
     abortController = null;
+
+    // 检查 AI 回复中是否有自动拍照触发标签（仅群聊场景）
+    if (chat && chat.characters && chat.characters.length > 0 && chat.messages[aiMsgIdx] && chat.messages[aiMsgIdx].content) {
+      var rawContent = chat.messages[aiMsgIdx].content;
+      var parsed = extractAndStripPhotoTrigger(rawContent);
+      if (parsed.triggerCharacters && parsed.triggerCharacters.length > 0) {
+        // 有拍照触发：剥离标签后保存，异步触发拍照
+        chat.messages[aiMsgIdx].content = parsed.cleanContent;
+        var chars = parsed.triggerCharacters;
+        for (var pi = 0; pi < chars.length; pi++) {
+          var char = chars[pi];
+          addProgramLog(LOG_TYPE_PHOTO, {
+            summary: 'AI 自动触发拍照（' + char + '）',
+            chatName: chat.name,
+            detail: '由 AI 回复末尾的 trigger 标签自动触发，角色：' + char
+          });
+          showToast('📸 ' + char + ' 开始拍照...', 'success');
+          // 每个拍照按顺序错开延迟，避免并发冲突
+          (function(c) {
+            setTimeout(function() {
+              triggerTakePhoto(c);
+            }, 100 + pi * 500);
+          })(char);
+        }
+      }
+    }
+
     saveData();
     renderMessages();
     // 检查是否需要摘要压缩
@@ -133,6 +162,10 @@ var _streamingCache = null; // { msgIdx, segments: [{speaker, textLen}] }
 var _streamingScrolledOnce = false; // 当前流式输出是否已触发过首次自动滚动
 
 function updateStreamingMessage(idx, content) {
+  // 剥离拍照触发标签（仅用于显示，不保存到 chat.messages）
+  content = content.replace(/<trigger\s+type="photo"\s+character="[^"]*"\s*\/>/g, '').trim();
+  if (!content) return;
+
   var msgEl = document.querySelector(`.message[data-idx="${idx}"] .msg-body`);
   if (!msgEl) return;
 
@@ -317,5 +350,36 @@ function stopStreaming() {
   if (abortController) {
     abortController.abort();
   }
+}
+
+/**
+ * 从 AI 回复内容中提取并剥离拍照触发 XML 标签
+ * 标签格式：<trigger type="photo" character="角色名" />
+ * 标签必须在回复末尾才生效，支持多个标签连续出现（多角色场景）
+ * @param {string} content - AI 原始回复内容
+ * @returns {{ cleanContent: string, triggerCharacters: string[] }}
+ */
+function extractAndStripPhotoTrigger(content) {
+  // 全局匹配所有 photo trigger
+  var triggerRegex = /<trigger\s+type="photo"\s+character="([^"]+)"\s*\/>/g;
+
+  var characters = [];
+  var match;
+
+  // 提取所有角色
+  while ((match = triggerRegex.exec(content)) !== null) {
+    characters.push(match[1]);
+  }
+
+  // 删除所有 trigger 标签
+  var cleanContent = content
+    .replace(triggerRegex, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return {
+    cleanContent,
+    triggerCharacters: characters
+  };
 }
 

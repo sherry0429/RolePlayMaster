@@ -142,19 +142,15 @@ async function compressChat() {
   }
   compressMessages.push({
     role: 'user',
-    content: '请对以上对话内容进行分析总结，输出system_prompt，包括任务定义，角色设定，背景故事，当前状态，回复样例。更新角色设定，背景故事，当前状态，绝对不要修改任务定义，回复样例。直接输出内容，不需要额外的说明。'
+    content: PROMPT_MEMORY
   });
 
-  // 记录压缩请求日志
-  requestLog.push({
-    time: new Date().toLocaleString(),
-    chatId: currentChatId,
-    chatName: chat.name + ' [压缩]',
-    messages: JSON.parse(JSON.stringify(compressMessages))
+  // 记录压缩日志
+  addProgramLog(LOG_TYPE_MEMORY, {
+    summary: '触发记忆压缩',
+    chatName: chat.name + LOG_NAME_MEMORY,
+    detail: compressMessages
   });
-  if (requestLog.length > 3) {
-    requestLog = requestLog.slice(-3);
-  }
 
   try {
     var response = await fetch(url, {
