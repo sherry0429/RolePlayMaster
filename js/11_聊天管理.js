@@ -81,6 +81,102 @@ function selectChat(id) {
   closeSidebar();
 }
 
+// ===== SP 解析辅助函数 =====
+
+function extractTagContent(text, tagName) {
+  var regex = new RegExp('<' + tagName + '>([\\s\\S]*?)</' + tagName + '>', 'i');
+  var match = text.match(regex);
+  return match ? match[1].trim() : '';
+}
+
+function extractCharIdentityFromSP(spContent, charName) {
+  if (!spContent || !charName) return '';
+
+  var charMarker = '【' + charName + '】';
+  var charIdx = spContent.indexOf(charMarker);
+  if (charIdx === -1) return '';
+
+  var afterChar = spContent.substring(charIdx + charMarker.length);
+  var nextCharIdx = afterChar.indexOf('【');
+  var charSection = nextCharIdx !== -1 ? afterChar.substring(0, nextCharIdx) : afterChar;
+
+  var identity = extractTagContent(charSection, '身份');
+  var personality = extractTagContent(charSection, '性格');
+
+  var parts = [];
+  if (identity) parts.push('身份：' + identity);
+  if (personality) parts.push('性格：' + personality);
+
+  return parts.join('\n');
+}
+
+function findAllCharNamesInSP(spContent) {
+  if (!spContent) return [];
+  var names = [];
+  var regex = /【([^】]+)】/g;
+  var match;
+  while ((match = regex.exec(spContent)) !== null) {
+    if (names.indexOf(match[1]) === -1) {
+      names.push(match[1]);
+    }
+  }
+  return names;
+}
+
+function findNewCharsInSP(spContent, existingChars) {
+  var allNames = findAllCharNamesInSP(spContent);
+  var existingNames = existingChars.map(function(c) { return c.name; });
+  return allNames.filter(function(n) { return existingNames.indexOf(n) === -1; });
+}
+
+function openEditAssociatedChar(chatId, charIdx) {
+  var chat = appData.chats[chatId];
+  if (!chat) return;
+  var chars = chat.characters || [];
+  var charInfo = chars[charIdx];
+  if (!charInfo) return;
+
+  var allChars = appData.characters || [];
+  var globalIdx = allChars.findIndex(function(c) { return c.name === charInfo.name; });
+
+  var latestSp = chat.spVersions[chat.spVersions.length - 1];
+  var spContent = latestSp ? latestSp.content : '';
+
+  var desc = extractCharIdentityFromSP(spContent, charInfo.name);
+
+  // 记录来源聊天，用于保存后同步到 chat.characters
+  var overlay = document.getElementById('modalOverlay');
+  overlay._fromChatId = chatId;
+  overlay._fromCharIdx = charIdx;
+  overlay._isNewFromSP = false;
+
+  if (globalIdx >= 0) {
+    showCharacterForm(globalIdx, { name: charInfo.name, description: desc || allChars[globalIdx].description, avatar: allChars[globalIdx].avatar });
+  } else {
+    showCharacterForm(-1, { name: charInfo.name, description: desc, avatar: charInfo.avatar || '' });
+  }
+}
+
+function openCreateNewCharFromSP(chatId, charName) {
+  var chat = appData.chats[chatId];
+  if (!chat) return;
+
+  var latestSp = chat.spVersions[chat.spVersions.length - 1];
+  var spContent = latestSp ? latestSp.content : '';
+
+  var desc = extractCharIdentityFromSP(spContent, charName);
+
+  // 记录来源聊天，用于保存后同步到 chat.characters
+  var overlay = document.getElementById('modalOverlay');
+  overlay._fromChatId = chatId;
+  overlay._fromCharIdx = -1;
+  overlay._isNewFromSP = true;
+
+  showCharacterForm(-1, { name: charName, description: desc, avatar: '' });
+}
+
+// ===== editChat =====
+
 function editChat(id) {
   var chat = appData.chats[id];
   if (!chat) return;
@@ -96,26 +192,36 @@ function editChat(id) {
   // 角色属性区域
   var charSectionHtml = '';
   var chars = chat.characters || [];
+  var latestSp = chat.spVersions[chat.spVersions.length - 1];
+  var spContent = latestSp ? latestSp.content : '';
+
   if (chars.length > 0) {
-    // 已设置角色，只读显示
-    var charTags = chars.map(c => {
-      if (c.avatar) {
-        return `<span class="chat-char-tag"><img src="${escHtml(c.avatar)}" class="chat-char-tag-avatar">${escHtml(c.name)}</span>`;
-      }
-      return `<span class="chat-char-tag">${escHtml(c.name)}</span>`;
+    // 已关联角色：可点击编辑，从 SP 提取身份和性格
+    var charTags = chars.map(function(c, i) {
+      var avatarHtml = c.avatar
+        ? `<img src="${escHtml(c.avatar)}" class="chat-char-tag-avatar">`
+        : `<span class="chat-char-tag-avatar-placeholder">${escHtml(c.name.charAt(0) || '?')}</span>`;
+      return '<span class="chat-char-tag clickable" onclick="event.stopPropagation();openEditAssociatedChar(\'' + id + '\', ' + i + ')">' + avatarHtml + escHtml(c.name) + '</span>';
     }).join('');
-    charSectionHtml = `<div class="form-group"><label>关联角色</label><div class="chat-char-tags">${charTags}</div><div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">角色已锁定，不可修改</div></div>`;
+
+    // 识别 SP 中未被关联的新角色（红色标记）
+    var newCharsFromSP = findNewCharsInSP(spContent, chars);
+    var newCharTags = newCharsFromSP.map(function(nc) {
+      return '<span class="chat-char-tag chat-char-tag-new clickable" onclick="event.stopPropagation();openCreateNewCharFromSP(\'' + id + '\', \'' + escHtml(nc) + '\')"><span class="chat-char-tag-avatar-placeholder new-char"></span>' + escHtml(nc) + '</span>';
+    }).join('');
+
+    charSectionHtml = '<div class="form-group"><label>关联角色</label><div class="chat-char-tags">' + charTags + newCharTags + '</div><div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">点击角色可编辑，红色角色为 SP 中未关联的新角色</div></div>';
   } else {
     // 旧版聊天，允许选择角色（设置一次后锁定）
     var allChars = appData.characters || [];
     if (allChars.length > 0) {
-      var charOptions = allChars.map((c, i) => {
+      var charOptions = allChars.map(function(c, i) {
         var avatarHtml = c.avatar
-          ? `<img src="${escHtml(c.avatar)}" class="chat-char-tag-avatar">`
+          ? '<img src="' + escHtml(c.avatar) + '" class="chat-char-tag-avatar">'
           : '';
-        return `<label class="chat-char-check"><input type="checkbox" value="${i}" data-char-select>${avatarHtml}${escHtml(c.name)}</label>`;
+        return '<label class="chat-char-check"><input type="checkbox" value="' + i + '" data-char-select>' + avatarHtml + escHtml(c.name) + '</label>';
       }).join('');
-      charSectionHtml = `<div class="form-group"><label>关联角色 <span style="font-size:11px;color:var(--text-secondary);">（设置后不可修改）</span></label><div class="chat-char-checks">${charOptions}</div></div>`;
+      charSectionHtml = '<div class="form-group"><label>关联角色 <span style="font-size:11px;color:var(--text-secondary);">（设置后不可修改）</span></label><div class="chat-char-checks">' + charOptions + '</div></div>';
     }
   }
 

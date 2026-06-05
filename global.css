@@ -583,6 +583,39 @@ html, body {
   border-radius: 50%;
   object-fit: cover;
 }
+.chat-char-tag.clickable {
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.chat-char-tag.clickable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.chat-char-tag-new {
+  background: #fff0f0 !important;
+  color: #d32f2f !important;
+  border: 1px dashed #e57373;
+}
+.chat-char-tag-new.clickable:hover {
+  background: #ffe0e0 !important;
+  border-color: #d32f2f;
+}
+.chat-char-tag-avatar-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+.chat-char-tag-avatar-placeholder.new-char {
+  background: #d32f2f;
+  color: #fff;
+}
 .chat-char-checks {
   display: flex;
   flex-wrap: wrap;

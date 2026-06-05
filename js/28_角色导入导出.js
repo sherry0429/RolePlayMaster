@@ -201,6 +201,26 @@ function saveCharacterForm(idx) {
     });
   }
 
+  // 如果是从聊天编辑弹框触发的角色操作，同步到 chat.characters
+  var overlay = document.getElementById('modalOverlay');
+  if (overlay._fromChatId) {
+    var chat = appData.chats[overlay._fromChatId];
+    if (chat) {
+      if (!chat.characters) chat.characters = [];
+      if (overlay._isNewFromSP) {
+        // 从 SP 新建角色 → 追加到 chat.characters
+        chat.characters.push({ name: name, avatar: avatar });
+      } else if (overlay._fromCharIdx >= 0 && overlay._fromCharIdx < chat.characters.length) {
+        // 编辑已有关联角色 → 更新 name 和 avatar
+        chat.characters[overlay._fromCharIdx].name = name;
+        chat.characters[overlay._fromCharIdx].avatar = avatar;
+      }
+    }
+    delete overlay._fromChatId;
+    delete overlay._fromCharIdx;
+    delete overlay._isNewFromSP;
+  }
+
   saveData();
   closeModal();
   // 刷新图库
