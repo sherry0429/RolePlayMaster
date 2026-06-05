@@ -190,8 +190,8 @@
       <span class="current-chat-name" id="currentChatName">AI Chat</span>
       <button class="toolbar-btn replay-btn" id="replayBtn" onclick="toggleReplay()" title="重放">🔄 重放</button>
       <span class="auto-topic-countdown" id="autoTopicCountdown" style="display:none;"></span>
-      <button class="toolbar-btn" onclick="openGalleryDrawer()" title="角色图库">🎭 角色管理</button>
-      <button class="toolbar-btn" onclick="openAlbumDrawer()" title="相册">🖼️ 相册</button>
+      <button class="toolbar-btn" id="galleryBtn" onclick="openGalleryDrawer()" title="角色图库">🎭 角色管理</button>
+      <button class="toolbar-btn" id="albumBtn" onclick="openAlbumDrawer()" title="相册" style="display:none;">🖼️ 相册</button>
       <button class="toolbar-btn theme-btn" onclick="toggleTheme()" id="themeBtn" title="切换主题">🌙 主题</button>
       <button class="toolbar-btn" onclick="openLogDrawer()" title="程序日志">📋 日志</button>
       <div class="replay-progress" id="replayProgress" style="width:0;"></div>
@@ -208,7 +208,7 @@
     <div class="quick-actions" id="quickActions">
       <button class="quick-action-btn" onclick="triggerMemory()">🧠 /记忆</button>
       <button class="quick-action-btn" onclick="triggerContinue()">▶ /继续</button>
-      <button class="quick-action-btn" onclick="triggerTakePhoto()">📷 拍照</button>
+      <button class="quick-action-btn" id="photoActionBtn" onclick="triggerTakePhoto()" style="display:none;">📷 拍照</button>
     </div>
 
     <!-- 拍摄进度条 -->
@@ -285,6 +285,21 @@
     <div class="btn-confirm-group">
       <button class="btn-sm btn-ghost" onclick="cancelCharSelect()">取消</button>
       <button class="btn-sm btn-primary" id="charSelectConfirmBtn" onclick="confirmCharSelect()" disabled>确认建群</button>
+    </div>
+  </div>
+</div>
+
+<!-- 拍照角色选择对话框 -->
+<div class="modal-overlay" id="photoCharSelectOverlay" style="display:none;">
+  <div class="modal" id="photoCharSelectModal" style="max-width:400px;">
+    <h3>📷 选择拍照角色</h3>
+    <div style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">可选择一至多个角色进行拍照</div>
+    <div id="photoCharSelectList" style="max-height:300px;overflow-y:auto;margin-bottom:16px;">
+      <!-- 动态渲染角色复选框 -->
+    </div>
+    <div class="modal-btns">
+      <button class="btn-sm btn-primary" id="photoCharSelectConfirm" onclick="confirmPhotoCharSelect()">确认拍照</button>
+      <button class="btn-sm btn-ghost" onclick="closePhotoCharSelect()">取消</button>
     </div>
   </div>
 </div>

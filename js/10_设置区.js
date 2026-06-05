@@ -48,6 +48,8 @@ function saveSettings() {
   // 重新初始化自动话题和通知
   initAutoTopic();
   initChatNotification();
+  // 更新拍照功能可见性
+  updatePhotoFeatureVisibility();
   // 如果消息正在显示，重新渲染以应用说话人区分
   if (currentChatId) renderMessages();
   saveData();
@@ -185,6 +187,24 @@ function loadComfyuiSettings() {
   } else {
     document.getElementById('comfyuiWorkflowStatus').textContent = '未上传';
     document.getElementById('comfyuiWorkflowStatus').style.color = '';
+  }
+  // 更新拍照功能可见性
+  if (typeof updatePhotoFeatureVisibility === 'function') {
+    updatePhotoFeatureVisibility();
+  }
+}
+
+// 更新拍照功能可见性（根据 ComfyUI 是否启用）
+function updatePhotoFeatureVisibility() {
+  var comfyuiEnabled = appData.settings.comfyui && appData.settings.comfyui.enabled;
+  var photoBtn = document.getElementById('photoActionBtn');
+  var albumBtn = document.getElementById('albumBtn');
+  
+  if (photoBtn) {
+    photoBtn.style.display = comfyuiEnabled ? '' : 'none';
+  }
+  if (albumBtn) {
+    albumBtn.style.display = comfyuiEnabled ? '' : 'none';
   }
 }
 

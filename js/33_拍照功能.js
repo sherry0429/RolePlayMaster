@@ -16,191 +16,13 @@
  * @param {string} [characterName] - 可选，指定角色名则直接为该角色拍照
  */
 async function triggerTakePhoto(characterName) {
-  // 状态检查：只阻止并发拍照，不阻塞聊天
-  if (isPhotoShooting) {
-    showToast('正在拍照中，请等待完成', 'error');
-    return;
-  }
-  if (isStreaming || isCompressing || isReplaying) {
-    showToast('请等待当前操作完成', 'error');
-    return;
-  }
-  if (!currentChatId) {
-    showToast('请先开始一个对话', 'error');
-    return;
-  }
-  var chat = appData.chats[currentChatId];
-  if (!chat || chat.messages.length === 0) {
-    showToast('请先发送一些消息再拍照', 'error');
-    return;
-  }
-
-  var apiKey = appData.settings.apiKey;
-  if (!apiKey) {
-    showToast('请先设置 API Key', 'error');
-    return;
-  }
-
-  // 如果有指定角色名，直接为该角色拍照（跳过 AI 角色分析）
+  // 如果指定了角色名（AI 自动触发），直接执行
   if (characterName) {
     return await takePhotoForCharacter(characterName);
   }
 
-  isPhotoShooting = true;
-  photoAbortController = new AbortController();
-
-  // 显示拍摄进度条
-  showPhotoProgress('🤳 正在构思画面...');
-
-  try {
-    // 1. 构建 AI 请求消息
-    var sp = getCurrentSpVersion();
-    var messages = buildPhotoRequestMessages(chat, sp);
-
-    // 记录日志
-    addProgramLog(LOG_TYPE_PHOTO, {
-      summary: 'AI 分析角色外貌（拍照）',
-      chatName: chat.name + LOG_NAME_PHOTO,
-      detail: messages
-    });
-
-    // 2. 发送 AI 请求，获取生成图像的 prompt
-    var apiHost = appData.settings.apiHost || DEFAULT_API_HOST;
-    var url = apiHost.replace(/\/+$/, '') + '/chat/completions';
-
-    updatePhotoProgress('🧠 AI 正在分析角色外貌...');
-
-    var response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: messages,
-        stream: false
-      }),
-      signal: photoAbortController.signal
-    });
-
-    if (!response.ok) {
-      var errText = await response.text();
-      throw new Error('AI 请求失败: ' + response.status + ' ' + errText);
-    }
-
-    var result = await response.json();
-    var aiContent = (result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content) || '';
-    if (!aiContent) {
-      throw new Error('AI 返回内容为空');
-    }
-
-    // 记录 AI 返回的图像 prompt 日志（不进入 history_messages，但出现在请求日志中）
-    addProgramLog(LOG_TYPE_PHOTO, {
-      summary: 'AI 返回的图像描述（共解析出 ' + (parsePhotoPrompts(aiContent).length || 1) + ' 张）',
-      chatName: chat.name + LOG_NAME_PHOTO,
-      detail: aiContent
-    });
-
-    // 3. 解析 AI 返回的 prompts（按分隔符分割）
-    var prompts = parsePhotoPrompts(aiContent);
-    if (prompts.length === 0) {
-      // 如果解析失败，把整个内容当作一个 prompt
-      prompts = [{ prompt: aiContent, characterName: extractPhotoCharacter(aiContent, chat) }];
-    }
-
-    // 4. 对每个 prompt 生成图片
-    var comfyuiEnabled = appData.settings.comfyui && appData.settings.comfyui.enabled;
-
-    // 确保 photos 数组存在
-    if (!chat.photos) chat.photos = [];
-
-    // 收集本轮新生成的照片 ID，用于后续更新 afterMessageIndex
-    var newPhotoIds = [];
-
-    for (var i = 0; i < prompts.length; i++) {
-      var item = prompts[i];
-      updatePhotoProgress('📸 ' + (item.characterName || '角色') + ' 正在拍摄 (' + (i + 1) + '/' + prompts.length + ')');
-
-      var photoData = null;
-      if (comfyuiEnabled && appData.settings.comfyui.workflowJson) {
-        // 记录 ComfyUI 请求日志（不进入 history_messages，但出现在请求日志中）
-        addProgramLog(LOG_TYPE_PHOTO, {
-          summary: 'ComfyUI 生成图片 (' + (item.characterName || '角色') + ')',
-          chatName: chat.name + LOG_NAME_PHOTO,
-          detail: '角色：' + (item.characterName || '未知') +
-            '\nWidth: ' + (appData.settings.comfyui.defaultWidth || 512) +
-            '\nHeight: ' + (appData.settings.comfyui.defaultHeight || 768) +
-            '\n\nPrompt:\n' + item.prompt
-        });
-        photoData = await callComfyUI(
-          item.prompt,
-          appData.settings.comfyui.defaultWidth || 512,
-          appData.settings.comfyui.defaultHeight || 768,
-          photoAbortController.signal
-        );
-      }
-
-      var photoObj;
-      if (photoData && photoData.dataUrl) {
-        var thumbUrl = await generateThumbnail(photoData.dataUrl, 200, 200);
-        photoObj = {
-          id: 'photo_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8),
-          dataUrl: photoData.dataUrl,
-          thumbUrl: thumbUrl,
-          prompt: item.prompt,
-          characterName: item.characterName || '',
-          createdAt: Date.now(),
-          // 使用当前最新消息索引，使照片像新消息一样出现在对话末尾
-          afterMessageIndex: chat.messages.length - 1
-        };
-        chat.photos.push(photoObj);
-        await saveData();
-      } else {
-        photoObj = {
-          id: 'photo_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8),
-          dataUrl: '',
-          prompt: item.prompt,
-          characterName: item.characterName || '',
-          createdAt: Date.now(),
-          afterMessageIndex: chat.messages.length - 1
-        };
-        chat.photos.push(photoObj);
-        await saveData();
-        showToast('图片生成失败（ComfyUI 未响应或未配置）', 'error');
-      }
-      newPhotoIds.push(photoObj.id);
-
-      // 每生成一张照片立即渲染，不等待全部完成
-      // 使用 insertAdjacentHTML 插入到 afterMessageIndex 对应的消息之后
-      renderPhotoMessage(photoObj);
-    }
-
-    // 5. 拍照完成，仅重新渲染确保位置准确，不触发 AI 回复
-    // 渲染引擎会根据 chat.photos 中的 afterMessageIndex 重新排列
-    renderMessages();
-
-    // 记录拍照完成日志
-    addProgramLog(LOG_TYPE_PHOTO_DONE, {
-      summary: '拍照完成',
-      chatName: chat.name,
-      detail: '已拍摄 ' + prompts.length + ' 张照片'
-    });
-
-    showToast('已拍摄 ' + prompts.length + ' 张照片', 'success');
-
-  } catch (e) {
-    if (e.name === 'AbortError') {
-      showToast('拍照已取消');
-    } else {
-      console.error('拍照失败', e);
-      showToast('拍照失败: ' + e.message, 'error');
-    }
-  } finally {
-    isPhotoShooting = false;
-    photoAbortController = null;
-    hidePhotoProgress();
-  }
+  // 未指定角色名，显示角色选择对话框
+  showPhotoCharSelect();
 }
 
 /**
@@ -435,6 +257,13 @@ function buildPhotoRequestMessages(chat, sp, specificCharacter) {
     }
   }
 
+  // 如果指定了角色，只保留该角色的外貌设定
+  if (specificCharacter) {
+    appearanceSections = appearanceSections.filter(function(s) {
+      return s.characterName === specificCharacter;
+    });
+  }
+
   var roleList = charNames.length > 0 ? '涉及角色：' + charNames.join('、') + '。' : '';
   var appearanceGuide = '';
   if (appearanceSections.length > 0) {
@@ -452,17 +281,10 @@ function buildPhotoRequestMessages(chat, sp, specificCharacter) {
     }
   }
 
-  // 如果指定了角色，只保留该角色的外貌设定
-  if (specificCharacter) {
-    appearanceSections = appearanceSections.filter(function(s) {
-      return s.characterName === specificCharacter;
-    });
-  }
-
   // 构建拍照指令
   var userContent = PROMPT_TAKE_PHOTO_PREAMBLE + '\n';
   if (specificCharacter) {
-    userContent += '请根据以上对话中角色的外貌设定和聊天记录，推算角色「' + specificCharacter + '」的当前外貌和状态。\n';
+    userContent += '请根据以上对话中角色的外貌设定和聊天记录，推算角色' + specificCharacter + '的当前外貌和状态。\n';
   } else {
     userContent += PROMPT_TAKE_PHOTO_BODY + '\n';
   }
@@ -918,5 +740,130 @@ function zoomPhoto(photoId) {
 
   overlay.classList.add('show');
   overlay._onConfirm = null;
+}
+
+/**
+ * 显示拍照角色选择对话框
+ * 渲染当前聊天中的所有角色供用户选择（可多选）
+ */
+function showPhotoCharSelect() {
+  // 状态检查
+  if (isPhotoShooting) {
+    showToast('正在拍照中，请等待完成', 'error');
+    return;
+  }
+  if (isStreaming || isCompressing || isReplaying) {
+    showToast('请等待当前操作完成', 'error');
+    return;
+  }
+  if (!currentChatId) {
+    showToast('请先开始一个对话', 'error');
+    return;
+  }
+  var chat = appData.chats[currentChatId];
+  if (!chat) {
+    showToast('请先开始一个对话', 'error');
+    return;
+  }
+
+  // 获取当前聊天关联的角色
+  var characters = chat.characters || [];
+  if (characters.length === 0) {
+    showToast('当前聊天未关联任何角色', 'error');
+    return;
+  }
+
+  // 渲染角色复选框列表
+  var listEl = document.getElementById('photoCharSelectList');
+  if (!listEl) return;
+
+  var html = '';
+  for (var i = 0; i < characters.length; i++) {
+    var char = characters[i];
+    var charInfo = findCharacter(char.name);
+    var avatarHtml = '🤖';
+    if (charInfo && charInfo.avatar) {
+      avatarHtml = '<img src="' + escHtml(charInfo.avatar) + '" alt="' + escHtml(char.name) + '">';
+    } else if (char.avatar) {
+      avatarHtml = '<img src="' + escHtml(char.avatar) + '" alt="' + escHtml(char.name) + '">';
+    }
+    
+    html += '<div class="photo-char-item" onclick="togglePhotoCharSelect(' + i + ')">' +
+      '<input type="checkbox" id="photoChar_' + i + '" onchange="event.stopPropagation()">' +
+      '<div class="photo-char-avatar">' + avatarHtml + '</div>' +
+      '<div class="photo-char-name">' + escHtml(char.name) + '</div>' +
+      '</div>';
+  }
+  listEl.innerHTML = html;
+
+  // 显示对话框
+  var overlay = document.getElementById('photoCharSelectOverlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+  }
+}
+
+/**
+ * 切换角色选择状态
+ * @param {number} index - 角色索引
+ */
+function togglePhotoCharSelect(index) {
+  var checkbox = document.getElementById('photoChar_' + index);
+  if (checkbox) {
+    checkbox.checked = !checkbox.checked;
+  }
+}
+
+/**
+ * 确认拍照角色选择
+ * 获取所有选中的角色，逐个执行拍照
+ */
+async function confirmPhotoCharSelect() {
+  if (!currentChatId) return;
+  var chat = appData.chats[currentChatId];
+  if (!chat || !chat.characters) return;
+
+  // 收集选中的角色名
+  var selectedNames = [];
+  for (var i = 0; i < chat.characters.length; i++) {
+    var checkbox = document.getElementById('photoChar_' + i);
+    if (checkbox && checkbox.checked) {
+      selectedNames.push(chat.characters[i].name);
+    }
+  }
+
+  if (selectedNames.length === 0) {
+    showToast('请至少选择一个角色', 'error');
+    return;
+  }
+
+  // 关闭对话框
+  closePhotoCharSelect();
+
+  // 逐个为选中的角色拍照
+  for (var j = 0; j < selectedNames.length; j++) {
+    await takePhotoForCharacter(selectedNames[j]);
+  }
+}
+
+/**
+ * 关闭拍照角色选择对话框
+ */
+function closePhotoCharSelect() {
+  var overlay = document.getElementById('photoCharSelectOverlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
+  // 清空复选框状态
+  if (!currentChatId) return;
+  var chat = appData.chats[currentChatId];
+  if (!chat || !chat.characters) return;
+  
+  for (var i = 0; i < chat.characters.length; i++) {
+    var checkbox = document.getElementById('photoChar_' + i);
+    if (checkbox) {
+      checkbox.checked = false;
+    }
+  }
 }
 

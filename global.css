@@ -2415,3 +2415,51 @@ html, body {
   cursor: default;
   box-shadow: 0 8px 40px rgba(0,0,0,0.5);
 }
+
+/* ==================== 拍照角色选择 ==================== */
+.photo-char-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: 1px solid transparent;
+}
+
+.photo-char-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.photo-char-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.photo-char-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  font-size: 20px;
+}
+
+.photo-char-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-char-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}

@@ -141,6 +141,12 @@ function generateGroupSystemPrompt(selectedChars) {
 
   var charNames = selectedChars.map(c => c.name).join('、');
 
+  // 动态判断是否包含自动拍照触发（仅 ComfyUI 启用时）
+  var photoTrigger = '';
+  if (appData.settings.comfyui && appData.settings.comfyui.enabled) {
+    photoTrigger = PROMPT_AUTO_PHOTO_TRIGGER;
+  }
+
   return `# 任务定义
 你现在是一个多角色扮演模拟引擎，负责驱动一个叙事世界。你的任务是：
 - 严格遵循指定角色的身份、性格、知识背景和说话风格。
@@ -148,7 +154,7 @@ function generateGroupSystemPrompt(selectedChars) {
 - 推动符合当前世界观下的合理剧情发展。
 - 在需要时自动完成各角色之间的对话、必要时包括行动和内在心理描写。
 - 回复时以角色名字用【】开头。回复消息除了角色名字用【】包括外，不要再使用【】。
-- ${PROMPT_AUTO_PHOTO_TRIGGER}
+- ${photoTrigger}
 
 # 角色设定
 ${charDescList}
