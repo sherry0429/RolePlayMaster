@@ -1,0 +1,37 @@
+[package]
+name = "roleplay-master"
+version = "1.0.0"
+description = "RolePlayMaster 桌面化身版"
+authors = ["妖怪"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+# Tauri 标准结构：库名与 package 名解耦，便于未来扩展移动端
+name = "roleplay_master_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# macos-private-api 是 macOS 下透明窗口的必需特性
+tauri = { version = "2", features = ["macos-private-api", "tray-icon", "image-png"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# 原生文件选择 / 保存对话框（导入导出、相册下载）
+rfd = "0.15"
+# Base64 解码（保存相册图片为二进制文件）
+base64 = "0.22"
+# 云端同步：由原生侧代发 HTTP 请求，绕开 WebView 的同源策略（详见 lib.rs 的 cloud_get / cloud_post）。
+# TLS 选 native-tls —— macOS 下走系统 Security.framework，无需额外 C 工具链；
+# stream 用于按块上报下载进度，system-proxy 让请求遵循系统代理设置。
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream", "system-proxy"] }
+futures-util = "0.3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
