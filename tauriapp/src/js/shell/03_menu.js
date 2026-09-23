@@ -158,6 +158,10 @@ function initDragHandles() {
     el.addEventListener('mousedown', function (e) {
       if (e.button !== 0) return;
       if (e.target.closest('button, input, textarea, select, a, .ptab')) return;
+      // 可滚动且内容溢出的拖拽区（如历史气泡堆）：让位给滚动条，
+      // 否则按住拖窗口会吞掉滚动条拖动。滚轮滚动不受影响。
+      var oy = getComputedStyle(el).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 1) return;
       e.preventDefault();
       closeContextMenu();
       shellStartDrag();

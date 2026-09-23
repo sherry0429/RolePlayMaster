@@ -214,6 +214,10 @@ function renderBubbleStack() {
   }
 
   var n = items.length;
+  // 重绘前判断用户是否贴在底部：贴底则重绘后跟随到底部（新消息自动可见）；
+  // 用户向上翻看历史时不打扰
+  var wasAtBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+
   box.innerHTML = items.map(function (it, i) {
     // t: 0 = 最上（最旧）→ 1 = 最下（最新）；越往下越不透明
     var t = n === 1 ? 1 : i / (n - 1);
@@ -231,7 +235,9 @@ function renderBubbleStack() {
       '</div>';
   }).join('');
 
-  // 内容超出高度上限时才淡出顶部（否则最旧的那条会被无谓地吃掉）
+  if (wasAtBottom) box.scrollTop = box.scrollHeight;
+
+  // 内容超出高度上限时顶部淡出，提示上方还有更早的消息（可滚动查看）
   box.classList.toggle('clipped', box.scrollHeight > box.clientHeight + 1);
 }
 

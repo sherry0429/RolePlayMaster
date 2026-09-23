@@ -178,13 +178,22 @@ body.chat-open {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  /* 高度上限由 JS 按屏幕高度写入，避免整套内容顶出屏幕 */
+  /* 高度上限由 JS 按屏幕高度写入；内容超高时可滚动，不再截断 */
   max-height: var(--stack-max-h, 320px);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   opacity: calc(0.35 + var(--shell-opacity, 0.85) * 0.65);
   user-select: none;
   z-index: 29;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
 }
+.bubble-stack::-webkit-scrollbar { width: 5px; }
+.bubble-stack::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+.bubble-stack::-webkit-scrollbar-track { background: transparent; }
 .bubble-stack:empty { display: none; }
 /* 只有当内容确实超出高度上限（最旧的消息被截断）时才淡出顶部 */
 .bubble-stack.clipped {
@@ -230,11 +239,8 @@ body.chat-open {
 }
 .bs-text {
   min-width: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 6;      /* 每条最多 6 行（约为此前 2 行的 3 倍字数） */
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   word-break: break-word;
+  /* 不截断：完整展示全文（气泡堆可滚动，超出部分滚轮查看） */
 }
 .bs-item.typing .bs-text::after {
   content: '…';
@@ -254,7 +260,7 @@ body.no-avatar-anim .avatar {
   position: relative;
   width: 100%;
   display: flex;
-  align-items: flex-end;
+  align-items: center;   /* 侧边按钮与输入框垂直居中对齐（多行输入时居中于整条输入栏） */
   gap: 5px;
   padding: 4px 5px 4px 9px;
   box-sizing: border-box;
