@@ -553,3 +553,125 @@ body.panel-mode .ctx-menu { display: none !important; }
   font-size: 13px;
   padding: 20px 0;
 }
+
+/* ==================== 动画上传表单修正 ==================== */
+/* legacy.css 的 .modal input / .character-form input 会把所有 input 拉成 width:100%，
+   单选框被拉满后，flex 标签里的文字被挤成一字一行 —— 这里按控件类型还原 */
+.anim-up-form input[type="radio"],
+.anim-up-form input[type="checkbox"],
+.anim-up-form input[type="range"],
+.anim-up-form input[type="color"] { width: auto; margin: 0; }
+.anim-up-form input[type="color"] {
+  width: 34px; height: 24px;
+  padding: 0; border: none; background: none; cursor: pointer;
+}
+.anim-up-form select {
+  width: auto; min-width: 130px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+}
+.anim-up-form .anim-bg-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+/* 上传窗口头部：标题 + 右上角关闭 */
+.anim-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.anim-modal-head h3 { margin-bottom: 0; }
+.anim-modal-close {
+  width: 26px; height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+.anim-modal-close:hover { background: var(--border-color); }
+
+/* ==================== 配置项问号悬浮说明 ==================== */
+.anim-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1;
+  cursor: help;
+  position: relative;
+  flex-shrink: 0;
+  user-select: none;
+}
+.anim-tip:hover { background: var(--border-color); color: var(--text-primary); }
+.anim-tip:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 7px);
+  width: max-content;
+  max-width: 250px;
+  white-space: normal;
+  background: rgba(24, 24, 34, 0.96);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  z-index: 300;
+  pointer-events: none;
+}
+.anim-tip:hover::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 2px);
+  border: 5px solid transparent;
+  border-top-color: rgba(24, 24, 34, 0.96);
+  z-index: 300;
+}
+
+/* ==================== 高级设置折叠开关 ==================== */
+.anim-adv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  padding: 4px 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.anim-adv-toggle em {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.anim-adv-toggle:hover { opacity: 0.75; }

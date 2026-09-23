@@ -85,7 +85,11 @@ function animMgrRender() {
   var content = document.getElementById('modalContent');
   content.style.maxWidth = '620px';
 
-  var html = '<h3>🎬 动画管理 — ' + escHtml(char.name) + '</h3>';
+  // 头部：标题 + 右上角关闭
+  var html = '<div class="anim-modal-head">' +
+    '<h3>🎬 动画管理 — ' + escHtml(char.name) + '</h3>' +
+    '<button class="anim-modal-close" onclick="closeModal()" title="关闭">✕</button>' +
+    '</div>';
   html += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;line-height:1.6;">' +
     '上传约 2 秒的 AI 生成视频（MP4/WebM），上传时自动抽帧并拼成 sprite sheet。' +
     '<b>待机动画为必填素材</b>（循环播放的呼吸感动画）；情绪动画播完自动回退待机。</div>';
@@ -110,14 +114,10 @@ function animMgrRender() {
   });
   html += '</div>';
 
-  // 新增情绪
-  html += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
-    '<input type="text" id="animNewEmotion" list="animEmotionPresets" placeholder="情绪名称，如：高兴 / 看书" ' +
-    'style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);outline:none;">' +
-    '<datalist id="animEmotionPresets">' +
-    ANIM_EMOTION_PRESETS.map(function (p) { return '<option value="' + escHtml(p) + '">'; }).join('') +
-    '</datalist>' +
+  // 新增情绪：不在列表页输入名称，统一进上传窗口填写（那里也有预置选项）
+  html += '<div style="display:flex;gap:8px;align-items:center;">' +
     '<button class="btn-sm btn-primary" onclick="animMgrShowUpload(null)">➕ 上传动画</button>' +
+    '<span style="flex:1;"></span>' +
     '<button class="btn-sm btn-ghost" onclick="closeModal()">关闭</button>' +
     '</div>';
 
@@ -187,8 +187,16 @@ function animMgrShowUpload(emotion) {
   var content = document.getElementById('modalContent');
   content.style.maxWidth = '560px';
 
-  var html = '<h3>' + (isNew ? '➕ 上传动画' : '重新上传 — ' + (emotion === ANIM_IDLE_EMOTION ? '待机' : escHtml(emotion))) + '</h3>';
-  html += '<div class="character-form">';
+  // 头部：标题 + 右上角关闭（返回列表用底部「返回」或此处 ✕ 均可）
+  var title = isNew ? '➕ 上传动画' : '重新上传 — ' + (emotion === ANIM_IDLE_EMOTION ? '待机' : escHtml(emotion));
+  var html = '<div class="anim-modal-head">' +
+    '<h3>' + title + '</h3>' +
+    '<button class="anim-modal-close" onclick="animMgrRender()" title="返回列表">✕</button>' +
+    '</div>';
+
+  // 注意：不要用 .character-form / 裸 input —— legacy.css 会把 input 拉成 width:100%，
+  // 单选框撑满后标签文字会被挤成一字一行。统一走 .anim-up-form + .anim-bg-line。
+  html += '<div class="anim-up-form">';
 
   // 情绪名
   if (isNew) {
@@ -211,25 +219,36 @@ function animMgrShowUpload(emotion) {
     '<input type="file" id="animUpFile" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" style="display:none" onchange="animMgrHandleFile(this)">' +
     '</div>';
 
+  // 高级设置开关：默认收起（30fps + 自动抠像），点开才显示帧率与背景处理
+  html += '<div class="form-group" style="text-align:left;margin-top:2px;">' +
+    '<button type="button" class="anim-adv-toggle" id="animAdvToggle" onclick="animMgrToggleAdv()">▸ 高级设置<em>默认 30fps · 自动抠像，一般不用改</em></button>' +
+    '</div>';
+
+  html += '<div id="animAdvConfig" style="display:none;">';
+
   // 帧率
   html += '<div class="form-group" style="text-align:left;">' +
     '<label>抽帧帧率<em>越高越流畅、sheet 越大</em></label>' +
-    '<select id="animUpFps" style="padding:7px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);">' +
+    '<select id="animUpFps">' +
     [12, 15, 24, 30].map(function (f) { return '<option value="' + f + '"' + (f === 30 ? ' selected' : '') + '>' + f + ' fps</option>'; }).join('') +
     '</select></div>';
 
   // 背景处理
   html += '<div class="form-group" style="text-align:left;">' +
     '<label>背景处理<em>透明背景 = 色键抠像，上传时逐帧处理，播放零计算</em></label>' +
-    '<div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">' +
-    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="animBg" value="auto" checked> 自动抠像（检测背景色）</label>' +
-    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="animBg" value="custom"> 指定色键颜色 <input type="color" id="animUpKeyColor" value="#00ff00" style="width:34px;height:24px;padding:0;border:none;background:none;"></label>' +
-    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="animBg" value="off"> 保留原始背景（不抠像）</label>' +
+    '<div style="display:flex;flex-direction:column;gap:8px;">' +
+    '<label class="anim-bg-line"><input type="radio" name="animBg" value="auto" checked> 自动抠像（检测背景色）</label>' +
+    '<label class="anim-bg-line"><input type="radio" name="animBg" value="custom"> 指定色键颜色 <input type="color" id="animUpKeyColor" value="#00ff00">' +
+    '<span class="anim-tip" data-tip="视频背景是纯色（绿幕/蓝幕等）时，用取色器选取与背景一致的颜色，抠像会比自动检测更干净。若背景不是纯色，请改用「保留原始背景」。">?</span></label>' +
+    '<label class="anim-bg-line"><input type="radio" name="animBg" value="off"> 保留原始背景（不抠像）</label>' +
     '</div>' +
     '<div id="animTolRow" style="margin-top:8px;">' +
-    '<label style="font-size:12px;color:var(--text-secondary);">抠像容差：<span id="animTolVal">28</span>/80</label>' +
+    '<label style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:4px;">抠像容差：<span id="animTolVal">28</span>/80' +
+    '<span class="anim-tip" data-tip="控制多大颜色差异内的像素会被当作背景抹成透明：调大能去除背景残留，但可能误伤角色身上相近的颜色；调小则抠得保守、边缘易留底色。建议 20~40 之间微调。">?</span></label>' +
     '<input type="range" id="animUpTol" min="5" max="80" step="1" value="28" style="width:100%;" oninput="document.getElementById(\'animTolVal\').textContent=this.value;">' +
     '</div></div>';
+
+  html += '</div>';   // /animAdvConfig
 
   // 进度 / 结果
   html += '<div id="animUpProgress" style="display:none;margin:6px 0;">' +
@@ -243,9 +262,9 @@ function animMgrShowUpload(emotion) {
   html += '</div>';
 
   html += '<div class="modal-btns">' +
+    '<button class="btn-sm btn-ghost" onclick="animMgrRender()">返回</button>' +
     '<button class="btn-sm btn-primary" id="animUpProcessBtn" onclick="animMgrStartProcess()">开始处理</button>' +
     '<button class="btn-sm btn-primary" id="animUpSaveBtn" onclick="animMgrSaveProcessed()" style="display:none;">保存到角色</button>' +
-    '<button class="btn-sm btn-ghost" onclick="animMgrRender()">返回</button>' +
     '</div>';
 
   content.innerHTML = html;
@@ -257,6 +276,17 @@ function animMgrShowUpload(emotion) {
       document.getElementById('animTolRow').style.display = radio.value === 'off' ? 'none' : '';
     });
   });
+}
+
+/** 展开 / 收起高级设置（帧率 + 背景处理），收起时全部走默认值 */
+function animMgrToggleAdv() {
+  var cfg = document.getElementById('animAdvConfig');
+  var btn = document.getElementById('animAdvToggle');
+  if (!cfg) return;
+  var show = cfg.style.display === 'none';
+  cfg.style.display = show ? '' : 'none';
+  if (btn) btn.innerHTML = (show ? '▾ 高级设置' : '▸ 高级设置') +
+    '<em>默认 30fps · 自动抠像，一般不用改</em>';
 }
 
 function animMgrHandleFile(input) {
