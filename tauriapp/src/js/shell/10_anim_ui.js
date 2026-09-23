@@ -102,7 +102,7 @@ function animMgrRender() {
     var meta = metas[emo];
     var label = emo === ANIM_IDLE_EMOTION ? '待机（必填）' : escHtml(emo);
     html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border-light);border-radius:10px;margin-bottom:8px;background:var(--bg-secondary);">' +
-      '<canvas class="anim-mgr-thumb" data-emotion="' + escHtml(emo) + '" width="56" height="56" style="width:56px;height:56px;border-radius:50%;background:var(--bg-tertiary);flex-shrink:0;"></canvas>' +
+      '<div class="anim-mgr-thumb" data-emotion="' + escHtml(emo) + '"><span class="anim-mgr-thumb-fallback">🎬</span></div>' +
       '<div style="flex:1;min-width:0;">' +
       '<div style="font-size:13px;font-weight:600;">' + label + '</div>' +
       '<div style="font-size:11px;color:var(--text-secondary);">' + animMgrMetaSummary(meta) + '</div>' +
@@ -124,17 +124,52 @@ function animMgrRender() {
   content.innerHTML = html;
   overlay.classList.add('show');
 
-  // 缩略图：加载 sheet 后画第一帧
-  content.querySelectorAll('.anim-mgr-thumb').forEach(function (cv) {
-    var emo = cv.getAttribute('data-emotion');
+  // 缩略图：加载 sheet 后，用 <img> + CSS 裁切显示「内容最多的一帧」。
+  // 不走 canvas 绘制（WKWebView 上 canvas 缩略图可能空白），
+  // 也不固定用第 0 帧（AI 视频开头常是淡入空白帧，抠像后整帧透明）。
+  content.querySelectorAll('.anim-mgr-thumb').forEach(function (box) {
+    var emo = box.getAttribute('data-emotion');
     animLoadSheet(ctxInfo.charId, emo).then(function (img) {
       var meta = charAnimEntry(ctxInfo.charId, emo);
-      if (!img || !meta) return;
-      var c2 = cv.getContext('2d');
-      c2.clearRect(0, 0, 56, 56);
-      c2.drawImage(img, 0, 0, meta.cellW, meta.cellH, 0, 0, 56, 56);
+      if (!img || !meta || !box.isConnected) return;   // 加载失败保留 🎬 占位
+      var fi = animPickThumbFrame(img, meta);
+      var col = fi % meta.cols;
+      var row = Math.floor(fi / meta.cols);
+      // 把整张 sheet 缩放到「单帧恰好适配 56px 圆」，再平移露出目标帧
+      var scale = 56 / Math.max(meta.cellW, meta.cellH);
+      var w = meta.cellW * scale, h = meta.cellH * scale;
+      var offX = Math.round((56 - w) / 2), offY = Math.round((56 - h) / 2);
+      box.innerHTML = '<img class="anim-thumb-img" alt="" src="' + img.src + '" style="' +
+        'position:absolute;width:' + Math.round(img.naturalWidth * scale) + 'px;' +
+        'height:' + Math.round(img.naturalHeight * scale) + 'px;' +
+        'left:' + Math.round(offX - col * w) + 'px;' +
+        'top:' + Math.round(offY - row * h) + 'px;">';
     });
   });
+}
+
+/**
+ * 挑一帧「内容最多」的帧作缩略图：在 首 / 中 / 倒数第二 帧里
+ * 选不透明像素占比最高的（AI 视频第一帧常是空白淡入帧）。
+ */
+function animPickThumbFrame(img, meta) {
+  var cands = [0, Math.floor(meta.frameCount / 2), Math.max(0, meta.frameCount - 2)];
+  var probe = document.createElement('canvas');
+  probe.width = 48;
+  probe.height = 48;
+  var pctx = probe.getContext('2d', { willReadFrequently: true });
+  var best = cands[0], bestA = -1;
+  for (var i = 0; i < cands.length; i++) {
+    var fi = cands[i];
+    var col = fi % meta.cols, row = Math.floor(fi / meta.cols);
+    pctx.clearRect(0, 0, 48, 48);
+    pctx.drawImage(img, col * meta.cellW, row * meta.cellH, meta.cellW, meta.cellH, 0, 0, 48, 48);
+    var d = pctx.getImageData(0, 0, 48, 48).data;
+    var a = 0;
+    for (var k = 3; k < d.length; k += 16) a += d[k];
+    if (a > bestA) { bestA = a; best = fi; }
+  }
+  return best;
 }
 
 function animMgrPreview(emotion) {

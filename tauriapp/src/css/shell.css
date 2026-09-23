@@ -852,3 +852,29 @@ body.panel-mode .toast-container { top: 58px !important; }
   pointer-events: none;
   z-index: 1;
 }
+
+/* ==================== 气泡堆：轮次分隔 + 入场动画 ==================== */
+/* 「幽灵分割线」：两个 AI 回复之间夹了用户发言时出现，
+   两端渐隐的极淡细线 —— 标记一轮新对话，又不打断沉浸视线 */
+.bs-sep {
+  align-self: stretch;
+  flex-shrink: 0;
+  height: 1px;
+  margin: 3px 6px;
+  /* 用主题边框色，浅色/深色主题下都隐约可见 */
+  background: linear-gradient(to right,
+    transparent, var(--border-light) 18%,
+    var(--border-light) 82%, transparent);
+}
+
+/* 新气泡入场：淡入 + 上浮，只播放一次（仅新增 key 带此 class）。
+   动画只声明 from，to 用元素自身的不透明度（跟随渐变层级） */
+.bs-item.bs-arrive {
+  animation: bsArrive 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes bsArrive {
+  from { opacity: 0.1; transform: translateY(10px); }
+}
+
+/* 点击「切换聊天」强制展开二级菜单（兼容窗口失焦后首次点击 hover 不生效） */
+.ctx-item.has-sub.sub-forced > .ctx-sub { display: block; }

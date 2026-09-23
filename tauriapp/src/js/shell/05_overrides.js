@@ -109,6 +109,7 @@ selectChat = function (id) {
   _stackSig = '';          // 换聊天后强制重绘气泡堆
   _bubbleExpiry = {};      // 换聊天后气泡计时全部重来
   _bubbleLastCount = -1;
+  _bubbleSeenKeys = null;  // 首帧静默渲染，不播入场动画
   renderAvatar();
   refreshShell();
 };
@@ -117,6 +118,7 @@ var _legacyUpdateUIForNoChat = updateUIForNoChat;
 updateUIForNoChat = function () {
   _legacyUpdateUIForNoChat();
   _bubbleSeenCount = 0;
+  _bubbleSeenKeys = null;
   refreshShell();
 };
 
@@ -126,6 +128,7 @@ applyImportedData = function (data) {
   _stackSig = '';
   _bubbleExpiry = {};
   _bubbleLastCount = -1;
+  _bubbleSeenKeys = null;
   _legacyApplyImportedData(data);
   _bubbleSeenCount = 0;
   refreshShell();

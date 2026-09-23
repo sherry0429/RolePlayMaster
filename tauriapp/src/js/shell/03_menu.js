@@ -79,30 +79,59 @@ function openContextMenu(x, y) {
   menu.style.left = left + 'px';
   menu.style.top = top + 'px';
 
-  // 二级菜单定位：优先贴在菜单右侧，放不下改到左侧，
-  // 两侧都放不下（窄窗口的常态）就夹进窗口 —— 总之不能跑到可视区外。
-  var sub = menu.querySelector('.ctx-sub');
+  positionChatSubmenu();
+}
+
+/**
+ * 二级菜单（切换聊天）定位。
+ * 以「切换聊天」菜单项的实时视口位置（getBoundingClientRect）为基准 ——
+ * 自动兼容菜单滚动，不再用 offsetTop + 固定高度估算，
+ * 任何情况下二级菜单都与菜单项无缝衔接：
+ * 鼠标从菜单项移向二级菜单的路径上始终有悬停目标，不会再闪没。
+ */
+function positionChatSubmenu() {
+  var menu = document.getElementById('contextMenu');
+  var stage = document.getElementById('stage');
+  if (!menu || !stage) return;
   var item = menu.querySelector('.ctx-item.has-sub');
-  if (sub && item) {
-    var SUB_W = 184;
-    var SUB_H = 246;
-    var xAbs = left + rect.width;                       // 贴菜单右缘，相邻才不会有 hover 断点
-    if (xAbs + SUB_W > bounds.width - 2) xAbs = left - SUB_W;
-    xAbs = Math.max(2, Math.min(xAbs, bounds.width - 2 - SUB_W));
+  var sub = menu.querySelector('.ctx-sub');
+  if (!item || !sub) return;
 
-    var yAbs = top + item.offsetTop;
-    yAbs = Math.max(2, Math.min(yAbs, bounds.height - 4 - SUB_H));
+  var bounds = stage.getBoundingClientRect();
+  var menuRect = menu.getBoundingClientRect();
+  var itemRect = item.getBoundingClientRect();
 
-    // .ctx-sub 的定位基准是整个菜单，所以换算成相对菜单的偏移
-    sub.style.left = (xAbs - left) + 'px';
-    sub.style.top = (yAbs - top) + 'px';
-    sub.style.right = 'auto';
-  }
+  // 临时强制显示，量出真实尺寸（聊天数不同，高度不同）
+  sub.style.display = 'block';
+  sub.style.visibility = 'hidden';
+  var subW = sub.offsetWidth || 184;
+  var subH = sub.offsetHeight || 246;
+  sub.style.visibility = '';
+  sub.style.display = '';
+
+  // 水平：贴菜单项右缘（无缝）；放不下翻到左侧（同样贴紧）；再夹进窗口
+  var absLeft = itemRect.right;
+  if (absLeft + subW > bounds.right - 2) absLeft = itemRect.left - subW;
+  absLeft = Math.max(bounds.left + 2, Math.min(absLeft, bounds.right - 2 - subW));
+
+  // 垂直：默认与菜单项顶对齐；底部放不下时整体上移 ——
+  // 上移后与菜单项仍有重叠（sub 是菜单项的子节点，重叠区悬停链不会断），绝无空隙
+  var absTop = itemRect.top;
+  if (absTop + subH > bounds.bottom - 2) absTop = bounds.bottom - 2 - subH;
+  absTop = Math.max(bounds.top + 2, absTop);
+
+  // .ctx-sub 的定位基准是整个菜单的 padding 盒，换算时加上边框宽度
+  sub.style.left = Math.round(absLeft - menuRect.left - menu.clientLeft) + 'px';
+  sub.style.top = Math.round(absTop - menuRect.top - menu.clientTop) + 'px';
+  sub.style.right = 'auto';
 }
 
 function closeContextMenu() {
   var menu = document.getElementById('contextMenu');
-  if (menu) menu.classList.remove('open');
+  if (!menu) return;
+  menu.classList.remove('open', 'sub-open');
+  var forced = menu.querySelector('.ctx-item.sub-forced');
+  if (forced) forced.classList.remove('sub-forced');
 }
 
 function handleMenuAction(act) {
@@ -178,21 +207,39 @@ function initContextMenu() {
       item.addEventListener('click', function (e) {
         e.stopPropagation();
         if (item.classList.contains('disabled')) return;
+        // 「切换聊天」：点击 = 展开/收起二级菜单（不再落到设置面板）。
+        // 兼容窗口失焦后首次点击 hover 不生效的场景 —— 点一下就出菜单。
+        if (item.classList.contains('has-sub')) {
+          var forced = item.classList.toggle('sub-forced');
+          menu.classList.toggle('sub-open', forced);
+          positionChatSubmenu();
+          return;
+        }
         handleMenuAction(item.dataset.act);
       });
     });
 
-    // 悬停「切换聊天」时放开菜单的滚动裁剪（.ctx-menu.sub-open），
-    // 否则二级子菜单会被菜单的 overflow-y 裁掉；离开菜单后恢复滚动。
+    // 二级菜单展开期间（悬停或点击强制），放开菜单的滚动裁剪（.sub-open），
+    // 否则二级子菜单会被菜单的 overflow-y 裁掉
     var hasSub = menu.querySelector('.ctx-item.has-sub');
     if (hasSub) {
       hasSub.addEventListener('mouseenter', function () {
         menu.classList.add('sub-open');
-      });
-      menu.addEventListener('mouseleave', function () {
-        menu.classList.remove('sub-open');
+        positionChatSubmenu();   // 菜单若滚动过，悬停时按实时位置重定位
       });
     }
+
+    // 离开菜单：收回滚动放行与点击强制展开的二级菜单
+    menu.addEventListener('mouseleave', function () {
+      menu.classList.remove('sub-open');
+      var forced = menu.querySelector('.ctx-item.sub-forced');
+      if (forced) forced.classList.remove('sub-forced');
+    });
+
+    // 菜单滚动时，二级菜单位置跟着菜单项走
+    menu.addEventListener('scroll', function () {
+      if (menu.classList.contains('open')) positionChatSubmenu();
+    });
   }
 
   if (stage) {

@@ -19,6 +19,7 @@ var _stackSig = '';              // 气泡堆内容指纹，未变化时跳过�
 var _streamingIdx = -1;          // 正在流式输出的消息下标
 var _bubbleExpiry = {};          // 「定时消失」模式下队首气泡的到期时间戳（key = idx.seg，同时最多一条）
 var _bubbleLastCount = -1;       // 上次见到的消息总数（减少时清空计时，防止删消息后 key 错位）
+var _bubbleSeenKeys = null;      // 上一帧渲染过的气泡 key 集合（null = 首帧/刚切换聊天，不做入场动画）
 
 // ==================== 气泡展示设置 ====================
 
@@ -218,27 +219,58 @@ function renderBubbleStack() {
   // 用户向上翻看历史时不打扰
   var wasAtBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
 
-  box.innerHTML = items.map(function (it, i) {
+  // 入场动画：只给「本次新出现」的气泡加（与上一帧的 key 集合对比），
+  // 已有气泡重绘时不重播 —— 否则流式输出期间每个字都会抖一下。
+  // _bubbleSeenKeys 为 null（首帧 / 刚切换聊天）时整体静默，不搞入场秀。
+  var prevKeys = _bubbleSeenKeys;
+  var seenNow = {};
+  var chatRef = chatNow;
+
+  var html = '';
+  for (var bi = 0; bi < items.length; bi++) {
+    var it = items[bi];
+    var bkey = it.idx + '.' + it.seg;
+    seenNow[bkey] = true;
+    var arrive = (prevKeys && !prevKeys[bkey]) ? ' bs-arrive' : '';
+    // 轮次分隔：相邻两个气泡来自不同消息、且中间夹着用户发言 → 幽灵分割线
+    var sep = '';
+    if (bi > 0 && it.idx !== items[bi - 1].idx &&
+        _hasUserMsgBetween(chatRef, items[bi - 1].idx, it.idx)) {
+      sep = '<div class="bs-sep"></div>';
+    }
     // t: 0 = 最上（最旧）→ 1 = 最下（最新）；越往下越不透明
-    var t = n === 1 ? 1 : i / (n - 1);
+    var t = n === 1 ? 1 : bi / (n - 1);
     var op = (0.35 + t * 0.65).toFixed(3);
-    var typing = (i === streamingPos) ? ' typing' : '';
+    var typing = (bi === streamingPos) ? ' typing' : '';
     // 说话人的位置直接放头像：多角色时主色是黑色，文字名会看不见
     var face = it.face
       ? '<img class="bs-face" src="' + escHtml(it.face) + '" alt="' + escHtml(it.speaker || '') + '">'
       : (it.speaker ? '<span class="bs-face bs-face-empty"></span>' : '');
-    return '<div class="bs-item' + typing + '" style="opacity:' + op + '"' +
+    html += sep +
+      '<div class="bs-item' + typing + arrive + '" style="opacity:' + op + '"' +
       ' data-idx="' + it.idx + '" data-seg="' + it.seg + '"' +
       (it.speaker ? ' title="' + escHtml(it.speaker) + '"' : '') + '>' +
       face +
       '<span class="bs-text">' + escHtml(it.text) + '</span>' +
       '</div>';
-  }).join('');
+  }
+
+  box.innerHTML = html;
+  _bubbleSeenKeys = seenNow;
 
   if (wasAtBottom) box.scrollTop = box.scrollHeight;
 
   // 内容超出高度上限时顶部淡出，提示上方还有更早的消息（可滚动查看）
   box.classList.toggle('clipped', box.scrollHeight > box.clientHeight + 1);
+}
+
+/** 两条 AI 消息（消息下标 a < b）之间是否夹着用户发言 */
+function _hasUserMsgBetween(chat, a, b) {
+  if (!chat || !chat.messages) return false;
+  for (var i = a + 1; i < b; i++) {
+    if (chat.messages[i] && chat.messages[i].role === 'user') return true;
+  }
+  return false;
 }
 
 function renderBubble() {

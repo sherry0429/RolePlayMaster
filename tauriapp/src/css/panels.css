@@ -675,3 +675,26 @@ body.panel-mode .ctx-menu { display: none !important; }
   color: var(--text-tertiary);
 }
 .anim-adv-toggle:hover { opacity: 0.75; }
+
+/* ==================== 动画管理缩略图（img 裁切版） ==================== */
+.anim-mgr-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.anim-mgr-thumb img {
+  display: block;
+  max-width: none;
+  max-height: none;
+}
+.anim-mgr-thumb-fallback {
+  font-size: 20px;
+  opacity: 0.5;
+}
