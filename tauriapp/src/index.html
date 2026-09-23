@@ -25,225 +25,323 @@
     <!-- ---------- 设置面板（分 Tab） ---------- -->
     <div class="panel" id="panel-settings" data-panel-w="980">
       <div class="panel-head" data-drag>
-        <h3>⚙️ 设置</h3>
+        <h3>设置</h3>
         <button class="panel-close" data-close-all title="关闭">✕</button>
       </div>
 
       <div class="panel-tabs" id="settingsTabs">
-        <button class="ptab active" data-tab="desktop">🖥️ 桌面</button>
-        <button class="ptab" data-tab="chat">🗂️ 聊天</button>
-        <button class="ptab" data-tab="api">🔌 接口</button>
-        <button class="ptab" data-tab="data">💾 数据</button>
-        <button class="ptab" data-tab="memory">🧠 记忆</button>
-        <button class="ptab" data-tab="image">🎨 图像</button>
-        <button class="ptab" data-tab="about">ℹ️ 关于</button>
+        <button class="ptab active" data-tab="desktop">桌面</button>
+        <button class="ptab" data-tab="chat">聊天</button>
+        <button class="ptab" data-tab="api">接口</button>
+        <button class="ptab" data-tab="data">数据</button>
+        <button class="ptab" data-tab="memory">记忆</button>
+        <button class="ptab" data-tab="image">图像</button>
+        <button class="ptab" data-tab="about">关于</button>
       </div>
 
       <div class="panel-body">
 
         <!-- ===== 桌面 ===== -->
         <section class="pane active" data-pane="desktop">
-          <div class="row">
-            <label class="switch-line">
-              <input type="checkbox" id="optAlwaysOnTop" checked>
-              <span>窗口始终置顶</span>
-            </label>
-          </div>
-          <div class="row">
-            <label class="slider-line">
-              <span>化身尺寸</span>
-              <input type="range" id="optAvatarSize" min="120" max="320" step="10" value="220">
-              <em id="optAvatarSizeVal">220</em>
-            </label>
-          </div>
-          <div class="row">
-            <label class="slider-line">
-              <span>气泡不透明度</span>
-              <input type="range" id="optOpacity" min="30" max="100" step="5" value="85">
-              <em id="optOpacityVal">85</em>
-            </label>
-          </div>
-          <div class="row btn-row">
-            <button class="btn-sm btn-ghost" id="themeBtn" onclick="toggleTheme()">🌙 主题</button>
-            <button class="btn-sm btn-ghost" onclick="resetShellLayout()">↺ 恢复默认外观与位置</button>
+          <div class="form-block">
+            <h4 class="block-title">窗口</h4>
+            <div class="block-body">
+              <label class="switch-line">
+                <span class="switch-label">窗口始终置顶<em>关闭后窗口可能被其它应用遮挡</em></span>
+                <input type="checkbox" id="optAlwaysOnTop" checked>
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+              <div class="slider-line">
+                <div class="slider-head"><span>化身尺寸</span><em id="optAvatarSizeVal">220</em></div>
+                <input type="range" id="optAvatarSize" min="120" max="320" step="10" value="220">
+              </div>
+              <div class="slider-line">
+                <div class="slider-head"><span>气泡不透明度</span><em id="optOpacityVal">85</em></div>
+                <input type="range" id="optOpacity" min="30" max="100" step="5" value="85">
+              </div>
+            </div>
           </div>
 
-          <h4 style="margin-top:18px;">全局背景图片</h4>
-          <div class="form-group">
-            <div style="display:flex;gap:8px;align-items:center;">
-              <button class="btn-sm btn-primary" onclick="document.getElementById('bgImageFile').click()">📷 上传</button>
-              <button class="btn-sm btn-danger" onclick="clearBgImage()" id="clearBgBtn" style="display:none;">🗑️ 清除</button>
-              <span id="bgImageStatus" style="font-size:12px;color:var(--text-secondary);"></span>
+          <div class="form-block">
+            <h4 class="block-title">外观</h4>
+            <div class="block-body">
+              <div class="btn-row">
+                <button class="btn-sm btn-ghost" id="themeBtn" onclick="toggleTheme()">切换主题</button>
+                <button class="btn-sm btn-ghost" onclick="resetShellLayout()">恢复默认外观与位置</button>
+              </div>
             </div>
-            <input type="file" id="bgImageFile" accept="image/*" style="display:none" onchange="handleBgImageUpload(event, false)">
-            <div class="hint">桌面窗口是透明的，背景图不会绘制到窗口上，仅作为与网页版互通的数据保留。</div>
+          </div>
+
+          <div class="form-block">
+            <h4 class="block-title">全局背景图片</h4>
+            <div class="block-body">
+              <div class="btn-row">
+                <button class="btn-sm btn-primary" onclick="document.getElementById('bgImageFile').click()">上传图片</button>
+                <button class="btn-sm btn-danger" onclick="clearBgImage()" id="clearBgBtn" style="display:none;">清除</button>
+                <span id="bgImageStatus" class="inline-status"></span>
+              </div>
+              <input type="file" id="bgImageFile" accept="image/*" style="display:none" onchange="handleBgImageUpload(event, false)">
+              <p class="hint">桌面窗口是透明的，背景图不会绘制到窗口上，仅作为与网页版互通的数据保留。</p>
+            </div>
           </div>
         </section>
 
         <!-- ===== 聊天 ===== -->
         <section class="pane" data-pane="chat">
-          <div class="chat-list-section" id="chatList"><!-- 由 renderChatList() 渲染 --></div>
-          <div class="hint">点击聊天切换当前对话；铅笔编辑名称与角色绑定；垃圾桶删除。化身会随之切换。</div>
+          <div class="form-block">
+            <h4 class="block-title">聊天列表</h4>
+            <div class="block-body">
+              <div class="chat-list-section" id="chatList"></div>
+              <p class="hint">点击切换当前对话；右侧可编辑名称与角色绑定、删除聊天。化身会随之切换。</p>
+            </div>
+          </div>
         </section>
 
         <!-- ===== 接口 ===== -->
         <section class="pane" id="settingsForm" data-pane="api">
-          <div class="form-group">
-            <label>API HOST</label>
-            <input type="text" id="apiHost" placeholder="https://api.deepseek.com">
+          <div class="form-block">
+            <h4 class="block-title">模型接口</h4>
+            <div class="block-body">
+              <div class="form-group">
+                <label for="apiHost">API HOST</label>
+                <input type="text" id="apiHost" placeholder="https://api.deepseek.com">
+              </div>
+              <div class="form-group">
+                <label for="apiKey">API Key</label>
+                <input type="password" id="apiKey" placeholder="sk-...">
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>API Key</label>
-            <input type="password" id="apiKey" placeholder="sk-...">
+
+          <div class="form-block">
+            <h4 class="block-title">云端同步</h4>
+            <div class="block-body">
+              <div class="form-group">
+                <label for="syncToken">同步 Token</label>
+                <input type="text" id="syncToken" placeholder="填写同步用的 Token">
+              </div>
+              <div class="form-group">
+                <label for="cloudSyncHost">云端同步地址<em>用于云端导入导出与通知</em></label>
+                <input type="text" id="cloudSyncHost" placeholder="https://poecurrency.top">
+              </div>
+              <div class="form-group">
+                <label for="optShareBase">分享链接基址<em>分享链接将指向该地址的网页版</em></label>
+                <input type="text" id="optShareBase" placeholder="留空则使用云端同步地址">
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>同步 Token</label>
-            <input type="text" id="syncToken" placeholder="填写同步用的 Token">
-          </div>
-          <div class="form-group">
-            <label>云端同步地址（含云端导入导出和通知功能）</label>
-            <input type="text" id="cloudSyncHost" placeholder="https://poecurrency.top">
-          </div>
-          <div class="form-group">
-            <label>分享链接基址（分享链接将指向该地址的网页版）</label>
-            <input type="text" id="optShareBase" placeholder="留空则使用云端同步地址">
-          </div>
-          <div class="btn-row">
+
+          <div class="btn-row btn-row-end">
             <button class="btn-sm btn-primary" onclick="saveSettings()">保存设置</button>
           </div>
         </section>
 
         <!-- ===== 数据 ===== -->
         <section class="pane" data-pane="data">
-          <h4>云端同步</h4>
-          <div class="data-section">
-            <button class="btn-sm btn-ghost" onclick="syncToCloud()">☁️ 同步到云端</button>
-            <button class="btn-sm btn-ghost" onclick="syncFromCloud()" id="cloudSyncBtn">☁️ 从云端同步</button>
+          <div class="form-block">
+            <h4 class="block-title">云端同步</h4>
+            <div class="block-body">
+              <div class="btn-grid">
+                <button class="btn-sm btn-ghost" onclick="syncToCloud()">同步到云端</button>
+                <button class="btn-sm btn-ghost" onclick="syncFromCloud()" id="cloudSyncBtn">从云端同步</button>
+              </div>
+            </div>
           </div>
-          <h4>本地文件</h4>
-          <div class="data-section">
-            <button class="btn-sm btn-ghost" onclick="exportDataAsFile()">⬆️ 导出全部数据</button>
-            <button class="btn-sm btn-ghost" onclick="importData()">⬇️ 导入数据</button>
-            <button class="btn-sm btn-ghost" onclick="shareLink()">🔗 生成分享链接</button>
+
+          <div class="form-block">
+            <h4 class="block-title">本地文件</h4>
+            <div class="block-body">
+              <div class="btn-grid">
+                <button class="btn-sm btn-ghost" onclick="exportDataAsFile()">导出全部数据</button>
+                <button class="btn-sm btn-ghost" onclick="importData()">导入数据</button>
+                <button class="btn-sm btn-ghost" onclick="shareLink()">生成分享链接</button>
+              </div>
+            </div>
           </div>
-          <h4>管理与查看</h4>
-          <div class="data-section">
-            <button class="btn-sm btn-ghost" onclick="openGalleryDrawer()">🎭 角色管理</button>
-            <button class="btn-sm btn-ghost" onclick="openAlbumDrawer()" id="albumBtn">🖼️ 当前聊天相册</button>
-            <button class="btn-sm btn-ghost" onclick="startGroupChatFlow()">➕ 创建群聊</button>
-            <button class="btn-sm btn-ghost" onclick="openLogDrawer()">📋 查看日志</button>
+
+          <div class="form-block">
+            <h4 class="block-title">管理与查看</h4>
+            <div class="block-body">
+              <div class="btn-grid">
+                <button class="btn-sm btn-ghost" onclick="openGalleryDrawer()">角色管理</button>
+                <button class="btn-sm btn-ghost" onclick="openAlbumDrawer()" id="albumBtn">当前聊天相册</button>
+                <button class="btn-sm btn-ghost" onclick="startGroupChatFlow()">创建群聊</button>
+                <button class="btn-sm btn-ghost" onclick="openLogDrawer()">查看日志</button>
+              </div>
+            </div>
           </div>
-          <h4>危险操作</h4>
-          <div class="data-section">
-            <button class="btn-sm btn-danger" onclick="resetSettings()">⚠️ 重置所有数据</button>
+
+          <div class="form-block">
+            <h4 class="block-title">危险操作</h4>
+            <div class="block-body">
+              <div class="btn-grid">
+                <button class="btn-sm btn-danger" onclick="resetSettings()">重置所有数据</button>
+              </div>
+              <p class="hint">重置会清空本机所有聊天、角色与设置，且不可撤销。</p>
+            </div>
           </div>
         </section>
 
         <!-- ===== 记忆 ===== -->
         <section class="pane" data-pane="memory">
-          <div class="form-group">
-            <label>摘要压缩阈值（每多少条消息触发一次 System Prompt 更新）</label>
-            <input type="number" id="compressThreshold" placeholder="300" min="10" max="9999">
-          </div>
-          <div class="checkbox-group">
-            <input type="checkbox" id="speakerMode" checked>
-            <label for="speakerMode">说话人区分（用【】拆分多角色消息）</label>
-          </div>
-
-          <h4 style="margin-top:18px;">💬 自动找话题</h4>
-          <div class="checkbox-group">
-            <input type="checkbox" id="autoTopic">
-            <label for="autoTopic">自动找话题</label>
-          </div>
-          <div class="form-group" id="autoTopicConfig" style="display:none;">
-            <label>触发间隔（分钟，支持小数，最小0.1=6秒，默认10）</label>
-            <input type="number" id="autoTopicInterval" placeholder="10" min="0.1" step="0.1" max="120">
-            <label style="margin-top:4px;">触发次数上限（默认5，用户输入后重置）</label>
-            <input type="number" id="autoTopicMaxCount" placeholder="5" min="1" max="100">
-          </div>
-          <div class="checkbox-group" style="display:none;">
-            <input type="checkbox" id="chatNotification" disabled>
-            <label for="chatNotification">聊天通知（桌面版不支持 Web Push）</label>
+          <div class="form-block">
+            <h4 class="block-title">记忆压缩</h4>
+            <div class="block-body">
+              <div class="form-group">
+                <label for="compressThreshold">摘要压缩阈值<em>每多少条消息触发一次 System Prompt 更新</em></label>
+                <input type="number" id="compressThreshold" placeholder="300" min="10" max="9999">
+              </div>
+              <label class="switch-line">
+                <span class="switch-label">说话人区分<em>开启后一条 AI 消息按【】拆成多个说话人段落</em></span>
+                <input type="checkbox" id="speakerMode" checked>
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+            </div>
           </div>
 
-          <div class="btn-row" style="margin-top:14px;">
+          <div class="form-block">
+            <h4 class="block-title">自动找话题</h4>
+            <div class="block-body">
+              <label class="switch-line">
+                <span class="switch-label">启用自动找话题<em>空闲一段时间后由 AI 主动发起新话题</em></span>
+                <input type="checkbox" id="autoTopic">
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+              <div id="autoTopicConfig" style="display:none;">
+                <div class="form-group">
+                  <label for="autoTopicInterval">触发间隔（分钟）<em>支持小数，最小 0.1 = 6 秒</em></label>
+                  <input type="number" id="autoTopicInterval" placeholder="10" min="0.1" step="0.1" max="120">
+                </div>
+                <div class="form-group">
+                  <label for="autoTopicMaxCount">触发次数上限<em>用户发言后重新计数</em></label>
+                  <input type="number" id="autoTopicMaxCount" placeholder="5" min="1" max="100">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-block" style="display:none;">
+            <div class="block-body">
+              <label class="switch-line">
+                <span class="switch-label">聊天通知<em>桌面版不支持 Web Push</em></span>
+                <input type="checkbox" id="chatNotification" disabled>
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="btn-row btn-row-end">
             <button class="btn-sm btn-primary" onclick="saveSettings()">保存设置</button>
           </div>
         </section>
 
         <!-- ===== 图像 ===== -->
         <section class="pane" data-pane="image">
-          <div class="checkbox-group">
-            <input type="checkbox" id="comfyuiEnabled">
-            <label for="comfyuiEnabled">启用 ComfyUI（关闭则仅生成画面描述文本）</label>
-          </div>
-          <div class="form-group">
-            <label>ComfyUI 服务器地址</label>
-            <input type="text" id="comfyuiServerUrl" placeholder="http://127.0.0.1:8188">
-          </div>
-          <div class="form-group">
-            <label>上传工作流 JSON</label>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <button class="btn-sm btn-primary" onclick="document.getElementById('comfyuiWorkflowFile').click()">📂 上传</button>
-              <span id="comfyuiWorkflowStatus" style="font-size:12px;color:var(--text-secondary);">未上传</span>
-            </div>
-            <input type="file" id="comfyuiWorkflowFile" accept=".json" style="display:none" onchange="handleComfyuiWorkflowUpload(event)">
-          </div>
-          <div class="form-group">
-            <label>提示词节点 ID</label>
-            <input type="text" id="comfyuiPromptNodeId" placeholder="例如: 6">
-          </div>
-          <div style="display:flex;gap:8px;">
-            <div class="form-group" style="flex:1;">
-              <label>宽度节点 ID</label>
-              <input type="text" id="comfyuiWidthNodeId" placeholder="例如: 5">
-            </div>
-            <div class="form-group" style="flex:1;">
-              <label>高度节点 ID</label>
-              <input type="text" id="comfyuiHeightNodeId" placeholder="例如: 5">
+          <div class="form-block">
+            <h4 class="block-title">ComfyUI 接入</h4>
+            <div class="block-body">
+              <label class="switch-line">
+                <span class="switch-label">启用 ComfyUI<em>关闭时拍照仅生成画面描述文本</em></span>
+                <input type="checkbox" id="comfyuiEnabled">
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+              <div class="form-group">
+                <label for="comfyuiServerUrl">服务器地址</label>
+                <input type="text" id="comfyuiServerUrl" placeholder="http://127.0.0.1:8188">
+              </div>
+              <div class="form-group">
+                <label for="comfyuiWorkflowFile">工作流 JSON</label>
+                <div class="btn-row">
+                  <button class="btn-sm btn-primary" onclick="document.getElementById('comfyuiWorkflowFile').click()">选择文件</button>
+                  <span id="comfyuiWorkflowStatus" class="inline-status">未上传</span>
+                </div>
+                <input type="file" id="comfyuiWorkflowFile" accept=".json" style="display:none" onchange="handleComfyuiWorkflowUpload(event)">
+              </div>
             </div>
           </div>
-          <div style="display:flex;gap:8px;">
-            <div class="form-group" style="flex:1;">
-              <label>默认宽度</label>
-              <input type="number" id="comfyuiDefaultWidth" placeholder="512" min="64" max="2048">
-            </div>
-            <div class="form-group" style="flex:1;">
-              <label>默认高度</label>
-              <input type="number" id="comfyuiDefaultHeight" placeholder="768" min="64" max="2048">
+
+          <div class="form-block">
+            <h4 class="block-title">工作流节点映射</h4>
+            <div class="block-body">
+              <div class="form-group">
+                <label for="comfyuiPromptNodeId">提示词节点 ID</label>
+                <input type="text" id="comfyuiPromptNodeId" placeholder="例如：6">
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="comfyuiWidthNodeId">宽度节点 ID</label>
+                  <input type="text" id="comfyuiWidthNodeId" placeholder="例如：5">
+                </div>
+                <div class="form-group">
+                  <label for="comfyuiHeightNodeId">高度节点 ID</label>
+                  <input type="text" id="comfyuiHeightNodeId" placeholder="例如：5">
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="comfyuiDefaultWidth">默认宽度</label>
+                  <input type="number" id="comfyuiDefaultWidth" placeholder="512" min="64" max="2048">
+                </div>
+                <div class="form-group">
+                  <label for="comfyuiDefaultHeight">默认高度</label>
+                  <input type="number" id="comfyuiDefaultHeight" placeholder="768" min="64" max="2048">
+                </div>
+              </div>
             </div>
           </div>
-          <div class="btn-row">
+
+          <div class="btn-row btn-row-end">
             <button class="btn-sm btn-primary" onclick="saveSettings()">保存设置</button>
           </div>
         </section>
 
         <!-- ===== 关于 ===== -->
         <section class="pane" data-pane="about">
-          <div class="about-block">
-            <div class="about-title">RolePlayMaster · 桌面化身版</div>
-            <div class="about-sub">v1.0.0 · Tauri 2 + 网页版同源逻辑</div>
+          <div class="form-block">
+            <h4 class="block-title">关于</h4>
+            <div class="block-body">
+              <div class="about-block">
+                <div class="about-title">RolePlayMaster · 桌面化身版</div>
+                <div class="about-sub">v1.0.0 · Tauri 2 · 与网页版同源逻辑</div>
+              </div>
+            </div>
           </div>
-          <h4>基本操作</h4>
-          <ul class="about-list">
-            <li><b>移动窗口</b>：按住化身、气泡、消息浮层顶栏或面板标题栏拖动</li>
-            <li><b>看消息 / 发消息</b>：点击化身左上角的<b>气泡</b>（Enter 发送，Shift+Enter 换行）</li>
-            <li><b>让 AI 继续</b>：点气泡右侧的<b>向下箭头</b></li>
-            <li><b>打开菜单</b>：在化身或气泡上<b>右键</b></li>
-            <li><b>记忆 / 拍照</b>：右键菜单，或消息浮层下方的快捷按钮</li>
-          </ul>
-          <h4>数据存储</h4>
-          <p class="hint">
-            全部数据存在本机 WebView 的 IndexedDB 中（键名 <code>aichat_data</code>），结构与网页版完全一致，
-            但<b>不与浏览器共享</b>。需要通过「数据」标签页的导出 / 导入在两个版本间迁移。
-          </p>
-          <h4>已知边界</h4>
-          <ul class="about-list">
-            <li>不含重放功能</li>
-            <li>桌面窗口透明，背景图设置不会绘制出来</li>
-            <li>不支持浏览器 Web Push 通知</li>
-            <li>拍照需要启用 ComfyUI 并提供工作流，否则只记录画面描述文本</li>
-          </ul>
+
+          <div class="form-block">
+            <h4 class="block-title">基本操作</h4>
+            <div class="block-body">
+              <ul class="about-list">
+                <li><b>移动窗口</b>：按住化身、消息气泡堆或输入栏拖动</li>
+                <li><b>发消息</b>：在输入栏输入，Enter 发送、Shift + Enter 换行</li>
+                <li><b>看最近消息</b>：化身上方的气泡堆</li>
+                <li><b>让 AI 继续</b>：输入栏右侧的 ▼</li>
+                <li><b>回看与快捷指令</b>：输入栏右侧的 ☰</li>
+                <li><b>菜单</b>：在化身或输入栏上右键</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="form-block">
+            <h4 class="block-title">数据存储</h4>
+            <div class="block-body">
+              <p class="hint">
+                全部数据存放在本机 WebView 的 IndexedDB 中（键名 <code>aichat_data</code>），结构与网页版一致，
+                但不与浏览器共享。需要在两个版本之间迁移时，请使用「数据」标签页的导出 / 导入。
+              </p>
+            </div>
+          </div>
+
+          <div class="form-block">
+            <h4 class="block-title">已知边界</h4>
+            <div class="block-body">
+              <ul class="about-list">
+                <li>不含重放功能</li>
+                <li>桌面窗口透明，背景图设置不会绘制出来</li>
+                <li>不支持浏览器 Web Push 通知</li>
+                <li>拍照需要启用 ComfyUI 并提供工作流，否则只记录画面描述文本</li>
+              </ul>
+            </div>
+          </div>
         </section>
 
       </div>
@@ -252,7 +350,7 @@
     <!-- ---------- System Prompt 面板 ---------- -->
     <div class="panel panel-narrow" id="panel-sp" data-panel-w="680">
       <div class="panel-head" data-drag>
-        <h3>📝 System Prompt</h3>
+        <h3>System Prompt</h3>
         <button class="panel-close" data-close-all title="关闭">✕</button>
       </div>
       <div class="panel-body">
@@ -334,7 +432,11 @@
   <!-- ================= 右键菜单（不含重放） ================= -->
   <div id="contextMenu" class="ctx-menu">
     <div class="ctx-item" data-act="newGroup"><span class="ctx-ico">➕</span>创建聊天（群聊）</div>
-    <div class="ctx-item" data-act="switch"><span class="ctx-ico">🗂️</span>切换聊天</div>
+    <div class="ctx-item has-sub" data-act="switch">
+      <span class="ctx-ico">🗂️</span><span class="ctx-label">切换聊天</span>
+      <span class="ctx-caret">›</span>
+      <div class="ctx-sub" id="ctxChatSub"></div>
+    </div>
     <div class="ctx-sep"></div>
     <div class="ctx-item" data-act="sp"><span class="ctx-ico">📝</span>修改 System Prompt</div>
     <div class="ctx-item" data-act="memory"><span class="ctx-ico">🧠</span>触发记忆功能</div>

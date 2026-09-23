@@ -32,6 +32,8 @@ Tauri 的 WebView 不支持浏览器原生 `window.confirm()`（macOS 上恒返�
 |---|---|---|
 | `handleInputKeydown` | 回车发送前先判断 `e.isComposing \|\| e.keyCode === 229` | 中文输入法选词时也会触发 Enter，不拦住会把没上屏的半成品直接发出去 |
 | `autoResizeInput` | 输入框自增高上限由 120px 收到 72px | 输入栏常驻在化身上方，空间有限 |
+| `renderChatList` | 只把 ✏️ / 🗑️ / ➕ 换成线性 SVG 图标，其余（头像聚合、类名）与网页版一致 | 设置面板要求「严肃、正式、现代化」，不适合出现 emoji |
+| `applyTheme` | 主题按钮文案由「🌙/☀️ 主题」改为「切换到深色 / 浅色」 | 同上 |
 
 从网页版同步 `13_send.js` 时，这两处不需要重新应用（改动在外壳里），
 但如果网页版这两个函数的逻辑有其它变化，记得同步到 `shell/05_overrides.js`。

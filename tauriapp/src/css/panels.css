@@ -5,6 +5,203 @@
 /* 兼容节点彻底不可见、不占位 */
 #compat { display: none !important; }
 
+/* ==================================================================
+   设置面板的控件样式 —— 统一到一套「现代、克制」的表单语言：
+     卡片分组 · 开关式复选框 · 细滑轨 · 统一 4/8 间距 · 不使用 emoji
+   ================================================================== */
+
+/* ---- 分组卡片 ---- */
+.form-block {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.form-block:last-child { margin-bottom: 0; }
+.block-title {
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+}
+.block-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.block-body > *:last-child { margin-bottom: 0; }
+/* 块内相邻的表单组不再叠加下边距 */
+.block-body .form-group { margin-bottom: 0; }
+.block-body .btn-row { margin: 0; }
+
+/* 两列并排的小字段 */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ---- 表单字段 ---- */
+.form-group label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  line-height: 1.45;
+}
+.form-group label em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.form-group input::placeholder { color: var(--text-tertiary); }
+.form-group input:hover { border-color: var(--text-tertiary); }
+.form-group input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* ---- 开关式复选框 ---- */
+.switch-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.switch-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+.switch-label em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+/* 原生 input 保留在 DOM 里（JS 直接读 .checked），视觉上藏起来但保持可聚焦 */
+.switch-line input[type="checkbox"] {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.switch-ui {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 23px;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  box-sizing: border-box;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.switch-ui::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.switch-line input:checked + .switch-ui {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.switch-line input:checked + .switch-ui::after { transform: translateX(17px); }
+.switch-line input:focus-visible + .switch-ui {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.switch-line input:disabled + .switch-ui { opacity: 0.4; }
+
+/* ---- 滑杆 ---- */
+.slider-line { display: flex; flex-direction: column; gap: 7px; }
+.slider-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.slider-head em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 1px 7px;
+  border-radius: 6px;
+}
+.slider-line input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  outline: none;
+  cursor: pointer;
+}
+.slider-line input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.12s ease;
+}
+.slider-line input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
+.slider-line input[type="range"]:active::-webkit-slider-thumb {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* ---- 聊天列表里的线性图标 ---- */
+.chat-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.chat-action-btn svg { display: block; }
+
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn-row-end { justify-content: flex-end; margin-top: 12px; }
+.btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.btn-grid .btn-sm { width: 100%; }
+.inline-status { font-size: 11.5px; color: var(--text-tertiary); }
+
 /* ---------------- 面板层 ----------------
    面板层是化身舞台上方的弹性区域：没有遮罩底色，
    面板直接浮在桌面上；化身在它下方依然可见可操作。 */
@@ -128,27 +325,6 @@ body.panel-mode .bubble-stack { display: none; }
   margin-top: 6px;
 }
 
-.switch-line,
-.slider-line {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-.switch-line input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
-.slider-line span { flex-shrink: 0; min-width: 78px; }
-.slider-line input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
-.slider-line em {
-  font-style: normal;
-  font-size: 12px;
-  color: var(--text-tertiary);
-  min-width: 34px;
-  text-align: right;
-}
-
-.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* 面板内的表单控件：统一外观，并保证跟随主题而非系统 */
 .panel input[type="text"],

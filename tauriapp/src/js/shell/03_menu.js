@@ -8,6 +8,49 @@
  *   窗口置顶 / 最小化 / 退出应用   ← 原先浮在化身右上角的三个按钮收进来了
  */
 
+/**
+ * 二级菜单：聊天列表。
+ * 直接从 chatOrder 渲染，不用先进设置面板就能切换。
+ */
+function buildChatSubmenu() {
+  var sub = document.getElementById('ctxChatSub');
+  if (!sub) return;
+
+  var ids = appData.chatOrder || [];
+  if (ids.length === 0) {
+    sub.innerHTML = '<div class="ctx-sub-empty">还没有聊天</div>';
+    return;
+  }
+
+  sub.innerHTML = ids.map(function (id) {
+    var chat = appData.chats[id];
+    if (!chat) return '';
+    var chars = chat.characters || [];
+    var multi = chars.length > 1;
+    var cls = 'ctx-sub-avatar' + (multi ? ' multi' : '');
+    var face = (chars.length > 0 && chars[0].avatar)
+      ? '<img class="' + cls + '" src="' + escHtml(chars[0].avatar) + '" alt="">'
+      : '<span class="' + cls + '"></span>';
+    var active = id === currentChatId;
+    return '<div class="ctx-sub-item' + (active ? ' active' : '') + '" data-chat="' + escHtml(id) + '">' +
+      face +
+      '<span class="ctx-sub-name">' + escHtml(chat.name || '未命名') + '</span>' +
+      (active ? '<span class="ctx-sub-tick">当前</span>' : '') +
+      '</div>';
+  }).join('');
+
+  sub.querySelectorAll('.ctx-sub-item').forEach(function (item) {
+    item.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var id = item.dataset.chat;
+      closeContextMenu();
+      if (!id || id === currentChatId) return;
+      selectChat(id);
+      showToast('已切换到「' + ((appData.chats[id] || {}).name || '') + '」');
+    });
+  });
+}
+
 function openContextMenu(x, y) {
   var menu = document.getElementById('contextMenu');
   var stage = document.getElementById('stage');
@@ -23,6 +66,8 @@ function openContextMenu(x, y) {
   // 置顶项的文案与勾选态跟随当前状态
   updateTopButton();
 
+  buildChatSubmenu();
+
   menu.classList.add('open');
 
   // 先显示再测量，才能拿到真实尺寸
@@ -32,6 +77,26 @@ function openContextMenu(x, y) {
   var top = Math.max(2, Math.min(y, bounds.height - rect.height - 2));
   menu.style.left = left + 'px';
   menu.style.top = top + 'px';
+
+  // 二级菜单定位：优先贴在菜单右侧，放不下改到左侧，
+  // 两侧都放不下（窄窗口的常态）就夹进窗口 —— 总之不能跑到可视区外。
+  var sub = menu.querySelector('.ctx-sub');
+  var item = menu.querySelector('.ctx-item.has-sub');
+  if (sub && item) {
+    var SUB_W = 184;
+    var SUB_H = 246;
+    var xAbs = left + rect.width;                       // 贴菜单右缘，相邻才不会有 hover 断点
+    if (xAbs + SUB_W > bounds.width - 2) xAbs = left - SUB_W;
+    xAbs = Math.max(2, Math.min(xAbs, bounds.width - 2 - SUB_W));
+
+    var yAbs = top + item.offsetTop;
+    yAbs = Math.max(2, Math.min(yAbs, bounds.height - 4 - SUB_H));
+
+    // .ctx-sub 的定位基准是整个菜单，所以换算成相对菜单的偏移
+    sub.style.left = (xAbs - left) + 'px';
+    sub.style.top = (yAbs - top) + 'px';
+    sub.style.right = 'auto';
+  }
 }
 
 function closeContextMenu() {

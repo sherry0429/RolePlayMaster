@@ -27,6 +27,26 @@ function stackCollapseWs(t) {
 }
 
 /**
+ * 按说话人拆分消息内容。
+ * 与 core 的 parseSpeakerSegments 规则一致，但**保留**第一个【】之前的正文
+ * （core 版本会把那一段丢掉），返回 [{ speaker|null, text }]。
+ */
+function splitBySpeaker(raw) {
+  var segs = parseSpeakerSegments(raw);
+  var first = String(raw).indexOf('【');
+  var lead = first > 0 ? String(raw).slice(0, first).trim() : '';
+  if (lead) segs.unshift({ speaker: null, text: lead });
+  return segs;
+}
+
+/** 取说话人的头像（用于气泡堆与浮层） */
+function speakerFace(name) {
+  if (!name) return '';
+  var c = findCharacter(name);
+  return (c && c.avatar) ? c.avatar : '';
+}
+
+/**
  * 取最近 N 个「气泡单元」。
  *
  * 气泡的粒度跟随设置里的「说话人区分」：
@@ -41,6 +61,9 @@ function collectRecentReplies(limit) {
   if (!chat || !chat.messages) return [];
 
   var speakerMode = appData.settings.speakerMode !== false;
+  // 只有一个角色的聊天里，说话人没有歧义 —— 没带【】标记时也用它的头像
+  var soloChar = (chat.characters && chat.characters.length === 1) ? chat.characters[0] : null;
+  var soloFace = (soloChar && soloChar.avatar) ? soloChar.avatar : '';
   var out = [];
 
   // 从最新往前取，取够 limit 个单元为止
@@ -51,20 +74,25 @@ function collectRecentReplies(limit) {
     if (!raw.trim()) continue;
 
     if (speakerMode && hasSpeakerTags(raw)) {
-      var segs = parseSpeakerSegments(raw);
+      var segs = splitBySpeaker(raw);
       if (segs.length > 0) {
         // 同一段里可能有多个说话人：倒着取，保证最新的一段排在最后（最下方）
         for (var s = segs.length - 1; s >= 0 && out.length < limit; s--) {
           var segText = stackCollapseWs(segs[s].text);
           if (!segText) continue;
-          out.push({ idx: i, seg: s, speaker: segs[s].speaker || '', text: segText });
+          var segWho = segs[s].speaker || '';
+          out.push({
+            idx: i, seg: s, speaker: segWho,
+            face: segWho ? speakerFace(segWho) : soloFace,
+            text: segText
+          });
         }
         continue;
       }
     }
 
     // 未开启说话人区分 / 无标记：整条消息一个气泡
-    out.push({ idx: i, seg: -1, speaker: '', text: stackCollapseWs(raw) });
+    out.push({ idx: i, seg: -1, speaker: '', face: soloFace, text: stackCollapseWs(raw) });
   }
 
   out.reverse();
@@ -105,9 +133,14 @@ function renderBubbleStack() {
     var t = n === 1 ? 1 : i / (n - 1);
     var op = (0.35 + t * 0.65).toFixed(3);
     var typing = (i === streamingPos) ? ' typing' : '';
+    // 说话人的位置直接放头像：多角色时主色是黑色，文字名会看不见
+    var face = it.face
+      ? '<img class="bs-face" src="' + escHtml(it.face) + '" alt="' + escHtml(it.speaker || '') + '">'
+      : (it.speaker ? '<span class="bs-face bs-face-empty"></span>' : '');
     return '<div class="bs-item' + typing + '" style="opacity:' + op + '"' +
-      ' data-idx="' + it.idx + '" data-seg="' + it.seg + '">' +
-      (it.speaker ? '<span class="bs-who">' + escHtml(it.speaker) + '</span>' : '') +
+      ' data-idx="' + it.idx + '" data-seg="' + it.seg + '"' +
+      (it.speaker ? ' title="' + escHtml(it.speaker) + '"' : '') + '>' +
+      face +
       '<span class="bs-text">' + escHtml(it.text) + '</span>' +
       '</div>';
   }).join('');
@@ -148,48 +181,55 @@ function bpSpeakerAvatar(name) {
   return '';
 }
 
+/** 一条消息按「说话人区分」拆成若干段（用户消息永远只有一段） */
+function bpMessageParts(msg, speakerMode) {
+  if (!msg) return [{ speaker: null, text: '' }];
+  var raw = stripTriggerTags(msg.content || '');
+  if (msg.role === 'user') return [{ speaker: null, text: raw }];
+  if (speakerMode && hasSpeakerTags(raw)) {
+    var segs = splitBySpeaker(raw);
+    if (segs.length > 0) return segs;
+  }
+  return [{ speaker: null, text: raw }];
+}
+
+/**
+ * 浮层里的一行。
+ * 说话人区分开启时，一条 AI 消息会拆成多行 —— 一行 = 一个说话人的一段话。
+ */
 function bpRowHtml(entry) {
   if (entry.type === 'photo') {
     var p = entry.photo;
     var img = p.thumbUrl || p.dataUrl;
     var inner = img
       ? '<img src="' + img + '" alt="照片" onclick="zoomPhoto(\'' + escHtml(p.id) + '\')">'
-      : '<div style="font-size:11.5px;opacity:.75;padding:4px 2px;">📷 ' + escHtml((p.prompt || '').slice(0, 40)) + '</div>';
+      : '<div style="font-size:11.5px;opacity:.75;padding:4px 2px;">' + escHtml((p.prompt || '').slice(0, 40)) + '</div>';
     return '<div class="bp-row photo">' +
-      '<div class="bp-row-head"><span>📷 ' + escHtml(p.characterName || '照片') + '</span></div>' +
+      '<div class="bp-row-head"><span>' + escHtml(p.characterName || '照片') + '</span></div>' +
       '<div class="bp-row-body">' + inner + '</div></div>';
   }
 
-  var msg = entry.msg;
-  var isUser = msg.role === 'user';
-  var content = stripTriggerTags(msg.content || '');
-  var speakerMode = appData.settings.speakerMode !== false;
-
-  var headHtml = '';
-  if (isUser) {
-    headHtml = '<div class="bp-row-head"><span>🧑 我</span></div>';
+  var headHtml;
+  if (entry.isUser) {
+    // 不带头像图也不带 emoji：一个圆形徽标里写「我」
+    headHtml = '<div class="bp-row-head"><span class="bp-me">我</span></div>';
+  } else if (entry.speaker) {
+    var av = speakerFace(entry.speaker);
+    headHtml = '<div class="bp-row-head">' +
+      (av ? '<img class="bp-row-avatar" src="' + escHtml(av) + '" alt="">'
+          : '<span class="bp-row-avatar bp-row-avatar-empty"></span>') +
+      '<span>' + escHtml(entry.speaker) + '</span></div>';
   } else {
-    var speaker = '';
-    if (speakerMode && hasSpeakerTags(content)) {
-      var segs = parseSpeakerSegments(content);
-      if (segs.length > 0) speaker = segs[0].speaker;
-    }
-    if (speaker) {
-      var av = bpSpeakerAvatar(speaker);
-      headHtml = '<div class="bp-row-head">' +
-        (av ? '<img class="bp-row-avatar" src="' + escHtml(av) + '" alt="">' : '') +
-        '<span>' + escHtml(speaker) + '</span></div>';
-    } else {
-      headHtml = '<div class="bp-row-head"><span>🤖 AI</span></div>';
-    }
+    headHtml = '<div class="bp-row-head"><span class="bp-row-role">AI</span></div>';
   }
 
-  var body = bpFormatBody(content, isUser);
+  var body = bpFormatBody(entry.text, entry.isUser);
   if (!body && isStreaming && entry.isLast) {
     body = '<span class="bp-cursor">&nbsp;</span>';
   }
 
-  return '<div class="bp-row' + (isUser ? ' user' : '') + '" data-idx="' + entry.idx + '">' +
+  return '<div class="bp-row' + (entry.isUser ? ' user' : '') + '"' +
+    ' data-idx="' + entry.idx + '" data-seg="' + entry.seg + '">' +
     headHtml +
     '<div class="bp-row-body">' + body + '</div></div>';
 }
@@ -217,14 +257,30 @@ function renderBubbleMessages() {
   var messages = chat.messages || [];
   var total = messages.length;
   var startIdx = Math.max(0, total - BUBBLE_MESSAGE_LIMIT);
+  var speakerMode = appData.settings.speakerMode !== false;
 
   var entries = [];
   for (var i = startIdx; i < total; i++) {
-    entries.push({ type: 'msg', idx: i, msg: messages[i], isLast: i === total - 1 });
-    if (chat.photos && chat.photos.length) {
-      chat.photos
-        .filter(function (p) { return p.afterMessageIndex === i; })
-        .forEach(function (p) { entries.push({ type: 'photo', photo: p }); });
+    var msg = messages[i];
+    if (!msg) continue;
+    var parts = bpMessageParts(msg, speakerMode);
+
+    for (var k = 0; k < parts.length; k++) {
+      entries.push({
+        type: 'msg',
+        idx: i,
+        seg: k,
+        isUser: msg.role === 'user',
+        speaker: parts[k].speaker || '',
+        text: parts[k].text || '',
+        isLast: i === total - 1 && k === parts.length - 1
+      });
+      // 照片挂在该条消息的最后一段之后
+      if (k === parts.length - 1 && chat.photos && chat.photos.length) {
+        chat.photos
+          .filter(function (p) { return p.afterMessageIndex === i; })
+          .forEach(function (p) { entries.push({ type: 'photo', photo: p }); });
+      }
     }
   }
   // 末尾照片（无 afterMessageIndex 或位于最后一条消息之后）
@@ -244,28 +300,40 @@ function renderBubbleMessages() {
   scrollBubblePanelToBottom();
 }
 
+/** 流式增量更新：只改写对应行的正文；分段数变化时整块重绘 */
+function updateBubbleStreaming(idx, content) {
+  var box = document.getElementById('bpMessages');
+  if (!box) return;
+
+  var clean = stripTriggerTags(content || '');
+  var speakerMode = appData.settings.speakerMode !== false;
+  var parts = (speakerMode && hasSpeakerTags(clean))
+    ? splitBySpeaker(clean)
+    : [{ speaker: null, text: clean }];
+
+  var rows = box.querySelectorAll('.bp-row[data-idx="' + idx + '"]');
+  if (!rows.length || rows.length !== parts.length) {
+    renderBubbleMessages();     // 分段数变了（例如刚出现新的说话人），整块重绘
+    return;
+  }
+
+  var lastText = parts[parts.length - 1].text || '';
+  var target = rows[rows.length - 1].querySelector('.bp-row-body');
+  if (target) {
+    var body = bpFormatBody(lastText, false);
+    target.innerHTML = body
+      ? body + '<span class="bp-cursor">&nbsp;</span>'
+      : '<span class="bp-cursor">&nbsp;</span>';
+  }
+  renderBubble();
+}
+
 function scrollBubblePanelToBottom() {
   var box = document.getElementById('bpMessages');
   if (!box) return;
   requestAnimationFrame(function () {
     box.scrollTop = box.scrollHeight;
   });
-}
-
-/** 流式增量更新：只改写对应行的正文 */
-function updateBubbleStreaming(idx, content) {
-  var box = document.getElementById('bpMessages');
-  if (!box) return;
-  var row = box.querySelector('.bp-row[data-idx="' + idx + '"] .bp-row-body');
-  if (!row) {
-    // 该消息不在最近 5 条窗口内（极少见），整体重绘
-    renderBubbleMessages();
-    return;
-  }
-  var clean = stripTriggerTags(content || '');
-  var body = bpFormatBody(clean, false);
-  row.innerHTML = body ? body + '<span class="bp-cursor">&nbsp;</span>' : '<span class="bp-cursor">&nbsp;</span>';
-  renderBubble();
 }
 
 // ==================== 展开 / 收起 ====================

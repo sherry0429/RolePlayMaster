@@ -152,6 +152,72 @@ applyImportedData = function (data) {
   };
 });
 
+// ==================== 3.5 去掉设置面板里的 emoji ====================
+
+/**
+ * 主题按钮文案。
+ * 网页版在 applyTheme 里写的是「🌙 主题 / ☀️ 主题」，桌面版设置面板要求无 emoji。
+ */
+var _legacyApplyTheme = applyTheme;
+applyTheme = function (theme) {
+  var r = _legacyApplyTheme.apply(null, arguments);
+  var t = (theme === 'dark' || theme === 'light') ? theme : appData.theme;
+  var btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = (t === 'dark') ? '切换到浅色' : '切换到深色';
+  return r;
+};
+
+/**
+ * 聊天列表渲染。
+ * 逻辑与 core/10_chat.js 完全一致，只把 ✏️ / 🗑️ / ➕ 换成线性 SVG 图标 ——
+ * 设置面板要「严肃、正式、现代化」，不适合出现 emoji。
+ */
+var CHAT_ICON_EDIT =
+  '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"' +
+  ' stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M11.4 2.6l2 2L5.2 12.8 2.6 13.4l.6-2.6z"/><path d="M9.9 4.1l2 2"/></svg>';
+var CHAT_ICON_DEL =
+  '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"' +
+  ' stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M3 4.6h10"/><path d="M6.6 4.6V3h2.8v1.6"/>' +
+  '<path d="M4.6 4.6l.7 8.3h5.4l.7-8.3"/><path d="M6.7 7.1v3.5M9.3 7.1v3.5"/></svg>';
+
+function renderChatList() {
+  var container = document.getElementById('chatList');
+  if (!container) return;
+  var html = '';
+  (appData.chatOrder || []).forEach(function (id) {
+    var chat = appData.chats[id];
+    if (!chat) return;
+    var active = id === currentChatId ? 'active' : '';
+
+    var avatarHtml = '';
+    var chars = chat.characters || [];
+    if (chars.length > 0) {
+      var showChars = chars.slice(0, 3);
+      var extraCount = chars.length - showChars.length;
+      var avatars = showChars.map(function (c) {
+        if (c.avatar) {
+          return '<img src="' + escHtml(c.avatar) + '" alt="' + escHtml(c.name) + '" class="chat-avatar-img">';
+        }
+        return '<span class="chat-avatar-placeholder">' + escHtml((c.name || '?').charAt(0)) + '</span>';
+      }).join('');
+      var extraBadge = extraCount > 0 ? '<span class="chat-avatar-extra">+' + extraCount + '</span>' : '';
+      avatarHtml = '<div class="chat-avatars">' + avatars + extraBadge + '</div>';
+    }
+
+    html += '<div class="chat-item ' + active + '" onclick="selectChat(\'' + id + '\')">' +
+      avatarHtml +
+      '<span class="chat-name">' + escHtml(chat.name) + '</span>' +
+      '<div class="chat-actions">' +
+        '<button class="chat-action-btn" onclick="event.stopPropagation();editChat(\'' + id + '\')" title="编辑" aria-label="编辑">' + CHAT_ICON_EDIT + '</button>' +
+        '<button class="chat-action-btn" onclick="event.stopPropagation();deleteChat(\'' + id + '\')" title="删除" aria-label="删除">' + CHAT_ICON_DEL + '</button>' +
+      '</div></div>';
+  });
+  html += '<button class="new-chat-btn" onclick="newChat()">新建聊天</button>';
+  container.innerHTML = html;
+}
+
 // ==================== 4. 导入导出 → 原生文件对话框 ====================
 
 /** 剪贴板（带降级） */
