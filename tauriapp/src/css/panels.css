@@ -495,3 +495,61 @@ body.panel-mode .ctx-menu { display: none !important; }
   box-shadow: var(--shadow-sm);
   border-color: var(--accent);
 }
+
+/* ==================== 设置 → 角色 Tab ==================== */
+.char-mgr-grid { display: flex; flex-direction: column; gap: 8px; }
+.char-mgr-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--bg-secondary);
+}
+.char-mgr-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+.char-mgr-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.char-mgr-info { flex: 1; min-width: 0; }
+.char-mgr-name {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.char-mgr-anim-badge {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+.char-mgr-anim-badge.dim { opacity: 0.6; }
+.char-mgr-desc {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.char-mgr-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.char-mgr-empty {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  padding: 20px 0;
+}

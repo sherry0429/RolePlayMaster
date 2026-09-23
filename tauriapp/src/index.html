@@ -32,6 +32,7 @@
       <div class="panel-tabs" id="settingsTabs">
         <button class="ptab active" data-tab="desktop">桌面</button>
         <button class="ptab" data-tab="chat">聊天</button>
+        <button class="ptab" data-tab="chars">角色</button>
         <button class="ptab" data-tab="api">接口</button>
         <button class="ptab" data-tab="data">数据</button>
         <button class="ptab" data-tab="memory">记忆</button>
@@ -119,6 +120,21 @@
             <div class="block-body">
               <div class="chat-list-section" id="chatList"></div>
               <p class="hint">点击切换当前对话；右侧可编辑名称与角色绑定、删除聊天。化身会随之切换。</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== 角色 ===== -->
+        <section class="pane" data-pane="chars">
+          <div class="form-block">
+            <h4 class="block-title">角色图库</h4>
+            <div class="block-body">
+              <div class="char-mgr-grid" id="settingsCharList"></div>
+              <div class="btn-row" style="margin-top:10px;">
+                <button class="btn-sm btn-primary" onclick="addCharacter()">新建角色</button>
+                <button class="btn-sm btn-ghost" onclick="openGalleryDrawer()">打开完整图库</button>
+              </div>
+              <p class="hint">「编辑」修改头像与描述；「动画」上传待机与情绪动画（约 2 秒视频，自动抽帧转 sprite sheet，AI 聊天时按情绪自动触发）。建群请点「打开完整图库」或右键化身。</p>
             </div>
           </div>
         </section>
@@ -605,16 +621,19 @@
 <script src="js/core/27_autotopic.js"></script>
 <script src="js/core/28_photo.js"></script>
 <script src="js/core/29_album.js"></script>
+<script src="js/core/30_animations.js"></script>
 
 <!-- ==================== 桌面外壳（新界面） ==================== -->
 <script src="js/shell/00_tauri.js"></script>
 <script src="js/shell/01_avatar.js"></script>
+<script src="js/shell/09_anim_player.js"></script>
 <script src="js/shell/02_bubble.js"></script>
 <script src="js/shell/03_menu.js"></script>
 <script src="js/shell/04_panels.js"></script>
 <script src="js/shell/05_overrides.js"></script>
 <script src="js/shell/06_cloud.js"></script>
 <script src="js/shell/07_dialogs.js"></script>
+<script src="js/shell/10_anim_ui.js"></script>
 <script src="js/shell/08_boot.js"></script>
 </body>
 </html>

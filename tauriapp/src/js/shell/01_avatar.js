@@ -226,7 +226,7 @@ function avatarSignature(chars) {
   }).join('~');
 }
 
-function renderAvatar() {
+function _renderAvatarBase() {
   var singleEl = document.getElementById('avatarSingle');
   var multiEl = document.getElementById('avatarMulti');
   var badgeEl = document.getElementById('avatarBadge');
@@ -244,6 +244,7 @@ function renderAvatar() {
   if (chars.length === 0) {
     var chat = currentChatId ? appData.chats[currentChatId] : null;
     var label = chat ? (chat.name || 'AI').charAt(0) : '🤖';
+    singleEl.removeAttribute('data-char-name');
     multiEl.style.display = 'none';
     multiEl.innerHTML = '';
     singleEl.style.display = '';
@@ -259,6 +260,7 @@ function renderAvatar() {
     singleEl.style.display = '';
     multiEl.style.display = 'none';
     multiEl.innerHTML = '';
+    singleEl.setAttribute('data-char-name', c0.name || '');   // 动画播放器按名字解析角色
     if (c0.avatar) {
       singleEl.innerHTML = '<img id="avatarMainImg" src="' + escHtml(c0.avatar) + '" alt="' + escHtml(c0.name || '') + '">';
       computeDominantColor(c0.avatar, function (color) {
@@ -277,6 +279,7 @@ function renderAvatar() {
   // 多角色：大圆内聚合
   singleEl.style.display = 'none';
   singleEl.innerHTML = '';
+  singleEl.removeAttribute('data-char-name');
   multiEl.style.display = '';
 
   var layout = layoutMulti(chars.length);
@@ -307,6 +310,18 @@ function renderAvatar() {
 
   // 多角色：描边固定为黑色
   applyBlackAccent();
+}
+
+/**
+ * 化身渲染入口：先按静态图渲染 DOM，再让动画播放器按角色实例接管 ——
+ * 配了动画的角色会把 <img> 藏起来、在其位置挂 canvas 逐帧绘制；
+ * 没有动画的角色保持原样。
+ */
+function renderAvatar() {
+  _renderAvatarBase();
+  if (window.AnimPlayer) {
+    try { AnimPlayer.syncFromDom(); } catch (e) { /* 动画系统异常不影响化身显示 */ }
+  }
 }
 
 /** 流式输出期间给化身加一点“说话中”的呼吸动画 */

@@ -825,3 +825,22 @@ body.panel-mode .toast-container { top: 58px !important; }
   border-radius: 3px;
 }
 .ctx-menu.sub-open { overflow: visible; }
+
+/* ==================== 角色动画（sprite sheet canvas） ==================== */
+/* 挂在 .avatar-single 或 .avatar-cell 里，覆盖静态头像图；
+   复用化身图片的径向遮罩，保持「中心实心、越靠边越透明」的气泡感 */
+.avatar-anim-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  -webkit-mask-image: radial-gradient(circle at 50% 47%,
+      #000 0%, #000 40%, rgba(0, 0, 0, 0.9) 52%, rgba(0, 0, 0, 0.55) 67%,
+      rgba(0, 0, 0, 0.2) 83%, transparent 100%);
+  mask-image: radial-gradient(circle at 50% 47%,
+      #000 0%, #000 40%, rgba(0, 0, 0, 0.9) 52%, rgba(0, 0, 0, 0.55) 67%,
+      rgba(0, 0, 0, 0.2) 83%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}

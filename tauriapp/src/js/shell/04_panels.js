@@ -119,6 +119,8 @@ function switchSettingsTab(name) {
     p.classList.toggle('active', p.dataset.pane === name);
   });
   ShellPrefs.set('settingsTab', name);
+  // 角色 Tab：每次进入都重绘（角色/动画可能在别处被修改）
+  if (name === 'chars') { try { renderSettingsChars(); } catch (e) { /* ignore */ } }
   // 不同分页内容高度不同，重新贴合一次
   setTimeout(fitPanelWindow, 60);
 }
@@ -135,6 +137,7 @@ function restoreSettingsTab() {
   panel.querySelectorAll('.pane').forEach(function (p) {
     p.classList.toggle('active', p.dataset.pane === name);
   });
+  if (name === 'chars') { try { renderSettingsChars(); } catch (e) { /* ignore */ } }
 }
 
 // ==================== 窗口尺寸贴合内容 ====================

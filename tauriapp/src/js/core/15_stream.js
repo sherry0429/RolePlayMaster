@@ -56,6 +56,25 @@ async function requestAI(extraMessages) {
   document.getElementById('stopBtn').style.display = 'flex';
   abortController = new AbortController();
 
+  // 情绪动画 function calling：聊天中的角色配有动画时，下发 show_emotion 工具，
+  // emotion 参数用 enum 限定为当前角色已有的情绪（不含待机，待机自动回退）。
+  var emotionTool = (typeof buildEmotionTool === 'function') ? buildEmotionTool(chat) : null;
+  var requestBody = {
+    model: DEFAULT_MODEL,
+    messages: messages,
+    stream: true
+  };
+  if (emotionTool) {
+    requestBody.tools = [emotionTool.tool];
+    requestBody.tool_choice = 'auto';
+    // 使用说明作为临时 system 消息追加（不写入聊天记录、不参与记忆压缩）
+    var hintPos = (messages[0] && messages[0].role === 'system') ? 1 : 0;
+    requestBody.messages.splice(hintPos, 0, { role: 'system', content: emotionTool.hint });
+  }
+
+  // 流式返回中的 tool_calls 增量（按 index 分片拼装）
+  var pendingToolCalls = [];
+
   try {
     var response = await fetch(url, {
       method: 'POST',
@@ -63,11 +82,7 @@ async function requestAI(extraMessages) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: messages,
-        stream: true
-      }),
+      body: JSON.stringify(requestBody),
       signal: abortController.signal
     });
 
@@ -96,10 +111,22 @@ async function requestAI(extraMessages) {
 
         try {
           var json = JSON.parse(data);
-          var delta = json.choices?.[0]?.delta?.content;
-          if (delta) {
-            chat.messages[aiMsgIdx].content += delta;
+          var delta = json.choices?.[0]?.delta;
+          var deltaContent = delta?.content;
+          if (deltaContent) {
+            chat.messages[aiMsgIdx].content += deltaContent;
             updateStreamingMessage(aiMsgIdx, chat.messages[aiMsgIdx].content);
+          }
+          // tool_calls 分片：{ index, id?, function: { name?, arguments? } }
+          var tcDeltas = delta?.tool_calls;
+          if (tcDeltas) {
+            for (var ti = 0; ti < tcDeltas.length; ti++) {
+              var tcd = tcDeltas[ti];
+              var slot = (tcd.index !== undefined) ? tcd.index : pendingToolCalls.length;
+              if (!pendingToolCalls[slot]) pendingToolCalls[slot] = { name: '', args: '' };
+              if (tcd.function && tcd.function.name) pendingToolCalls[slot].name += tcd.function.name;
+              if (tcd.function && tcd.function.arguments) pendingToolCalls[slot].args += tcd.function.arguments;
+            }
           }
         } catch (e) {
           // 忽略解析错误
@@ -123,6 +150,11 @@ async function requestAI(extraMessages) {
     document.getElementById('sendBtn').style.display = 'flex';
     document.getElementById('stopBtn').style.display = 'none';
     abortController = null;
+
+    // 情绪动画触发：解析模型给出的 show_emotion 调用并入队
+    if (pendingToolCalls.length) {
+      handleEmotionToolCalls(chat, pendingToolCalls, aiMsgIdx);
+    }
 
     // 检查 AI 回复中是否有自动拍照触发标签（仅群聊场景）
     if (chat && chat.characters && chat.characters.length > 0 && chat.messages[aiMsgIdx] && chat.messages[aiMsgIdx].content) {
@@ -383,3 +415,102 @@ function extractAndStripPhotoTrigger(content) {
   };
 }
 
+
+// ==================== 情绪动画 function calling ====================
+
+/**
+ * 构建 show_emotion 工具（仅当聊天中的角色配有动画时返回）。
+ * emotion 参数用 enum 限定为当前聊天角色已有的情绪（不含待机 —— 待机是回退态）；
+ * 群聊时 character 参数用 enum 限定为聊天关联的角色名。
+ */
+function buildEmotionTool(chat) {
+  if (typeof AnimPlayer === 'undefined') return null;
+  var chars = (chat.characters && chat.characters.length) ? chat.characters : getChatAvatars();
+  var emotionSet = {};
+  var nameSet = [];
+  var hasAny = false;
+  chars.forEach(function (c) {
+    if (!c || !c.name) return;
+    if (nameSet.indexOf(c.name) < 0) nameSet.push(c.name);
+    var lib = findCharacter(c.name);
+    if (!lib) return;
+    var metas = charAnimations(lib.id);
+    Object.keys(metas).forEach(function (e) {
+      if (e !== ANIM_IDLE_EMOTION) { emotionSet[e] = true; hasAny = true; }
+    });
+  });
+  if (!hasAny) return null;
+
+  var emotions = Object.keys(emotionSet);
+  var multi = nameSet.length > 1;
+  var tool = {
+    type: 'function',
+    function: {
+      name: 'show_emotion',
+      description: '让角色播放一段情绪/动作动画（约2秒，播放完自动回到待机）。' +
+        '在回复文字的同时按需调用，不要为了调用而调用；一次调用表达一种情绪。',
+      parameters: {
+        type: 'object',
+        properties: {
+          emotion: {
+            type: 'string',
+            enum: emotions,
+            description: '要播放的情绪/动作，只能从列表中选择'
+          },
+          character: multi
+            ? { type: 'string', enum: nameSet, description: '角色名（群聊必填，指明是哪个角色做这个表情）' }
+            : { type: 'string', description: '角色名，单角色聊天可省略' }
+        },
+        required: ['emotion']
+      }
+    }
+  };
+  var hint = '【情绪动画】当前聊天支持以下情绪动画：' + emotions.join('、') + '。' +
+    '当角色的情绪或动作与列表明显匹配时，在回复的同时调用 show_emotion 播放动画' +
+    (multi ? '，群聊必须通过 character 参数指明角色' : '') +
+    '。列表之外的情绪不要调用（系统会自动回退到待机动画），也不必每条回复都调用。';
+  return { tool: tool, hint: hint };
+}
+
+/**
+ * 处理模型输出的 show_emotion 调用：
+ * 校验角色/情绪 → 加入该角色（按角色 ID 命名空间）的动画队列；
+ * 找不到对应动画 → 回退待机（不入队），仅记日志。
+ */
+function handleEmotionToolCalls(chat, calls, aiMsgIdx) {
+  if (!chat) return;
+  for (var i = 0; i < calls.length; i++) {
+    var call = calls[i];
+    if (!call || call.name !== 'show_emotion') continue;
+    var args = {};
+    try { args = JSON.parse(call.args || '{}'); } catch (e) { /* 参数不完整，忽略 */ }
+    var emotion = String(args.emotion || '').trim();
+    if (!emotion) continue;
+
+    var targets = [];
+    if (args.character) {
+      targets = [String(args.character)];
+    } else if (chat.characters && chat.characters.length) {
+      targets = chat.characters.map(function (c) { return c.name; });
+    } else {
+      targets = getChatAvatars().map(function (c) { return c.name; }).filter(Boolean);
+    }
+
+    for (var t = 0; t < targets.length; t++) {
+      var lib = findCharacter(targets[t]);
+      if (!lib) continue;
+      var ok = (typeof AnimPlayer !== 'undefined') && AnimPlayer.trigger(lib.id, emotion);
+      addProgramLog(LOG_TYPE_INFO, {
+        summary: '情绪动画（' + targets[t] + ' → ' + emotion + '）',
+        chatName: chat.name,
+        detail: ok ? '已加入该角色的动画队列' : '该角色没有此情绪的动画，回退待机'
+      });
+      if (!ok) break;   // 该角色没这个动画，不必对同一目标重复尝试
+    }
+  }
+
+  // 模型只调了工具、没输出文字时，移除空占位消息
+  if (chat.messages[aiMsgIdx] && !chat.messages[aiMsgIdx].content.trim()) {
+    chat.messages.splice(aiMsgIdx, 1);
+  }
+}

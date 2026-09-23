@@ -123,6 +123,8 @@ async function deleteCharacter(idx) {
   var char = appData.characters[idx];
   if (!char) return;
   if (!(await confirmDialog(`确定删除角色「${char.name}」吗？`))) return;
+  // 清理该角色的全部动画资产（sprite sheet + 元数据）
+  try { await deleteAllCharAnims(char.id); } catch (e) { /* ignore */ }
   appData.characters.splice(idx, 1);
   saveData();
   galleryCurrentPage = 0;

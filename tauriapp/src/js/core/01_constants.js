@@ -23,8 +23,9 @@ function getChatSyncUrl() {
 
 // ==================== IndexedDB 存储（替代 localStorage，解决大小限制）====================
 var DB_NAME = 'SimpleGirlFriendDB';
-var DB_VERSION = 1;
+var DB_VERSION = 2;                     // v2：新增 anim_assets（角色动画 sprite sheet 资产）
 var DB_STORE_NAME = 'appData';
+var DB_ANIM_STORE = 'anim_assets';      // key = anim:{charId}:{emotion}，value = { key, sheet: dataURL }
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -34,6 +35,9 @@ function openDB() {
       var db = event.target.result;
       if (!db.objectStoreNames.contains(DB_STORE_NAME)) {
         db.createObjectStore(DB_STORE_NAME, { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains(DB_ANIM_STORE)) {
+        db.createObjectStore(DB_ANIM_STORE, { keyPath: 'key' });
       }
     };
 
