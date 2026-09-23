@@ -32,7 +32,13 @@ function closeGalleryDrawer() {
   }
 }
 
-document.getElementById('galleryBackdrop').addEventListener('click', closeGalleryDrawer);
+// 注意：这里必须用包装函数**在点击时**再查全局 closeGalleryDrawer ——
+// 桌面壳（shell/05_overrides.js）会给它包一层「退出面板模式」逻辑；
+// 若直接把函数值绑进监听，绑定时捕获的是未包装的原始版本，
+// 点遮罩关闭抽屉后窗口会停留在放大透明状态，挡住其它应用且右键失效。
+document.getElementById('galleryBackdrop').addEventListener('click', function () {
+  closeGalleryDrawer();
+});
 
 function renderGalleryContent(append) {
   var body = document.getElementById('galleryDrawerBody');

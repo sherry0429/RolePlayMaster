@@ -470,3 +470,28 @@ body.panel-mode .bubble-stack { display: none; }
 /* 面板层被打开时，隐藏舞台残留的浮层 */
 body.panel-mode .bubble-panel,
 body.panel-mode .ctx-menu { display: none !important; }
+
+/* ==================== 桌面壳：角色图库绘制修正 ====================
+   透明 WKWebView 窗口下，卡片 hover 的 transform / box-shadow 过渡
+   叠加 CSS 多列瀑布流（multicol）会触发重绘撕裂 ——
+   悬停的卡片（尤其图片部分）整块闪没，稍后才重绘回来。
+   桌面壳里禁用这类重绘动画，改用边框高亮；瀑布流改为 grid 布局。 */
+.gallery-waterfall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  columns: auto;
+  column-count: auto;
+  column-gap: normal;
+}
+.gallery-card {
+  break-inside: auto;
+  margin-bottom: 0;
+  transition: border-color 0.15s ease;
+  transform: none !important;
+}
+.gallery-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+  border-color: var(--accent);
+}

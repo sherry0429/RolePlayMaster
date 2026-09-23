@@ -63,7 +63,10 @@ function closeLogDrawer() {
   document.getElementById('logBackdrop').classList.remove('show');
 }
 
-document.getElementById('logBackdrop').addEventListener('click', closeLogDrawer);
+// 包装调用：点击时再查全局（桌面壳会给 closeLogDrawer 包「退出面板模式」逻辑）
+document.getElementById('logBackdrop').addEventListener('click', function () {
+  closeLogDrawer();
+});
 
 // ==================== 渲染日志内容 ====================
 function renderLogContent() {

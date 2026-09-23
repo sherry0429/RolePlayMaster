@@ -205,8 +205,10 @@ async function clearAllAlbumPhotos() {
   showToast('所有照片已清空', 'success');
 }
 
-// 点击相册遮罩关闭
-document.getElementById('albumBackdrop').addEventListener('click', closeAlbumDrawer);
+// 点击相册遮罩关闭（包装调用：点击时再查全局，桌面壳会给它包「退出面板模式」逻辑）
+document.getElementById('albumBackdrop').addEventListener('click', function () {
+  closeAlbumDrawer();
+});
 
 /**
  * 复制照片的生成 prompt 到剪贴板
