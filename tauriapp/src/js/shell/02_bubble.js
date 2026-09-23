@@ -1,44 +1,132 @@
 /**
- * 02_bubble.js —— 气泡与消息浮层
+ * 02_bubble.js —— 输入栏 · 消息气泡堆 · 消息浮层
  *
- * - 气泡：贴在化身左上角，显示最近一条消息预览；右侧向下箭头 = 网页版的「继续」
- * - 消息浮层：点击气泡后展开，展示最近 5 条消息，并可直接在内部输入继续聊天
+ * 自上而下的三层结构：
+ *   1) 消息气泡堆（#bubbleStack）：化身正上方，最近 3 个气泡；
+ *      越靠上越旧、越透明，越靠下越新、越清晰。
+ *      粒度跟随「说话人区分」：开启时一个气泡 = 一个说话人的一段话；
+ *   2) 输入栏（#bubble）：常驻可输入，回车即发送；
+ *      右侧是「继续」（▼）与「打开聊天窗」（☰）；
+ *   3) 消息浮层（#bubblePanel）：点 ☰ 才展开，用于回看、滚动历史与快捷指令。
  */
 
-var BUBBLE_MESSAGE_LIMIT = 5;   // 浮层展示的最近消息条数
-var _bubbleSeenCount = 0;       // 已读消息条数（用于未读小圆点）
+var BUBBLE_MESSAGE_LIMIT = 5;    // 浮层展示的最近消息条数
+var BUBBLE_STACK_LIMIT = 3;      // 气泡堆展示的最近气泡数（每条最多 6 行）
+var _bubbleSeenCount = 0;        // 已读消息条数（用于未读小圆点）
 var _bubblePanelOpen = false;
+var _stackSig = '';              // 气泡堆内容指纹，未变化时跳过重绘
+var _streamingIdx = -1;          // 正在流式输出的消息下标
 
-// ==================== 气泡 ====================
+// ==================== 消息气泡堆 ====================
 
-/** 生成气泡预览文案 */
-function buildBubblePreview() {
-  if (!currentChatId || !appData.chats[currentChatId]) return '点击开始';
-  var chat = appData.chats[currentChatId];
-  if (!chat.messages || chat.messages.length === 0) return '开始新的对话…';
+/**
+ * 折叠空白，便于气泡里单行排版
+ */
+function stackCollapseWs(t) {
+  return String(t || '').replace(/\s+/g, ' ').trim();
+}
 
-  for (var i = chat.messages.length - 1; i >= 0; i--) {
-    var raw = stripTriggerTags(chat.messages[i].content || '');
+/**
+ * 取最近 N 个「气泡单元」。
+ *
+ * 气泡的粒度跟随设置里的「说话人区分」：
+ *   - 开启且消息带【角色名】标记 → **一个气泡 = 一个说话人的一段话**
+ *     （一条群聊 AI 回复里有几个说话人，就拆成几个气泡）；
+ *   - 关闭，或这条消息没有标记 → 整条消息算一个气泡。
+ *
+ * 返回顺序：旧的在前（显示在最上方），新的在后。
+ */
+function collectRecentReplies(limit) {
+  var chat = currentChatId ? appData.chats[currentChatId] : null;
+  if (!chat || !chat.messages) return [];
+
+  var speakerMode = appData.settings.speakerMode !== false;
+  var out = [];
+
+  // 从最新往前取，取够 limit 个单元为止
+  for (var i = chat.messages.length - 1; i >= 0 && out.length < limit; i--) {
+    var m = chat.messages[i];
+    if (!m || m.role !== 'assistant') continue;
+    var raw = stripTriggerTags(m.content || '');
     if (!raw.trim()) continue;
-    // 【角色名】→「角色名：」，让小气泡里的预览更像一句对话
-    var text = raw.replace(/【(.+?)】/g, '$1：').replace(/\s+/g, ' ').trim();
-    return text.length > 22 ? text.slice(0, 22) + '…' : text;
+
+    if (speakerMode && hasSpeakerTags(raw)) {
+      var segs = parseSpeakerSegments(raw);
+      if (segs.length > 0) {
+        // 同一段里可能有多个说话人：倒着取，保证最新的一段排在最后（最下方）
+        for (var s = segs.length - 1; s >= 0 && out.length < limit; s--) {
+          var segText = stackCollapseWs(segs[s].text);
+          if (!segText) continue;
+          out.push({ idx: i, seg: s, speaker: segs[s].speaker || '', text: segText });
+        }
+        continue;
+      }
+    }
+
+    // 未开启说话人区分 / 无标记：整条消息一个气泡
+    out.push({ idx: i, seg: -1, speaker: '', text: stackCollapseWs(raw) });
   }
-  return '开始新的对话…';
+
+  out.reverse();
+  return out;
+}
+
+function renderBubbleStack() {
+  var box = document.getElementById('bubbleStack');
+  if (!box) return;
+
+  var items = collectRecentReplies(BUBBLE_STACK_LIMIT);
+  var sig = (isStreaming ? '1' : '0') + '|' +
+    items.map(function (it) { return it.idx + '.' + it.seg + ':' + it.text.length; }).join(',');
+  if (sig === _stackSig) {
+    // 内容没变就不重排（流式期间会频繁触发），但仍要刷新「是否被截断」
+    box.classList.toggle('clipped', box.scrollHeight > box.clientHeight + 1);
+    return;
+  }
+  _stackSig = sig;
+
+  if (items.length === 0) {
+    box.innerHTML = '';
+    box.classList.remove('clipped');
+    return;
+  }
+
+  // 流式输出时，只有该消息的**最后一段**显示光标（同一条消息可能拆成多个气泡）
+  var streamingPos = -1;
+  if (isStreaming) {
+    for (var p = items.length - 1; p >= 0; p--) {
+      if (items[p].idx === _streamingIdx) { streamingPos = p; break; }
+    }
+  }
+
+  var n = items.length;
+  box.innerHTML = items.map(function (it, i) {
+    // t: 0 = 最上（最旧）→ 1 = 最下（最新）；越往下越不透明
+    var t = n === 1 ? 1 : i / (n - 1);
+    var op = (0.35 + t * 0.65).toFixed(3);
+    var typing = (i === streamingPos) ? ' typing' : '';
+    return '<div class="bs-item' + typing + '" style="opacity:' + op + '"' +
+      ' data-idx="' + it.idx + '" data-seg="' + it.seg + '">' +
+      (it.speaker ? '<span class="bs-who">' + escHtml(it.speaker) + '</span>' : '') +
+      '<span class="bs-text">' + escHtml(it.text) + '</span>' +
+      '</div>';
+  }).join('');
+
+  // 内容超出高度上限时才淡出顶部（否则最旧的那条会被无谓地吃掉）
+  box.classList.toggle('clipped', box.scrollHeight > box.clientHeight + 1);
 }
 
 function renderBubble() {
   var bubble = document.getElementById('bubble');
-  var textEl = document.getElementById('bubbleText');
-  if (!bubble || !textEl) return;
-
-  textEl.textContent = buildBubblePreview();
+  if (!bubble) return;
 
   var chat = currentChatId ? appData.chats[currentChatId] : null;
   var total = chat && chat.messages ? chat.messages.length : 0;
-  // 浮层关闭且出现了新消息 → 闪烁提示
+  // 浮层关闭且出现了新消息 → 小圆点闪烁提示
   bubble.classList.toggle('has-new', !_bubblePanelOpen && total > _bubbleSeenCount);
   bubble.classList.toggle('typing', !!isStreaming);
+
+  renderBubbleStack();
 }
 
 // ==================== 消息浮层 ====================
@@ -186,6 +274,7 @@ function openBubblePanel() {
   var panel = document.getElementById('bubblePanel');
   if (!panel) return;
   _bubblePanelOpen = true;
+  holdAvatarSize();                           // 化身改尺寸与窗口改尺寸必须同步（禁用过渡）
   panel.classList.add('open');
   document.body.classList.add('chat-open');   // 化身缩小，为消息列表让出空间
   shellSyncAvatarWindowSize();                // 窗口随之变高，容纳消息列表
@@ -210,6 +299,7 @@ function closeBubblePanel() {
   var panel = document.getElementById('bubblePanel');
   if (!panel) return;
   _bubblePanelOpen = false;
+  holdAvatarSize();
   panel.classList.remove('open');
   document.body.classList.remove('chat-open');
   shellSyncAvatarWindowSize();
@@ -228,6 +318,19 @@ function refreshBubblePanel() {
   _bubbleSeenCount = chat && chat.messages ? chat.messages.length : 0;
 }
 
+/**
+ * 展开/收起消息浮层时，化身尺寸会立刻变化。
+ * 窗口尺寸是按「目标尺寸」算出来的，若化身的宽高过渡还在跑，
+ * 就会出现窗口已缩小而化身还没缩、底部被裁掉的一瞬。这里临时关掉过渡。
+ */
+function holdAvatarSize() {
+  document.body.classList.add('no-avatar-anim');
+  clearTimeout(holdAvatarSize._t);
+  holdAvatarSize._t = setTimeout(function () {
+    document.body.classList.remove('no-avatar-anim');
+  }, 360);
+}
+
 /** updateSpDisplay 在无聊天时也会安全执行 */
 function updateSpDisplaySafe() {
   try { updateSpDisplay(); } catch (e) { /* ignore */ }
@@ -238,15 +341,17 @@ function updateSpDisplaySafe() {
 function initBubble() {
   var bubble = document.getElementById('bubble');
   var arrow = document.getElementById('bubbleArrow');
+  var menuBtn = document.getElementById('bubbleMenuBtn');
   var closeBtn = document.getElementById('bpClose');
   var input = document.getElementById('userInput');
 
   if (bubble) {
+    // 输入栏常驻，点击即进入输入状态（不再需要先点开聊天窗）
     bubble.addEventListener('click', function (e) {
-      if (e.target === arrow) return;   // 箭头单独处理
-      toggleBubblePanel();
+      if (e.target.closest && e.target.closest('button')) return;
+      if (input) { try { input.focus(); } catch (err) { /* ignore */ } }
     });
-    // 右键气泡同样弹出菜单
+    // 右键输入栏同样弹出菜单
     bubble.addEventListener('contextmenu', function (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -254,6 +359,15 @@ function initBubble() {
     });
   }
 
+  // ☰ 才打开聊天窗
+  if (menuBtn) {
+    menuBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      toggleBubblePanel();
+    });
+  }
+
+  // ▼ = 网页版的「继续」
   if (arrow) {
     arrow.addEventListener('click', function (e) {
       e.stopPropagation();

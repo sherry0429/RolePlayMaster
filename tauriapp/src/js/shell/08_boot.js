@@ -29,7 +29,6 @@ async function shellBoot() {
   fillSettingsForm();
 
   // ---- 6. 事件装配 ----
-  initWindowTools();
   initBubble();
   initContextMenu();
   initPanels();

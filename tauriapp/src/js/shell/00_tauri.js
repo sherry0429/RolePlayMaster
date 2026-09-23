@@ -63,12 +63,20 @@ function shellSetAlwaysOnTop(on) {
   updateTopButton();
 }
 
+/**
+ * 刷新右键菜单里「窗口置顶」一项的文案与勾选态。
+ * 窗口按钮已从界面上移除，置顶状态改为在菜单里体现。
+ */
 function updateTopButton() {
-  var btn = document.getElementById('winTopBtn');
-  if (!btn) return;
+  var label = document.getElementById('ctxPinLabel');
+  if (!label) return;
   var on = ShellPrefs.get('alwaysOnTop', true);
-  btn.classList.toggle('off', !on);
-  btn.title = on ? '窗口已置顶（点击取消）' : '窗口未置顶（点击开启）';
+  label.textContent = on ? '取消窗口置顶' : '窗口置顶';
+  var item = label.closest('.ctx-item');
+  if (item) {
+    item.classList.toggle('checked', on);
+    item.title = on ? '当前已置顶，点击取消' : '当前未置顶，点击置顶';
+  }
 }
 
 /** 计算面板模式尺寸（留出足够空间给设置/相册/日志） */
@@ -111,45 +119,55 @@ function shellDockWindow() {
 }
 
 /**
- * 根据当前化身尺寸与聊天浮层是否展开，动态调整窗口大小。
- * 收起态窗口紧贴化身，避免大片透明区域挡住桌面上的其它应用。
+ * 根据当前内容精确收紧窗口。
+ *
+ * 注意：不能直接量 .avatar-block 的实时高度 —— 化身的宽高带 CSS 过渡，
+ * 展开/收起消息浮层时立即测量会读到「过渡进行中」的旧尺寸，窗口就会差出一个化身的高度。
+ * 所以这里按已知量解析计算：气泡堆高度 + 输入栏高度 + 化身的「目标」高度。
+ *
+ * 高度上限直接取屏幕工作区高度：长回复（最多 6 行）× 3 个气泡也不能被截断，
+ * 所以宁可让窗口长到与屏幕等高，也不要在上面切掉一条。
  */
 function shellSyncAvatarWindowSize() {
   if (document.body.classList.contains('panel-mode')) return;
+
+  var availW = (window.screen && window.screen.availWidth) || 1280;
+  var availH = (window.screen && window.screen.availHeight) || 900;
   var size = parseInt(ShellPrefs.get('avatarSize', 220), 10) || 220;
   var open = document.body.classList.contains('chat-open');
-  var availH = (window.screen && window.screen.availHeight) || 900;
-  var availW = (window.screen && window.screen.availWidth) || 1280;
+
+  var gap = 6;
+  var stackEl = document.getElementById('bubbleStack');
+  var barEl = document.getElementById('bubble');
+  // 无内容或浮层展开时气泡堆是 display:none，此时它不占位、也不产生间距
+  var stackVisible = !!(stackEl && getComputedStyle(stackEl).display !== 'none');
+  var stackH = stackVisible ? stackEl.getBoundingClientRect().height : 0;
+  var barH = barEl ? barEl.getBoundingClientRect().height : 40;
+  var avatarH = open ? size * 0.5 : size;         // 化身的「目标」高度，而不是过渡中的高度
+
+  var blockH = (stackH > 0 ? stackH + gap : 0) + barH + gap + avatarH;
+
+  // 气泡堆的高度上限 = 屏幕工作区里，扣掉「输入栏 + 化身 + 内边距」之后剩下的全部空间。
+  // 这样气泡堆最多能长到把窗口撑满屏幕，长文本就不会被顶部遮罩切掉。
+  var chromeH = barH + gap + avatarH + 14 + gap;      // 14 = stage 上下内边距
+  var stackMax = Math.max(120, Math.round(availH - chromeH));
+  document.documentElement.style.setProperty('--stack-max-h', stackMax + 'px');
+  // 上限变了，「是否被截断」也要跟着重判（内容未变时 renderBubbleStack 不会重排）
+  if (stackEl && stackEl.childElementCount) {
+    stackEl.classList.toggle('clipped', stackEl.scrollHeight > stackEl.clientHeight + 1);
+  }
 
   var w = Math.round(Math.min(Math.max(360, size + 170), Math.max(360, availW * 0.4)));
-  var h = open
-    ? Math.round(Math.min(size + 390, availH * 0.88))
-    : Math.round(Math.min(size + 118, availH * 0.6));
+
+  var h = Math.round(blockH + 14 + (open ? 306 : 0));
+  h = Math.min(Math.max(h, 200), Math.round(availH));   // 上限 = 屏幕工作区高度
 
   shellCall('resize_avatar_window', { width: w, height: h });
-}
-
-/** 最小化窗口（应用保留 Dock 图标，点 Dock 图标即可恢复） */
-function shellMinimize() {
-  if (!ShellNative.available) {
-    showToast('浏览器预览模式：最小化不可用', 'info');
-    return;
-  }
-  shellCall('minimize_window');
 }
 
 /** 隐藏到系统托盘（可从菜单栏托盘图标恢复） */
 function shellHideWindow() {
   shellCall('hide_window');
-}
-
-/** 退出应用（浏览器预览时仅提示） */
-function shellQuit() {
-  if (!ShellNative.available) {
-    showToast('浏览器预览模式：请直接关闭标签页', 'info');
-    return;
-  }
-  shellCall('quit_app');
 }
 
 // ==================== 文件读写 ====================
@@ -287,59 +305,29 @@ var ShellPrefs = (function () {
   };
 })();
 
-// ==================== 窗口工具按钮装配 ====================
+// ==================== 窗口操作入口（已并入右键菜单） ====================
+//
+// 之前化身右上角浮动「置顶 / 最小化 / 退出」三个按钮，太破坏沉浸感，
+// 现在全部收进右键菜单（见 shell/03_menu.js 的 pin / minimize / quit）。
+// 这里只保留最小化与退出的实现，供菜单项调用。
 
-function initWindowTools() {
-  var topBtn = document.getElementById('winTopBtn');
-  var minBtn = document.getElementById('winHideBtn');
-  var quitBtn = document.getElementById('winQuitBtn');
-
-  if (topBtn) {
-    updateTopButton();
-    topBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      shellSetAlwaysOnTop(!ShellPrefs.get('alwaysOnTop', true));
-      showToast(ShellPrefs.get('alwaysOnTop', true) ? '窗口已置顶 📌' : '已取消置顶');
-    });
+/** 最小化窗口（应用保留 Dock 图标，点 Dock 图标即可恢复） */
+function shellMinimize() {
+  if (!ShellNative.available) {
+    showToast('浏览器预览模式：最小化不可用', 'info');
+    return;
   }
+  shellCall('minimize_window');
+}
 
-  if (minBtn) {
-    minBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      shellMinimize();
-    });
+/** 退出应用：先弹应用内确认框，避免误触 */
+async function shellQuitWithConfirm() {
+  if (!ShellNative.available) {
+    showToast('浏览器预览模式：请直接关闭标签页', 'info');
+    return;
   }
-
-  // 退出用「两段式确认」，避免依赖 Tauri 不支持的 window.confirm
-  if (quitBtn) {
-    var armed = false;
-    var timer = null;
-    var disarm = function () {
-      armed = false;
-      quitBtn.classList.remove('armed');
-      quitBtn.textContent = '✕';
-      quitBtn.title = '退出应用';
-      if (timer) { clearTimeout(timer); timer = null; }
-    };
-    quitBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      if (!armed) {
-        armed = true;
-        quitBtn.classList.add('armed');
-        quitBtn.textContent = '✓';
-        quitBtn.title = '再点一次退出应用';
-        showToast('再点一次即退出应用');
-        timer = setTimeout(disarm, 3000);
-        return;
-      }
-      disarm();
-      shellQuit();
-    });
-    // 点到别处就取消待确认状态
-    document.addEventListener('mousedown', function (e) {
-      if (armed && e.target !== quitBtn) disarm();
-    });
-  }
+  var ok = await confirmDialog('确定退出「RolePlayMaster 化身」吗？', { title: '退出应用', okText: '退出' });
+  if (ok) shellCall('quit_app');
 }
 
 /** 启动时把置顶状态同步给窗口 */

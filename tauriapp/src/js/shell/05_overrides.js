@@ -39,9 +39,31 @@ function scrollToBottom() {
   scrollBubblePanelToBottom();
 }
 
-/** 流式增量更新改为更新浮层中对应的一行 */
+/** 流式增量更新：浮层对应行 + 气泡堆最下方那条 */
 function updateStreamingMessage(idx, content) {
+  _streamingIdx = idx;
   updateBubbleStreaming(idx, content);
+}
+
+/**
+ * 回车发送。比网页版多一层输入法保护：
+ * 中文输入法选词确认也会触发 Enter（isComposing / keyCode 229），
+ * 不拦住会把没上屏的半成品直接发出去。
+ */
+function handleInputKeydown(e) {
+  if (e.isComposing || e.keyCode === 229) return;
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+/** 输入栏空间有限：把输入框自增高上限从 120px 收到 72px，其余与网页版一致 */
+function autoResizeInput() {
+  var ta = document.getElementById('userInput');
+  if (!ta) return;
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 72) + 'px';
 }
 
 /** 桌面窗口是透明的，不绘制背景图（设置项仍保留以便与网页版数据互通） */
@@ -72,7 +94,7 @@ function updatePhotoFeatureVisibility() {
 function refreshShell() {
   renderAvatar();
   renderBubbleMessages();
-  renderBubble();
+  renderBubble();          // 内部会一并刷新气泡堆
   updateSpDisplaySafe();
   try { updatePhotoFeatureVisibility(); } catch (e) { /* ignore */ }
   applyShellOptionStyles();
@@ -84,6 +106,7 @@ var _legacySelectChat = selectChat;
 selectChat = function (id) {
   _legacySelectChat(id);
   _bubbleSeenCount = 0;
+  _stackSig = '';          // 换聊天后强制重绘气泡堆
   renderAvatar();
   refreshShell();
 };
@@ -98,6 +121,7 @@ updateUIForNoChat = function () {
 var _legacyApplyImportedData = applyImportedData;
 applyImportedData = function (data) {
   _avatarSignature = '';   // 强制化身重绘
+  _stackSig = '';
   _legacyApplyImportedData(data);
   _bubbleSeenCount = 0;
   refreshShell();

@@ -20,8 +20,11 @@
   padding: 0 0 6px;
 }
 body.panel-mode .panel-layer { display: flex; }
-/* 面板模式下气泡让位（此时消息浮层已关闭，气泡只是重复信息） */
-body.panel-mode .bubble { opacity: 0; pointer-events: none; }
+/* 面板模式下输入栏与气泡堆让位（此时的输入由面板内容承载）。
+   必须是 display:none 而不是 opacity:0 —— 只调透明度它们仍然占据布局高度，
+   会把「面板层」挤扁，进而让 fitPanelWindow 量出偏小的高度、把窗口越收越小。 */
+body.panel-mode .bubble,
+body.panel-mode .bubble-stack { display: none; }
 
 .panel {
   display: none;

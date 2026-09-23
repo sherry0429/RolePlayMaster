@@ -15,19 +15,26 @@ use base64::Engine;
 use futures_util::StreamExt;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
     Manager,
 };
 
-/// 化身模式窗口尺寸（与 tauri.conf.json 保持一致）
-const AVATAR_W: f64 = 380.0;
-const AVATAR_H: f64 = 520.0;
+/// 化身模式的兜底窗口尺寸。
+/// 正常尺寸由前端按内容精确计算（命令 resize_avatar_window），
+/// 这两个常量只在「没有记录过退出前状态」时兜底使用。
+const AVATAR_W: f64 = 390.0;
+const AVATAR_H: f64 = 560.0;
 
-/// 全局状态：窗口是否置顶（托盘与前端共用）
+/// 进入面板模式前的窗口几何（x, y, w, h），退出时原样还原
+type PanelReturn = Option<(f64, f64, f64, f64)>;
+
+/// 全局状态：窗口是否置顶 + 进入面板模式前的窗口几何
 struct ShellState {
     on_top: AtomicBool,
+    pre_panel: Mutex<PanelReturn>,
 }
 
 /// 取当前显示器的工作区（逻辑像素）与原点。
@@ -45,8 +52,10 @@ fn monitor_rect(win: &tauri::WebviewWindow) -> Option<(f64, f64, f64, f64)> {
 fn clamp_to_screen(win: &tauri::WebviewWindow, w: f64, h: f64) -> (f64, f64) {
     match monitor_rect(win) {
         Some((_, _, sw, sh)) => {
-            let max_w = (sw - 40.0).max(320.0);
-            let max_h = (sh - 80.0).max(260.0);
+            let max_w = (sw - 16.0).max(320.0);
+            // 只留极小的安全边距：前端已经把高度夹在「屏幕工作区」内，
+            // 这里若再砍掉几十像素，长得高的气泡堆就会被裁掉一条
+            let max_h = (sh - 8.0).max(260.0);
             (w.min(max_w).max(300.0), h.min(max_h).max(240.0))
         }
         None => (w, h),
@@ -317,6 +326,26 @@ fn enter_panel_mode(app: tauri::AppHandle, width: f64, height: f64) -> Result<()
     let win = app
         .get_webview_window("main")
         .ok_or_else(|| "主窗口不存在".to_string())?;
+
+    // 记住「进入面板前」的位置**和尺寸**，退出时两者一起还原。
+    // 只记位置是不够的：退出时若先按别的尺寸改窗口，再按「底边不动」重新定位，
+    // 底部就会整体漂移。尺寸也必须一并还原。
+    // 只在第一次记录：fitPanelWindow 会多次调用本命令微调尺寸，那时窗口已经居中。
+    if let (Some(state), Ok(pos), Ok(size), Ok(scale)) = (
+        app.try_state::<ShellState>(),
+        win.outer_position(),
+        win.outer_size(),
+        win.scale_factor(),
+    ) {
+        if let Ok(mut slot) = state.pre_panel.lock() {
+            if slot.is_none() {
+                let p = pos.to_logical::<f64>(scale);
+                let sz = size.to_logical::<f64>(scale);
+                *slot = Some((p.x, p.y, sz.width, sz.height));
+            }
+        }
+    }
+
     let _ = win.set_resizable(true);
     let (w, h) = clamp_to_screen(&win, width, height);
     win.set_size(tauri::LogicalSize::new(w, h))
@@ -332,10 +361,23 @@ fn exit_panel_mode(app: tauri::AppHandle) -> Result<(), String> {
     let win = app
         .get_webview_window("main")
         .ok_or_else(|| "主窗口不存在".to_string())?;
-    win.set_size(tauri::LogicalSize::new(AVATAR_W, AVATAR_H))
-        .map_err(|e| e.to_string())?;
     let _ = win.set_resizable(false);
-    place_bottom_right(&win, AVATAR_W, AVATAR_H);
+
+    // 还原到进入面板前的尺寸与位置；只有从未记录过（例如刚启动）才退回右下角
+    let remembered = match app.try_state::<ShellState>() {
+        Some(state) => state.pre_panel.lock().ok().and_then(|mut slot| slot.take()),
+        None => None,
+    };
+    match remembered {
+        Some((x, y, w, h)) => {
+            let _ = win.set_size(tauri::LogicalSize::new(w, h));
+            let _ = win.set_position(tauri::LogicalPosition::new(x, y));
+        }
+        None => {
+            let _ = win.set_size(tauri::LogicalSize::new(AVATAR_W, AVATAR_H));
+            place_bottom_right(&win, AVATAR_W, AVATAR_H);
+        }
+    }
     Ok(())
 }
 
@@ -350,17 +392,34 @@ fn dock_window(app: tauri::AppHandle) {
     }
 }
 
-/// 化身模式下按当前化身尺寸动态调整窗口大小，并保持右下角停靠。
-/// 定位用的是「请求的尺寸」，避免 outer_size 尚未更新导致窗口超出屏幕。
+/// 化身模式下按当前内容调整窗口大小。
+///
+/// 位置策略：**保留用户拖动后的位置**，只把「底边」钉住 ——
+/// 窗口变高时向上生长、变矮时向下收，化身始终停在原地，
+/// 消息浮层也总是出现在化身正上方。
+/// （早先这里每次都 place_bottom_right，导致拖动过化身之后一开聊天窗就被拽回右下角。）
 #[tauri::command]
 fn resize_avatar_window(app: tauri::AppHandle, width: f64, height: f64) -> Result<(), String> {
     let win = app
         .get_webview_window("main")
         .ok_or_else(|| "主窗口不存在".to_string())?;
     let (w, h) = clamp_to_screen(&win, width, height);
+
+    let scale = win.scale_factor().unwrap_or(1.0);
+    let old_pos = win.outer_position().ok().map(|p| p.to_logical::<f64>(scale));
+    let old_size = win.outer_size().ok().map(|s| s.to_logical::<f64>(scale));
+
     win.set_size(tauri::LogicalSize::new(w, h))
         .map_err(|e| e.to_string())?;
-    place_bottom_right(&win, w, h);
+
+    if let (Some(p), Some(sz)) = (old_pos, old_size) {
+        if let Some((ox, oy, sw, sh)) = monitor_rect(&win) {
+            // 横向保持不动（超出工作区时回推），纵向钉住底边
+            let x = p.x.min(ox + sw - w).max(ox);
+            let y = (p.y + sz.height - h).min(oy + sh - h).max(oy);
+            let _ = win.set_position(tauri::LogicalPosition::new(x, y));
+        }
+    }
     Ok(())
 }
 
@@ -386,6 +445,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(ShellState {
             on_top: AtomicBool::new(true),
+            pre_panel: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             save_text_file,

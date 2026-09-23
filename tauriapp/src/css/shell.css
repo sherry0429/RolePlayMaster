@@ -26,69 +26,31 @@ body.chat-open {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
+  gap: 6px;
   cursor: default;
 }
 
 /* 面板模式下化身始终保留（面板占据上方区域，化身留在下方，可继续拖动/右键） */
 
-/* ---------------- 窗口工具（悬停显现） ---------------- */
-.win-tools {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  z-index: 40;
-}
-.stage:hover .win-tools { opacity: 1; }
-.win-tool {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid var(--glass-border);
-  background: var(--glass-bg);
-  color: var(--glass-text);
-  font-size: 11px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-.win-tool:hover { background: rgba(255, 255, 255, 0.2); }
-.win-tool.off { opacity: 0.45; }
-.win-tool.armed {
-  background: rgba(239, 68, 68, 0.95) !important;
-  border-color: rgba(239, 68, 68, 1);
-  color: #fff;
-  opacity: 1;
-}
-
-/* ---------------- 化身区块 ---------------- */
+/* ---------------- 化身区块（纵向：气泡堆 → 输入栏 → 化身） ---------------- */
 .avatar-block {
   position: relative;
   flex-shrink: 0;
-  width: var(--avatar-current);
-  height: var(--avatar-current);
-  transition: width 0.28s ease, height 0.28s ease;
-  margin-top: 34px;   /* 给贴在上方的气泡留出空间 */
-}
-/* 面板模式下气泡隐藏，不需要预留那么多空间 */
-body.panel-mode .avatar-block {
-  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
 .avatar {
   position: relative;
-  width: 100%;
-  height: 100%;
+  width: var(--avatar-current);
+  height: var(--avatar-current);
+  flex-shrink: 0;
   cursor: grab;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: width 0.28s ease, height 0.28s ease,
+              transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
 }
 .avatar:active { cursor: grabbing; }
@@ -205,20 +167,87 @@ body.panel-mode .avatar-block {
 }
 .avatar-badge.show { display: block; }
 
-/* ---------------- 气泡（贴着化身左上角，描边取角色主色） ---------------- */
-.bubble {
-  position: absolute;
-  left: -10px;
-  /* 轻微压住化身左上角，形成“角色在说话”的视觉；压得太多会挡住多角色最上面那个圆 */
-  bottom: calc(100% - 8px);
-  width: max-content;
-  max-width: min(320px, calc(100vw - 82px));
+/* ---------------- 消息气泡堆（化身正上方，最近 10 条 AI 回复） ----------------
+   越靠上越旧、越透明，形成「逐渐远去」的气泡感；越靠下越新、越清晰。
+   整体不透明度跟随设置里的「气泡不透明度」滑杆。 */
+.bubble-stack {
+  width: 100%;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 5px 5px 11px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  /* 高度上限由 JS 按屏幕高度写入，避免整套内容顶出屏幕 */
+  max-height: var(--stack-max-h, 320px);
+  overflow: hidden;
+  opacity: calc(0.35 + var(--shell-opacity, 0.85) * 0.65);
+  user-select: none;
+  z-index: 29;
+}
+.bubble-stack:empty { display: none; }
+/* 只有当内容确实超出高度上限（最旧的消息被截断）时才淡出顶部 */
+.bubble-stack.clipped {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 30px, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 30px, #000 100%);
+}
+
+.bs-item {
+  max-width: 100%;
+  /* 不被压缩：高度超限时应当裁切最旧的那条，而不是把每条都挤扁 */
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 12px 12px 12px 4px;
+  background:
+    linear-gradient(rgba(var(--accent-rgb), 0.20), rgba(var(--accent-rgb), 0.20)),
+    rgba(14, 14, 22, 0.62);
+  border: 1px solid rgba(var(--accent-rgb), 0.55);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  color: var(--glass-text);
+  font-size: 11.5px;
+  line-height: 1.4;
+  overflow: hidden;
+}
+.bs-who {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: rgb(var(--accent-rgb));
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+}
+.bs-text {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;      /* 每条最多 6 行（约为此前 2 行的 3 倍字数） */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+.bs-item.typing .bs-text::after {
+  content: '…';
+  animation: dotBlink 1s infinite;
+}
+
+/* 浮层展开时气泡堆让位（消息由浮层承载），输入栏保留 */
+body.chat-open .bubble-stack { display: none; }
+
+/* 展开/收起瞬间：化身尺寸直接跳到目标值，不做过渡（见 holdAvatarSize） */
+body.no-avatar-anim .avatar {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---------------- 输入栏（紧贴化身上方；右侧：发送/停止 · 继续 · 打开聊天窗） ---------------- */
+.bubble {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  padding: 4px 5px 4px 9px;
   box-sizing: border-box;
-  border-radius: 15px 15px 15px 5px;
+  border-radius: 15px;
   /* 半透明玻璃 + 主色染色；不透明度由设置面板的滑杆控制 */
   background:
     linear-gradient(rgba(var(--accent-rgb), 0.30), rgba(var(--accent-rgb), 0.30)),
@@ -231,23 +260,18 @@ body.panel-mode .avatar-block {
   color: var(--glass-text);
   font-size: 12px;
   line-height: 1.35;
-  cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.2s ease;
+  transition: box-shadow 0.18s ease, opacity 0.2s ease;
   z-index: 30;
   opacity: calc(0.35 + var(--shell-opacity, 0.85) * 0.65);
 }
-.bubble:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45),
-              0 0 0 4px rgba(var(--accent-rgb), 0.18);
+.bubble:focus-within {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42),
+              0 0 0 3px rgba(var(--accent-rgb), 0.28);
 }
-/* 浮层展开时气泡让位（信息由浮层承载） */
-body.chat-open .bubble {
-  opacity: 0;
-  pointer-events: none;
-}
+.bubble.typing { border-color: rgba(var(--accent-rgb), 1); }
 
 .bubble-dot {
+  align-self: center;
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -258,25 +282,36 @@ body.chat-open .bubble {
 .bubble.has-new .bubble-dot { animation: dotBlink 1.1s ease-in-out infinite; }
 @keyframes dotBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-.bubble-text {
+/* 输入区：随内容增高，到上限后内部滚动 */
+#userInput {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 210px;
-  font-weight: 500;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--glass-text);
+  font-size: 12.5px;
+  font-family: inherit;
+  line-height: 1.45;
+  padding: 5px 0;
+  max-height: 72px;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
-.bubble-arrow {
+#userInput::placeholder { color: rgba(243, 243, 250, 0.45); }
+
+/* 圆形小按钮：继续 / 打开聊天窗 */
+.bubble-arrow,
+.bubble-menu {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 1px solid rgba(var(--accent-rgb), 0.9);
   background: rgba(var(--accent-rgb), 0.45);
   color: #fff;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -285,11 +320,24 @@ body.chat-open .bubble {
   padding: 0;
   transition: background 0.15s ease;
 }
-.bubble-arrow:hover { background: rgba(var(--accent-rgb), 0.85); }
-.bubble.typing .bubble-text::after {
-  content: '…';
-  animation: dotBlink 1s infinite;
+.bubble-arrow:hover,
+.bubble-menu:hover { background: rgba(var(--accent-rgb), 0.85); }
+.bubble-menu { font-size: 12px; }
+
+/* 发送靠回车；发送按钮保留在 DOM 中（流式逻辑会切换它），但不在输入栏显示 */
+.bubble #sendBtn { display: none !important; }
+/* 生成中的「停止」按钮：收到与箭头/菜单同尺寸的小圆钮，
+   否则 .send-btn 的 32px 红圆会在窄输入栏里显得像一颗突兀的录音红点 */
+.bubble .send-btn,
+.bubble .stop-btn {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+  align-self: center;
+  background: rgba(239, 68, 68, 0.92);
+  border: 1px solid rgba(239, 68, 68, 1);
 }
+.bubble .stop-btn:hover { background: rgba(239, 68, 68, 1); }
 
 /* ---------------- 消息浮层（点击气泡展开，占据化身上方空间） ---------------- */
 .bubble-panel {
@@ -433,50 +481,6 @@ body.chat-open .bubble {
   animation: dotBlink 0.9s steps(2) infinite;
   border-radius: 1px;
 }
-
-.bp-input {
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  padding: 8px 10px 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0;
-}
-#userInput {
-  flex: 1;
-  resize: none;
-  max-height: 84px;
-  min-height: 32px;
-  padding: 7px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--glass-text);
-  font-size: 12.5px;
-  font-family: inherit;
-  outline: none;
-  line-height: 1.4;
-  box-sizing: border-box;
-}
-#userInput::placeholder { color: rgba(243, 243, 250, 0.4); }
-#userInput:focus { border-color: rgba(var(--accent-rgb), 0.9); }
-
-.send-btn {
-  width: 32px; height: 32px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  border: none;
-  background: rgba(var(--accent-rgb), 0.9);
-  color: #fff;
-  font-size: 13px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-.send-btn:hover { filter: brightness(1.12); }
-.send-btn.stop-btn { background: rgba(239, 68, 68, 0.9); }
 
 .bp-quick {
   display: flex;
@@ -636,24 +640,19 @@ body.chat-open .bubble {
 }
 
 /* ---------------- Toast：适配小窗口 ---------------- */
-/* 放在窗口顶部，避免遮住化身与气泡；面板模式下下移，避开面板标题栏 */
+/* 放在窗口顶部，避免遮住化身与气泡；面板模式下下移，避开面板标题栏。
+   容器本身不接收点击，只有真正的 toast 才接收。 */
 .toast-container {
-  top: 6px !important;
+  top: 10px !important;
   bottom: auto !important;
   right: 8px !important;
   left: 8px !important;
   align-items: center;
+  /* 容器本身不接收点击，只有真正的 toast 才接收 —— 否则它的空白区域会挡住下面的按钮 */
+  pointer-events: none;
 }
+.toast-container .toast { pointer-events: auto; }
 body.panel-mode .toast-container { top: 58px !important; }
-
-/* 面板模式下窗口工具常显，并移到窗口右下角——
-   避免与面板自己的关闭按钮挤在同一个角落 */
-body.panel-mode .win-tools {
-  opacity: 1;
-  top: auto;
-  bottom: 6px;
-  right: 8px;
-}
 .toast-container .toast {
   max-width: 100%;
   font-size: 12px;

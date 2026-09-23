@@ -5,6 +5,7 @@
  *   创建聊天（群聊） / 切换聊天
  *   修改 System Prompt / 触发记忆功能 / 触发拍照功能
  *   打开设置面板
+ *   窗口置顶 / 最小化 / 退出应用   ← 原先浮在化身右上角的三个按钮收进来了
  */
 
 function openContextMenu(x, y) {
@@ -18,6 +19,9 @@ function openContextMenu(x, y) {
     var item = menu.querySelector('.ctx-item[data-act="' + act + '"]');
     if (item) item.classList.toggle('disabled', !hasChat);
   });
+
+  // 置顶项的文案与勾选态跟随当前状态
+  updateTopButton();
 
   menu.classList.add('open');
 
@@ -63,6 +67,16 @@ function handleMenuAction(act) {
       break;
     case 'settings':
       openSettingsPanel();
+      break;
+    case 'pin':
+      shellSetAlwaysOnTop(!ShellPrefs.get('alwaysOnTop', true));
+      showToast(ShellPrefs.get('alwaysOnTop', true) ? '窗口已置顶 📌' : '已取消置顶');
+      break;
+    case 'minimize':
+      shellMinimize();
+      break;
+    case 'quit':
+      shellQuitWithConfirm();
       break;
     default:
       break;

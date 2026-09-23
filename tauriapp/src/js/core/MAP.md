@@ -23,6 +23,19 @@ Tauri 的 WebView 不支持浏览器原生 `window.confirm()`（macOS 上恒返�
 | `25_group.js` | `syncFromCloud` |
 | `19_share.js` | `checkShareData` |
 
+## 有意改动 ③：被外壳「遮蔽」的两个函数（core 文件本身未改）
+
+有两个网页版函数在桌面版的输入栏场景下不适用，但**没有改 core 文件**，
+而是在 `shell/05_overrides.js` 里重新声明了一遍（外壳脚本后加载，会覆盖同名全局函数）：
+
+| 网页版函数（core） | 桌面版行为 | 原因 |
+|---|---|---|
+| `handleInputKeydown` | 回车发送前先判断 `e.isComposing \|\| e.keyCode === 229` | 中文输入法选词时也会触发 Enter，不拦住会把没上屏的半成品直接发出去 |
+| `autoResizeInput` | 输入框自增高上限由 120px 收到 72px | 输入栏常驻在化身上方，空间有限 |
+
+从网页版同步 `13_send.js` 时，这两处不需要重新应用（改动在外壳里），
+但如果网页版这两个函数的逻辑有其它变化，记得同步到 `shell/05_overrides.js`。
+
 ## 有意改动 ②：云端同步的传输层
 
 桌面端 WebView 的来源是 `tauri://localhost`，访问 `https://poecurrency.top` 属于**跨域**；
