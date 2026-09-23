@@ -281,7 +281,15 @@ var ShellPrefs = (function () {
 
   function load() {
     if (cache) return cache;
-    var defaults = { alwaysOnTop: true, avatarSize: 220, opacity: 85 };
+    var defaults = {
+      alwaysOnTop: true,
+      avatarSize: 220,
+      opacity: 85,
+      fontSize: 14,             // 消息字体大小（px）
+      historyLimit: 5,          // 消息浮层最多展示的历史消息数
+      alwaysShowBubbles: true,  // 是否始终展示历史消息气泡
+      bubbleTimeout: 10         // 不始终展示时，每个气泡的存活秒数（1~180）
+    };
     try {
       var raw = localStorage.getItem(KEY);
       cache = raw ? Object.assign(defaults, JSON.parse(raw)) : defaults;

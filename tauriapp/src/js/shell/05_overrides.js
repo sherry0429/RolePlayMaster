@@ -107,6 +107,8 @@ selectChat = function (id) {
   _legacySelectChat(id);
   _bubbleSeenCount = 0;
   _stackSig = '';          // 换聊天后强制重绘气泡堆
+  _bubbleExpiry = {};      // 换聊天后气泡计时全部重来
+  _bubbleLastCount = -1;
   renderAvatar();
   refreshShell();
 };
@@ -122,6 +124,8 @@ var _legacyApplyImportedData = applyImportedData;
 applyImportedData = function (data) {
   _avatarSignature = '';   // 强制化身重绘
   _stackSig = '';
+  _bubbleExpiry = {};
+  _bubbleLastCount = -1;
   _legacyApplyImportedData(data);
   _bubbleSeenCount = 0;
   refreshShell();

@@ -193,6 +193,30 @@ function applyShellOptionsToControls() {
   if (opInput) opInput.value = opacity;
   if (opVal) opVal.textContent = opacity;
   if (topInput) topInput.checked = !!onTop;
+
+  // ---- 消息展示 ----
+  var fontSize = ShellPrefs.get('fontSize', 14);
+  var histLimit = ShellPrefs.get('historyLimit', 5);
+  var always = ShellPrefs.get('alwaysShowBubbles', true);
+  var bTimeout = ShellPrefs.get('bubbleTimeout', 10);
+
+  var fontInput = document.getElementById('optFontSize');
+  var fontVal = document.getElementById('optFontSizeVal');
+  var histInput = document.getElementById('optHistoryLimit');
+  var histVal = document.getElementById('optHistoryLimitVal');
+  var alwaysInput = document.getElementById('optAlwaysShowBubbles');
+  var timeoutInput = document.getElementById('optBubbleTimeout');
+  var timeoutVal = document.getElementById('optBubbleTimeoutVal');
+  var timeoutCfg = document.getElementById('bubbleTimeoutConfig');
+
+  if (fontInput) fontInput.value = fontSize;
+  if (fontVal) fontVal.textContent = fontSize;
+  if (histInput) histInput.value = histLimit;
+  if (histVal) histVal.textContent = histLimit;
+  if (alwaysInput) alwaysInput.checked = !!always;
+  if (timeoutInput) timeoutInput.value = bTimeout;
+  if (timeoutVal) timeoutVal.textContent = bTimeout;
+  if (timeoutCfg) timeoutCfg.style.display = always ? 'none' : '';
 }
 
 function applyShellOptionStyles() {
@@ -200,13 +224,24 @@ function applyShellOptionStyles() {
   var opacity = ShellPrefs.get('opacity', 85);
   document.documentElement.style.setProperty('--avatar-size', size + 'px');
   document.documentElement.style.setProperty('--shell-opacity', String(opacity / 100));
+  // 消息字体大小（气泡堆 / 消息浮层 / 输入栏）
+  document.documentElement.style.setProperty('--shell-font', ShellPrefs.get('fontSize', 14) + 'px');
 }
 
 function resetShellLayout() {
   ShellPrefs.set('avatarSize', 220);
   ShellPrefs.set('opacity', 85);
   ShellPrefs.set('alwaysOnTop', true);
+  ShellPrefs.set('fontSize', 14);
+  ShellPrefs.set('historyLimit', 5);
+  ShellPrefs.set('alwaysShowBubbles', true);
+  ShellPrefs.set('bubbleTimeout', 10);
   applyShellOptionStyles();
+  applyBubbleDisplayPrefs();
+  _bubbleExpiry = {};
+  _bubbleLastCount = -1;
+  _stackSig = '';
+  renderBubble();
   applyShellOptionsToControls();
   shellSetAlwaysOnTop(true);
   shellDockWindow();
@@ -274,6 +309,57 @@ function initPanels() {
       var val = document.getElementById('optOpacityVal');
       if (val) val.textContent = v;
       applyShellOptionStyles();
+    });
+  }
+
+  // ---- 消息展示 ----
+  var fontInput = document.getElementById('optFontSize');
+  if (fontInput) {
+    fontInput.addEventListener('input', function () {
+      var v = parseInt(fontInput.value, 10) || 14;
+      ShellPrefs.set('fontSize', v);
+      var val = document.getElementById('optFontSizeVal');
+      if (val) val.textContent = v;
+      applyShellOptionStyles();
+    });
+  }
+
+  var histInput = document.getElementById('optHistoryLimit');
+  if (histInput) {
+    histInput.addEventListener('input', function () {
+      var v = parseInt(histInput.value, 10) || 5;
+      ShellPrefs.set('historyLimit', v);
+      var val = document.getElementById('optHistoryLimitVal');
+      if (val) val.textContent = v;
+      applyBubbleDisplayPrefs();
+      renderBubble();          // 刷新气泡堆
+      renderBubbleMessages();  // 浮层展开时同步刷新（内部会滚到底部）
+    });
+  }
+
+  var alwaysInput = document.getElementById('optAlwaysShowBubbles');
+  if (alwaysInput) {
+    alwaysInput.addEventListener('change', function () {
+      ShellPrefs.set('alwaysShowBubbles', alwaysInput.checked);
+      var cfg = document.getElementById('bubbleTimeoutConfig');
+      if (cfg) cfg.style.display = alwaysInput.checked ? 'none' : '';
+      _bubbleExpiry = {};
+      _stackSig = '';
+      renderBubble();
+    });
+  }
+
+  var timeoutInput = document.getElementById('optBubbleTimeout');
+  if (timeoutInput) {
+    timeoutInput.addEventListener('input', function () {
+      var v = parseInt(timeoutInput.value, 10) || 10;
+      v = Math.max(1, Math.min(180, v));
+      ShellPrefs.set('bubbleTimeout', v);
+      var val = document.getElementById('optBubbleTimeoutVal');
+      if (val) val.textContent = v;
+      _bubbleExpiry = {};      // 新时限从现在起对所有可见气泡生效
+      _stackSig = '';
+      renderBubble();
     });
   }
 

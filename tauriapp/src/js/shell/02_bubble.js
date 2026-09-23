@@ -17,6 +17,45 @@ var _bubbleSeenCount = 0;        // 已读消息条数（用于未读小圆点�
 var _bubblePanelOpen = false;
 var _stackSig = '';              // 气泡堆内容指纹，未变化时跳过重绘
 var _streamingIdx = -1;          // 正在流式输出的消息下标
+var _bubbleExpiry = {};          // 「定时消失」模式下队首气泡的到期时间戳（key = idx.seg，同时最多一条）
+var _bubbleLastCount = -1;       // 上次见到的消息总数（减少时清空计时，防止删消息后 key 错位）
+
+// ==================== 气泡展示设置 ====================
+
+/** 是否始终展示历史消息气泡（设置 → 桌面 → 消息展示） */
+function bubbleAlwaysShow() {
+  return ShellPrefs.get('alwaysShowBubbles', true);
+}
+
+/** 历史气泡展示时长（秒），1 ~ 180，默认 10 */
+function bubbleTimeoutSec() {
+  var v = parseInt(ShellPrefs.get('bubbleTimeout', 10), 10);
+  if (isNaN(v)) v = 10;
+  return Math.max(1, Math.min(180, v));
+}
+
+/** 从 ShellPrefs 回填「最多展示的历史消息数」到渲染常量 */
+function applyBubbleDisplayPrefs() {
+  var limit = parseInt(ShellPrefs.get('historyLimit', BUBBLE_MESSAGE_LIMIT), 10);
+  if (!isNaN(limit) && limit >= 1) BUBBLE_MESSAGE_LIMIT = Math.min(200, limit);
+}
+
+/**
+ * 定时消失模式的节拍器：每 0.5s 检查一次是否有气泡到期，到期就触发重绘。
+ * 没有到期气泡时 renderBubble 里的指纹比对会直接跳过，开销可忽略。
+ */
+function startBubbleExpiryTicker() {
+  if (startBubbleExpiryTicker._t) return;
+  startBubbleExpiryTicker._t = setInterval(function () {
+    if (bubbleAlwaysShow()) return;
+    var box = document.getElementById('bubbleStack');
+    if (!box || !box.childElementCount) return;   // 堆里没有气泡就不用盯
+    var now = Date.now();
+    for (var k in _bubbleExpiry) {
+      if (_bubbleExpiry[k] <= now) { renderBubble(); return; }
+    }
+  }, 500);
+}
 
 // ==================== 消息气泡堆 ====================
 
@@ -105,6 +144,52 @@ function renderBubbleStack() {
   if (!box) return;
 
   var items = collectRecentReplies(BUBBLE_STACK_LIMIT);
+
+  // 「定时消失」模式：像队列一样**逐个**消失 ——
+  // 只有最旧（最上方）的气泡在计时，它到点消失后，下一个气泡才开始计时。
+  // 新出现的气泡排在队尾，轮到它成为队首时才开始倒数。
+  // 消息变少（编辑/删除导致下标移位）或模式切回「始终展示」时，全部重新计时。
+  var timed = !bubbleAlwaysShow();
+  var chatNow = currentChatId ? appData.chats[currentChatId] : null;
+  var msgTotal = (chatNow && chatNow.messages) ? chatNow.messages.length : 0;
+  if (!timed || msgTotal < _bubbleLastCount) {
+    _bubbleExpiry = {};
+    _bubbleLastCount = msgTotal;
+  }
+  if (timed && items.length) {
+    var now = Date.now();
+
+    // 先清掉已不在展示窗口内的计时记录（滚出窗口 / 消息被删），
+    // 已到期但仍在窗口内的记录必须保留 —— 否则下次重绘会把到期气泡当成新气泡「复活」
+    var inWindow = {};
+    for (var w = 0; w < items.length; w++) {
+      inWindow[items[w].idx + '.' + items[w].seg] = true;
+    }
+    for (var ek in _bubbleExpiry) {
+      if (!inWindow[ek]) delete _bubbleExpiry[ek];
+    }
+
+    var alive = [];
+    var headDone = false;    // 是否已给当前队首发过计时
+    for (var e = 0; e < items.length; e++) {
+      var ekey = items[e].idx + '.' + items[e].seg;
+      var exp = _bubbleExpiry[ekey];
+      if (exp !== undefined && exp <= now) {
+        continue;            // 队首到期 → 移除；下一个气泡在下一次循环/重绘时接棒计时
+      }
+      if (!headDone) {
+        if (exp === undefined) {
+          _bubbleExpiry[ekey] = now + bubbleTimeoutSec() * 1000;   // 队首开始计时
+        }
+        headDone = true;
+      } else if (exp !== undefined) {
+        delete _bubbleExpiry[ekey];   // 非队首不计时，清掉残留记录
+      }
+      alive.push(items[e]);
+    }
+    items = alive;
+  }
+
   var sig = (isStreaming ? '1' : '0') + '|' +
     items.map(function (it) { return it.idx + '.' + it.seg + ':' + it.text.length; }).join(',');
   if (sig === _stackSig) {
@@ -229,10 +314,19 @@ function bpRowHtml(entry) {
     body = '<span class="bp-cursor">&nbsp;</span>';
   }
 
+  // 悬停出现的 编辑 / 删除 按钮，逻辑与网页版完全一致（editMessage / deleteMessage）。
+  // 一条 AI 消息按说话人拆成多行时，每行的按钮都作用于整条消息（与网页版按消息操作一致）。
+  var actionsHtml = '<div class="bp-row-actions">' +
+    '<button class="bp-act" onclick="editMessage(' + entry.idx + ')">编辑</button>' +
+    '<button class="bp-act del" onclick="deleteMessage(' + entry.idx + ')">删除</button>' +
+    '</div>';
+
   return '<div class="bp-row' + (entry.isUser ? ' user' : '') + '"' +
     ' data-idx="' + entry.idx + '" data-seg="' + entry.seg + '">' +
     headHtml +
-    '<div class="bp-row-body">' + body + '</div></div>';
+    '<div class="bp-row-body">' + body + '</div>' +
+    actionsHtml +
+    '</div>';
 }
 
 function renderBubbleMessages() {
@@ -455,4 +549,8 @@ function initBubble() {
     input.addEventListener('input', autoResizeInput);
     input.addEventListener('keydown', handleInputKeydown);
   }
+
+  // 回填「最多展示的历史消息数」，并启动气泡到期的节拍器
+  applyBubbleDisplayPrefs();
+  startBubbleExpiryTicker();
 }

@@ -69,6 +69,7 @@ function openContextMenu(x, y) {
   buildChatSubmenu();
 
   menu.classList.add('open');
+  menu.scrollTop = 0;         // 每次打开都从顶部开始（菜单超高时可滚动）
 
   // 先显示再测量，才能拿到真实尺寸
   var rect = menu.getBoundingClientRect();
@@ -176,6 +177,18 @@ function initContextMenu() {
         handleMenuAction(item.dataset.act);
       });
     });
+
+    // 悬停「切换聊天」时放开菜单的滚动裁剪（.ctx-menu.sub-open），
+    // 否则二级子菜单会被菜单的 overflow-y 裁掉；离开菜单后恢复滚动。
+    var hasSub = menu.querySelector('.ctx-item.has-sub');
+    if (hasSub) {
+      hasSub.addEventListener('mouseenter', function () {
+        menu.classList.add('sub-open');
+      });
+      menu.addEventListener('mouseleave', function () {
+        menu.classList.remove('sub-open');
+      });
+    }
   }
 
   if (stage) {

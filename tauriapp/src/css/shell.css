@@ -775,3 +775,53 @@ body.panel-mode .toast-container { top: 58px !important; }
   padding: 8px 12px;
   border-radius: 10px;
 }
+
+/* ==================== 消息展示设置（设置 → 桌面 → 消息展示） ==================== */
+
+/* 字体大小：基准值由 JS 写入 --shell-font（11~20px），以下元素按原比例缩放 */
+.bs-item { font-size: calc(var(--shell-font, 14px) * 0.82); }
+.bp-row-body { font-size: calc(var(--shell-font, 14px) * 0.89); }
+.bp-row-head { font-size: calc(var(--shell-font, 14px) * 0.75); }
+.bp-empty { font-size: calc(var(--shell-font, 14px) * 0.86); }
+#userInput { font-size: calc(var(--shell-font, 14px) * 0.89); }
+
+/* ---------------- 浮层消息的 编辑 / 删除（与网页版 msg-actions 行为一致，悬停出现） ---------------- */
+.bp-row-actions {
+  display: none;
+  gap: 6px;
+  padding: 0 2px;
+}
+.bp-row:hover .bp-row-actions { display: inline-flex; }
+.bp-act {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--glass-text);
+  font-size: 10.5px;
+  line-height: 1;
+  border-radius: 7px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.bp-act:hover { background: rgba(255, 255, 255, 0.2); }
+.bp-act.del:hover {
+  background: rgba(239, 68, 68, 0.85);
+  border-color: rgba(239, 68, 68, 0.9);
+  color: #fff;
+}
+
+/* ==================== 右键菜单：内容超高时可滚动 ==================== */
+/* 菜单项较多时在小窗口里会被底部裁掉，允许整体滚动；
+   悬停展开「切换聊天」二级菜单时由 JS 加 .sub-open 放开裁剪，
+   否则子菜单会被菜单的 overflow 裁掉（子菜单定位基准是整个菜单）。 */
+.ctx-menu {
+  max-height: calc(100vh - 8px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+.ctx-menu::-webkit-scrollbar { width: 6px; }
+.ctx-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 3px;
+}
+.ctx-menu.sub-open { overflow: visible; }

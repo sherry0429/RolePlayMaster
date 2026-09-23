@@ -63,6 +63,32 @@
           </div>
 
           <div class="form-block">
+            <h4 class="block-title">消息展示</h4>
+            <div class="block-body">
+              <div class="slider-line">
+                <div class="slider-head"><span>字体大小</span><em id="optFontSizeVal">14</em></div>
+                <input type="range" id="optFontSize" min="11" max="20" step="1" value="14">
+              </div>
+              <div class="slider-line">
+                <div class="slider-head"><span>最多展示的历史消息数</span><em id="optHistoryLimitVal">5</em></div>
+                <input type="range" id="optHistoryLimit" min="5" max="100" step="5" value="5">
+              </div>
+              <label class="switch-line">
+                <span class="switch-label">始终展示历史消息气泡<em>关闭后，气泡在展示时长结束后自动消失</em></span>
+                <input type="checkbox" id="optAlwaysShowBubbles" checked>
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+              <div id="bubbleTimeoutConfig" style="display:none;">
+                <div class="slider-line">
+                  <div class="slider-head"><span>历史气泡展示时长（秒）</span><em id="optBubbleTimeoutVal">10</em></div>
+                  <input type="range" id="optBubbleTimeout" min="1" max="180" step="1" value="10">
+                </div>
+              </div>
+              <p class="hint">字体大小作用于气泡堆、消息浮层与输入栏；历史消息数决定消息浮层（点 ☰ 打开）回看的条数。</p>
+            </div>
+          </div>
+
+          <div class="form-block">
             <h4 class="block-title">外观</h4>
             <div class="block-body">
               <div class="btn-row">
