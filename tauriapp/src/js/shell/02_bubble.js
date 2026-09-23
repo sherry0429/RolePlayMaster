@@ -2,7 +2,7 @@
  * 02_bubble.js —— 输入栏 · 消息气泡堆 · 消息浮层
  *
  * 自上而下的三层结构：
- *   1) 消息气泡堆（#bubbleStack）：化身正上方，最近 3 个气泡；
+ *   1) 消息气泡堆（#bubbleStack）：化身正上方，最近 6 个气泡；
  *      越靠上越旧、越透明，越靠下越新、越清晰。
  *      粒度跟随「说话人区分」：开启时一个气泡 = 一个说话人的一段话；
  *   2) 输入栏（#bubble）：常驻可输入，回车即发送；
@@ -11,7 +11,8 @@
  */
 
 var BUBBLE_MESSAGE_LIMIT = 5;    // 浮层展示的最近消息条数
-var BUBBLE_STACK_LIMIT = 3;      // 气泡堆展示的最近气泡数（每条最多 6 行）
+var BUBBLE_STACK_LIMIT = 6;      // 气泡堆展示的最近气泡数（每条最多 6 行）
+                                 // 屏幕装不下 6 个长气泡时，从最旧的那条开始淡出
 var _bubbleSeenCount = 0;        // 已读消息条数（用于未读小圆点）
 var _bubblePanelOpen = false;
 var _stackSig = '';              // 气泡堆内容指纹，未变化时跳过重绘
