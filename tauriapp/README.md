@@ -236,6 +236,12 @@ macOS 还需要 `app.macOSPrivateApi: true`（已在配置里打开，Cargo.toml
 只调透明度它们仍然占着几百像素的布局高度，面板层会被挤扁，`fitPanelWindow` 又按被挤扁的结果
 去收窗口，越收越小，最后设置面板只剩一条边。
 
+**移出窗口的元素要收掉阴影。** 角色 / 相册 / 日志三个抽屉是 `position: fixed; right: 0`
++ `transform: translateX(100%)` 滑到窗口右侧之外的。但 `box-shadow`（`0 18px 48px rgba(0,0,0,.5)`）
+**不会跟着移走** —— 它仍从窗口右缘向内投射约 50~60px，在透明窗口上就是一条很粗的黑色渐变竖边，
+让人一眼看出「这是个长方形」而不是圆形化身。所以关闭态必须补 `visibility: hidden`
+（`shell.css`），让阴影一并停绘；`transition` 里带上 `visibility`，滑入滑出依然平滑。
+
 ### 3. 化身主色提取
 
 `computeDominantColor()` 把角色图片绘制到 32×32 的 canvas，做 4bit 量化统计直方图，

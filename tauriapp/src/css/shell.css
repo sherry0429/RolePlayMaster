@@ -734,6 +734,27 @@ body.no-avatar-anim .avatar {
   text-align: center;
 }
 
+/* ---------------- 抽屉：关闭时必须真正「不可见」 ----------------
+   三个抽屉（日志 / 相册 / 角色）都是 position:fixed; right:0，
+   靠 transform: translateX(100%) 滑出窗口右侧。问题在于它们的
+   box-shadow（rgba(0,0,0,.5) 0 18px 48px 0）不会跟着一起移走 ——
+   阴影仍从窗口右缘向内投射约 50~60px，在透明窗口上就是一条很粗的
+   黑色渐变竖边，让整个挂件一眼看去是个长方形，而不是一颗圆形化身。
+   关闭态补上 visibility: hidden 让阴影一并停绘。
+   transition 里带上 visibility，滑入滑出依然平滑
+   （visibility 是离散量，隐藏会推迟到动画结束才真正生效）。 */
+.log-drawer,
+.album-drawer,
+.gallery-drawer {
+  visibility: hidden;
+  transition: transform 0.3s ease, visibility 0.3s ease;
+}
+.log-drawer.open,
+.album-drawer.open,
+.gallery-drawer.open {
+  visibility: visible;
+}
+
 /* ---------------- Toast：适配小窗口 ---------------- */
 /* 放在窗口顶部，避免遮住化身与气泡；面板模式下下移，避开面板标题栏。
    容器本身不接收点击，只有真正的 toast 才接收。 */
