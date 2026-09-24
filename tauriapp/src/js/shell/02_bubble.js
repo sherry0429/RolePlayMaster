@@ -41,6 +41,36 @@ function applyBubbleDisplayPrefs() {
   if (!isNaN(limit) && limit >= 1) BUBBLE_MESSAGE_LIMIT = Math.min(200, limit);
 }
 
+// ==================== 气泡堆收起 / 展开（输入栏右侧「—」按钮） ====================
+
+var _bubbleFreezeAt = 0;   // 收起时刻（用于冻结「定时消失」倒计时）
+
+/** 点击切换：收起时冻结定时消失计时，展开时按冻结时长顺延恢复 */
+function toggleBubblesCollapsed() {
+  applyBubblesCollapsed(!ShellPrefs.get('bubblesCollapsed', false));
+}
+
+function applyBubblesCollapsed(collapse) {
+  ShellPrefs.set('bubblesCollapsed', collapse);
+  document.body.classList.toggle('bubbles-hidden', collapse);
+
+  if (collapse) {
+    // 冻结：记下收起时刻；期间 renderBubbleStack 直接早退，不做任何到期处理
+    _bubbleFreezeAt = Date.now();
+    return;
+  }
+
+  // 展开：把冻结期间流逝的时间补回到所有未到期气泡上（倒计时原地顺延，不重置）
+  if (_bubbleFreezeAt) {
+    var paused = Date.now() - _bubbleFreezeAt;
+    for (var k in _bubbleExpiry) _bubbleExpiry[k] += paused;
+    _bubbleFreezeAt = 0;
+  }
+  // 收起期间可能有新消息到达，强制重绘一次（新气泡会带入场动画）
+  _stackSig = '';
+  renderBubble();
+}
+
 /**
  * 定时消失模式的节拍器：每 0.5s 检查一次是否有气泡到期，到期就触发重绘。
  * 没有到期气泡时 renderBubble 里的指纹比对会直接跳过，开销可忽略。
@@ -143,6 +173,9 @@ function collectRecentReplies(limit) {
 function renderBubbleStack() {
   var box = document.getElementById('bubbleStack');
   if (!box) return;
+
+  // 气泡堆被收起（输入栏右侧「—」按钮）：不渲染、不计时 —— 定时消失冻结
+  if (document.body.classList.contains('bubbles-hidden')) return;
 
   var items = collectRecentReplies(BUBBLE_STACK_LIMIT);
 
@@ -597,7 +630,8 @@ function initBubble() {
     input.addEventListener('keydown', handleInputKeydown);
   }
 
-  // 回填「最多展示的历史消息数」，并启动气泡到期的节拍器
+  // 回填「最多展示的历史消息数」，启动气泡到期节拍器，并恢复上次的收起状态
   applyBubbleDisplayPrefs();
   startBubbleExpiryTicker();
+  applyBubblesCollapsed(ShellPrefs.get('bubblesCollapsed', false));
 }
