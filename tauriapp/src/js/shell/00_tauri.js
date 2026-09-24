@@ -159,7 +159,7 @@ function shellSyncAvatarWindowSize() {
 
   var w = Math.round(Math.min(Math.max(360, size + 170), Math.max(360, availW * 0.4)));
 
-  var h = Math.round(blockH + 14 + (open ? 306 : 0));
+  var h = Math.round(blockH + 14 + (open ? 612 : 0));
   h = Math.min(Math.max(h, 200), Math.round(availH));   // 上限 = 屏幕工作区高度
 
   shellCall('resize_avatar_window', { width: w, height: h });

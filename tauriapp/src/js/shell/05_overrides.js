@@ -113,6 +113,7 @@ selectChat = function (id) {
   _bubbleExpiry = {};      // 换聊天后气泡计时全部重来
   _bubbleLastCount = -1;
   _bubbleSeenKeys = null;  // 首帧静默渲染，不播入场动画
+  _bpShownCount = 0;       // 浮层「加载更早」重置
   renderAvatar();
   refreshShell();
 };
@@ -132,6 +133,7 @@ applyImportedData = function (data) {
   _bubbleExpiry = {};
   _bubbleLastCount = -1;
   _bubbleSeenKeys = null;
+  _bpShownCount = 0;
   _legacyApplyImportedData(data);
   _bubbleSeenCount = 0;
   refreshShell();

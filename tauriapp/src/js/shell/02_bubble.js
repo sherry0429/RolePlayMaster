@@ -45,6 +45,18 @@ function applyBubbleDisplayPrefs() {
 
 var _bubbleFreezeAt = 0;   // 收起时刻（用于冻结「定时消失」倒计时）
 
+// 消息浮层的「加载更早」：已渲染的消息数（从末尾往前数）与加载标记
+var _bpShownCount = 0;     // 0 = 未初始化（取 BUBBLE_MESSAGE_LIMIT）
+var _bpLoadingMore = false;
+
+/** 点击「加载更早的消息」：多渲染 30 条，并保持当前阅读位置 */
+function bpLoadMore() {
+  if (_bpLoadingMore) return;
+  _bpShownCount += 30;
+  _bpLoadingMore = true;
+  renderBubbleMessages();
+}
+
 /** 点击切换：收起时冻结定时消失计时，展开时按冻结时长顺延恢复 */
 function toggleBubblesCollapsed() {
   applyBubblesCollapsed(!ShellPrefs.get('bubblesCollapsed', false));
@@ -460,7 +472,8 @@ function renderBubbleMessages() {
 
   var messages = chat.messages || [];
   var total = messages.length;
-  var startIdx = Math.max(0, total - BUBBLE_MESSAGE_LIMIT);
+  if (!_bpShownCount) _bpShownCount = BUBBLE_MESSAGE_LIMIT;
+  var startIdx = Math.max(0, total - _bpShownCount);
   var speakerMode = appData.settings.speakerMode !== false;
 
   var entries = [];
@@ -500,12 +513,27 @@ function renderBubbleMessages() {
     return;
   }
 
-  box.innerHTML = entries.map(bpRowHtml).join('');
-  scrollBubblePanelToBottom();
+  // 滚动上下文：加载更早 → 重绘后保持阅读位置；其余情况贴底跟随
+  var prevScrollH = box.scrollHeight, prevScrollTop = box.scrollTop;
+  var wasAtBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+
+  var html = '';
+  if (startIdx > 0) {
+    html += '<div class="bp-load-more" onclick="bpLoadMore()">点击加载更早的消息（' + startIdx + ' 条）</div>';
+  }
+  html += entries.map(bpRowHtml).join('');
+  box.innerHTML = html;
+
+  if (_bpLoadingMore) {
+    // 加载更早：把原先的阅读位置对回新增内容之后
+    box.scrollTop = box.scrollHeight - prevScrollH + prevScrollTop;
+    _bpLoadingMore = false;
+  } else if (wasAtBottom) {
+    scrollBubblePanelToBottom();     // 用户本来就在底部 → 跟随到底
+  }
 }
 
-/** 流式增量更新：只改写对应行的正文；分段数变化时整块重绘 */
-function updateBubbleStreaming(idx, content) {
+/** 流式增量更新：只改写对应行的正文；分段数变化时整块重绘 */function updateBubbleStreaming(idx, content) {
   var box = document.getElementById('bpMessages');
   if (!box) return;
 
@@ -546,6 +574,7 @@ function openBubblePanel() {
   var panel = document.getElementById('bubblePanel');
   if (!panel) return;
   _bubblePanelOpen = true;
+  _bpShownCount = 0;                          // 每次打开从头按默认条数渲染
   holdAvatarSize();                           // 化身改尺寸与窗口改尺寸必须同步（禁用过渡）
   panel.classList.add('open');
   document.body.classList.add('chat-open');   // 化身缩小，为消息列表让出空间

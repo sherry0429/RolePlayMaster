@@ -1039,3 +1039,23 @@ body.bubbles-hidden .bubble-stack { display: none !important; }
   text-decoration: underline dotted;
   text-underline-offset: 3px;
 }
+
+/* ==================== 聊天浮层：隐藏输入栏 + 加载更早消息 ==================== */
+/* 浮层展开时不再显示输入栏（收起浮层后输入栏回归） */
+body.chat-open .bubble { display: none !important; }
+
+/* 「点击加载更早的消息」行 */
+.bp-load-more {
+  align-self: stretch;
+  text-align: center;
+  padding: 8px 0 2px;
+  font-size: 11.5px;
+  color: var(--glass-text-dim);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+.bp-load-more:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--glass-text);
+}
