@@ -139,20 +139,19 @@ async function takePhotoForCharacter(characterName) {
         };
         chat.photos.push(photoObj);
         await saveData();
+        renderPhotoMessage(photoObj);
       } else {
-        photoObj = {
-          id: 'photo_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8),
-          dataUrl: '',
-          prompt: item.prompt,
-          characterName: item.characterName || characterName,
-          createdAt: Date.now(),
-          afterMessageIndex: chat.messages.length - 1
-        };
-        chat.photos.push(photoObj);
+        // 生成失败：不再创建空照片对象，而是把 image prompt 落成一条正式聊天消息
+        // —— 它会以气泡形式出现在历史气泡堆、在消息浮层完整展示、且可悬停编辑/删除
+        var failChar = item.characterName || characterName;
+        chat.messages.push({
+          role: 'assistant',
+          content: '【' + failChar + '】📷 拍照失败（ComfyUI 未响应或未配置），本次图像 prompt 已保留：\n' + item.prompt
+        });
         await saveData();
-        showToast('图片生成失败（ComfyUI 未响应或未配置）', 'error');
+        renderMessages();
+        showToast('图片生成失败（ComfyUI 未响应或未配置），prompt 已保留在聊天中', 'error');
       }
-      renderPhotoMessage(photoObj);
     }
 
     // 5. 拍照完成
@@ -873,3 +872,23 @@ function closePhotoCharSelect() {
   }
 }
 
+
+/**
+ * 删除一条「拍摄失败」的遗留照片记录（消息浮层失败照片行的删除按钮）
+ * @param {string} photoId
+ */
+async function deleteFailedPhoto(photoId) {
+  if (!currentChatId) return;
+  var chat = appData.chats[currentChatId];
+  if (!chat || !chat.photos) return;
+  var idx = -1;
+  for (var i = 0; i < chat.photos.length; i++) {
+    if (chat.photos[i].id === photoId) { idx = i; break; }
+  }
+  if (idx < 0) return;
+  if (!(await confirmDialog('删除这条拍摄失败的记录吗？'))) return;
+  chat.photos.splice(idx, 1);
+  await saveData();
+  renderMessages();
+  showToast('已删除失败记录');
+}

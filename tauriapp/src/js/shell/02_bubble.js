@@ -324,10 +324,19 @@ function bpMessageParts(msg, speakerMode) {
 function bpRowHtml(entry) {
   if (entry.type === 'photo') {
     var p = entry.photo;
+    // 生成失败的照片（无图）：完整展示 prompt，可删除（兼容历史数据）
+    if (!p.dataUrl) {
+      return '<div class="bp-row photo photo-failed">' +
+        '<div class="bp-row-head"><span>' + escHtml(p.characterName || '照片') + ' · 📷 拍摄失败</span></div>' +
+        '<div class="bp-row-body">' + escHtml(p.prompt || '') + '</div>' +
+        '<div class="bp-row-actions">' +
+        '<button class="bp-act del" onclick="deleteFailedPhoto(\'' + escHtml(p.id) + '\')">删除</button>' +
+        '</div></div>';
+    }
     var img = p.thumbUrl || p.dataUrl;
     var inner = img
       ? '<img src="' + img + '" alt="照片" onclick="zoomPhoto(\'' + escHtml(p.id) + '\')">'
-      : '<div style="font-size:11.5px;opacity:.75;padding:4px 2px;">' + escHtml((p.prompt || '').slice(0, 40)) + '</div>';
+      : '<div style="font-size:11.5px;opacity:.75;padding:4px 2px;">' + escHtml(p.prompt || '') + '</div>';
     return '<div class="bp-row photo">' +
       '<div class="bp-row-head"><span>' + escHtml(p.characterName || '照片') + '</span></div>' +
       '<div class="bp-row-body">' + inner + '</div></div>';
