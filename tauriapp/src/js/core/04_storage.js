@@ -26,8 +26,9 @@ async function loadData() {
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
       // 兼容新版：补全 comfyui 设置
       if (!appData.settings.comfyui) {
-        appData.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768 };
+        appData.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768, timeout: 300 };
       }
+      if (appData.settings.comfyui.timeout === undefined) appData.settings.comfyui.timeout = 300;
       if (!appData.characters) appData.characters = [];
       // 兼容旧版：为每个聊天补全 characters 和 photos 字段
       if (appData.chats) {
@@ -61,8 +62,9 @@ async function loadData() {
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
       // 兼容新版：补全 comfyui 设置
       if (!appData.settings.comfyui) {
-        appData.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768 };
+        appData.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768, timeout: 300 };
       }
+      if (appData.settings.comfyui.timeout === undefined) appData.settings.comfyui.timeout = 300;
       if (!appData.characters) appData.characters = [];
       // 兼容旧版：为每个聊天补全 characters 和 photos 字段
       if (appData.chats) {

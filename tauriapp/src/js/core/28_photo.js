@@ -434,9 +434,10 @@ async function callComfyUI(prompt, width, height, signal) {
     var promptId = promptResult.prompt_id;
     if (!promptId) throw new Error('ComfyUI 未返回 prompt_id');
 
-    // 3. 轮询获取结果（最多 60 秒）
+    // 3. 轮询获取结果（超时秒数可在 设置 → 图像 中配置，默认 300 秒）
+    var timeoutSec = (parseInt(comfyui.timeout, 10) >= 10) ? parseInt(comfyui.timeout, 10) : 300;
     var pollInterval = 1000; // 1 秒轮询一次
-    var maxAttempts = 60;
+    var maxAttempts = Math.max(1, timeoutSec);
     var historyUrl = serverUrl.replace(/\/+$/, '') + '/history/' + promptId;
 
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
@@ -488,7 +489,7 @@ async function callComfyUI(prompt, width, height, signal) {
       }
     }
 
-    throw new Error('ComfyUI 生成超时（60秒）');
+    throw new Error('ComfyUI 生成超时（' + timeoutSec + ' 秒）');
   } catch (e) {
     if (e.name === 'AbortError') throw e;
     console.error('ComfyUI 调用失败', e);

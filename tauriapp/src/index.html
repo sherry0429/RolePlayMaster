@@ -209,7 +209,6 @@
                 <button class="btn-sm btn-ghost" onclick="openGalleryDrawer()">角色管理</button>
                 <button class="btn-sm btn-ghost" onclick="openAlbumDrawer()" id="albumBtn">当前聊天相册</button>
                 <button class="btn-sm btn-ghost" onclick="startGroupChatFlow()">创建群聊</button>
-                <button class="btn-sm btn-ghost" onclick="openLogDrawer()">查看日志</button>
               </div>
             </div>
           </div>
@@ -308,6 +307,10 @@
                 <input type="text" id="comfyuiServerUrl" placeholder="http://127.0.0.1:8188">
               </div>
               <div class="form-group">
+                <label for="comfyuiTimeout">生成超时（秒）<em>等待 ComfyUI 出图的最长时间，默认 300 秒</em></label>
+                <input type="number" id="comfyuiTimeout" min="10" max="3600" step="10" placeholder="300">
+              </div>
+              <div class="form-group">
                 <label for="comfyuiWorkflowFile">工作流 JSON</label>
                 <div class="btn-row">
                   <button class="btn-sm btn-primary" onclick="document.getElementById('comfyuiWorkflowFile').click()">选择文件</button>
@@ -379,27 +382,6 @@
             </div>
           </div>
 
-          <div class="form-block">
-            <h4 class="block-title">数据存储</h4>
-            <div class="block-body">
-              <p class="hint">
-                全部数据存放在本机 WebView 的 IndexedDB 中（键名 <code>aichat_data</code>），结构与网页版一致，
-                但不与浏览器共享。需要在两个版本之间迁移时，请使用「数据」标签页的导出 / 导入。
-              </p>
-            </div>
-          </div>
-
-          <div class="form-block">
-            <h4 class="block-title">已知边界</h4>
-            <div class="block-body">
-              <ul class="about-list">
-                <li>不含重放功能</li>
-                <li>桌面窗口透明，背景图设置不会绘制出来</li>
-                <li>不支持浏览器 Web Push 通知</li>
-                <li>拍照需要启用 ComfyUI 并提供工作流，否则只记录画面描述文本</li>
-              </ul>
-            </div>
-          </div>
         </section>
 
       </div>

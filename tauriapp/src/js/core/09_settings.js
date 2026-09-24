@@ -48,6 +48,9 @@ function saveSettings() {
   appData.settings.comfyui.defaultWidth = (w >= 64 && w <= 2048) ? w : 512;
   var h = parseInt(document.getElementById('comfyuiDefaultHeight').value, 10);
   appData.settings.comfyui.defaultHeight = (h >= 64 && h <= 2048) ? h : 768;
+  // 生成超时（秒）
+  var to = parseInt(document.getElementById('comfyuiTimeout').value, 10);
+  appData.settings.comfyui.timeout = (to >= 10 && to <= 3600) ? to : 300;
   // 重新初始化自动话题和通知
   initAutoTopic();
   initChatNotification();
@@ -88,6 +91,7 @@ function logSettingsDiff(oldS, newS) {
   add('comfyui.nodeIds.height', oc.nodeIds && oc.nodeIds.height, nc.nodeIds && nc.nodeIds.height);
   add('comfyui.defaultWidth', oc.defaultWidth, nc.defaultWidth);
   add('comfyui.defaultHeight', oc.defaultHeight, nc.defaultHeight);
+  add('comfyui.timeout', oc.timeout, nc.timeout);
 
   if (changes.length === 0) return;
   addProgramLog(LOG_TYPE_SYSTEM, {
@@ -221,6 +225,7 @@ function loadComfyuiSettings() {
   document.getElementById('comfyuiHeightNodeId').value = (c.nodeIds && c.nodeIds.height) || '';
   document.getElementById('comfyuiDefaultWidth').value = c.defaultWidth || 512;
   document.getElementById('comfyuiDefaultHeight').value = c.defaultHeight || 768;
+  document.getElementById('comfyuiTimeout').value = c.timeout || 300;
   if (c.workflowJson) {
     document.getElementById('comfyuiWorkflowStatus').textContent = '✅ 已上传';
     document.getElementById('comfyuiWorkflowStatus').style.color = 'var(--success)';

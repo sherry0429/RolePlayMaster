@@ -26,7 +26,8 @@ function createDefaultData() {
         workflowJson: '',
         nodeIds: { prompt: '', width: '', height: '' },
         defaultWidth: 512,
-        defaultHeight: 768
+        defaultHeight: 768,
+        timeout: 300
       }
     },
     chats: {},       // { id: { name, bgImage, messages: [], spVersions: [] } }
