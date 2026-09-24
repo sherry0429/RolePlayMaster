@@ -276,11 +276,19 @@
 
         <!-- ===== 图像 ===== -->
         <section class="pane" data-pane="image">
+          <!-- 供应商子 Tab：每个 Tab 是独立配置；开关决定「当前使用哪个」 -->
+          <div class="provider-tabs" id="imageProviderTabs">
+            <button class="ptab active" data-provider="comfyui">ComfyUI Local</button>
+            <button class="ptab" data-provider="siliconflow">硅基流动</button>
+          </div>
+
+          <!-- ---------- ComfyUI Local ---------- -->
+          <div class="provider-pane active" data-provider-pane="comfyui">
           <div class="form-block">
             <h4 class="block-title">ComfyUI 接入</h4>
             <div class="block-body">
               <label class="switch-line">
-                <span class="switch-label">启用 ComfyUI<em>关闭时拍照仅生成画面描述文本</em></span>
+                <span class="switch-label">使用 ComfyUI 生成图片<em>与本机 ComfyUI 配合；关闭时拍照仅生成画面描述文本</em></span>
                 <input type="checkbox" id="comfyuiEnabled">
                 <span class="switch-ui" aria-hidden="true"></span>
               </label>
@@ -332,6 +340,62 @@
               </div>
             </div>
           </div>
+          </div><!-- /provider-pane comfyui -->
+
+          <!-- ---------- 硅基流动 SiliconFlow ---------- -->
+          <div class="provider-pane" data-provider-pane="siliconflow">
+            <div class="form-block">
+              <h4 class="block-title">硅基流动接入</h4>
+              <div class="block-body">
+                <label class="switch-line">
+                  <span class="switch-label">使用硅基流动生成图片<em>云端出图，无需本地部署；需填写 API Key</em></span>
+                  <input type="checkbox" id="siliconflowEnabled">
+                  <span class="switch-ui" aria-hidden="true"></span>
+                </label>
+                <div class="form-group">
+                  <label for="siliconflowApiKey">API Key</label>
+                  <input type="password" id="siliconflowApiKey" placeholder="sk-...">
+                </div>
+                <div class="form-group">
+                  <label for="siliconflowApiHost">接口地址</label>
+                  <input type="text" id="siliconflowApiHost" placeholder="https://api.siliconflow.cn">
+                </div>
+                <div class="form-group">
+                  <label>模型<em>固定使用，暂不支持切换</em></label>
+                  <div class="inline-status" id="siliconflowModelLabel" style="font-size:13px;">Tongyi-MAI/Z-Image-Turbo</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-block">
+              <h4 class="block-title">生成参数</h4>
+              <div class="block-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="siliconflowWidth">默认宽度</label>
+                    <input type="number" id="siliconflowWidth" placeholder="1024" min="64" max="4096">
+                  </div>
+                  <div class="form-group">
+                    <label for="siliconflowHeight">默认高度</label>
+                    <input type="number" id="siliconflowHeight" placeholder="1024" min="64" max="4096">
+                  </div>
+                </div>
+                <p class="hint">常用尺寸：1024×1024（方图）/ 768×1024、1024×768（竖/横）/ 1328×1328（高清方图），均已实测可用。</p>
+                <div class="form-group">
+                  <label for="siliconflowSteps">推理步数<em>1~100；Turbo 模型 4~10 步即可，默认 8</em></label>
+                  <input type="number" id="siliconflowSteps" placeholder="8" min="1" max="100">
+                </div>
+                <div class="form-group">
+                  <label for="siliconflowNegative">负面提示词<em>可选，描述不希望出现的元素</em></label>
+                  <input type="text" id="siliconflowNegative" placeholder="lowres, bad anatomy, watermark">
+                </div>
+                <div class="form-group">
+                  <label for="siliconflowTimeout">生成超时（秒）<em>云端出图等待上限，默认 120 秒</em></label>
+                  <input type="number" id="siliconflowTimeout" min="10" max="3600" step="10" placeholder="120">
+                </div>
+              </div>
+            </div>
+          </div><!-- /provider-pane siliconflow -->
 
           <div class="btn-row btn-row-end">
             <button class="btn-sm btn-primary" onclick="saveSettings()">保存设置</button>
@@ -603,6 +667,7 @@
 <script src="js/core/28_photo.js"></script>
 <script src="js/core/29_album.js"></script>
 <script src="js/core/30_animations.js"></script>
+<script src="js/core/31_image_providers.js"></script>
 
 <!-- ==================== 桌面外壳（新界面） ==================== -->
 <script src="js/shell/00_tauri.js"></script>

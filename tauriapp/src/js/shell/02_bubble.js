@@ -500,10 +500,12 @@ function renderBubbleMessages() {
       }
     }
   }
-  // 末尾照片（无 afterMessageIndex 或位于最后一条消息之后）
+  // 末尾照片（无 afterMessageIndex / 负数（空聊天里拍的）/ 位于最后一条消息之后）
   if (chat.photos && chat.photos.length) {
     chat.photos
-      .filter(function (p) { return p.afterMessageIndex === undefined || p.afterMessageIndex >= total; })
+      .filter(function (p) {
+        return p.afterMessageIndex === undefined || p.afterMessageIndex < 0 || p.afterMessageIndex >= total;
+      })
       .slice(-2)
       .forEach(function (p) { entries.push({ type: 'photo', photo: p }); });
   }

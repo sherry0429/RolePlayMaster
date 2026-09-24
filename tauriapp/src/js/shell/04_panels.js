@@ -107,12 +107,55 @@ function startGroupChatFlow() {
   showToast('勾选要加入群聊的角色，再点「确认建群」');
 }
 
+// ==================== 图像供应商子分页 ====================
+
+/** 切换「设置 → 图像」下的供应商配置子分页 */
+function switchImageProviderTab(id) {
+  var wrap = document.getElementById('imageProviderTabs');
+  if (!wrap) return;
+  wrap.querySelectorAll('.ptab').forEach(function (b) {
+    b.classList.toggle('active', b.dataset.provider === id);
+  });
+  var pane = document.querySelector('.pane[data-pane="image"]');
+  if (!pane) return;
+  pane.querySelectorAll('.provider-pane').forEach(function (p) {
+    p.classList.toggle('active', p.dataset.providerPane === id);
+  });
+}
+
+/** 供应商开关互斥：勾选一个就取消另一个（避免「两个都启用」的歧义） */
+function initImageProviderSwitch() {
+  var cf = document.getElementById('comfyuiEnabled');
+  var sf = document.getElementById('siliconflowEnabled');
+  if (cf) {
+    cf.addEventListener('change', function () {
+      if (cf.checked && sf) sf.checked = false;
+    });
+  }
+  if (sf) {
+    sf.addEventListener('change', function () {
+      if (sf.checked && cf) cf.checked = false;
+    });
+  }
+
+  var wrap = document.getElementById('imageProviderTabs');
+  if (wrap) {
+    wrap.addEventListener('click', function (e) {
+      var btn = e.target.closest('.ptab');
+      if (!btn) return;
+      switchImageProviderTab(btn.dataset.provider);
+    });
+  }
+}
+
 // ==================== 设置面板分页 ====================
 
 function switchSettingsTab(name) {
   var panel = document.getElementById('panel-settings');
   if (!panel) return;
-  panel.querySelectorAll('.ptab').forEach(function (b) {
+  // 注意：只作用于主 Tab 容器 —— 图像分页里还有「供应商」子 Tab，
+  // 用 panel.querySelectorAll('.ptab') 会把子 Tab 的选中态一并清掉
+  document.querySelectorAll('#settingsTabs .ptab').forEach(function (b) {
     b.classList.toggle('active', b.dataset.tab === name);
   });
   panel.querySelectorAll('.pane').forEach(function (p) {
@@ -131,7 +174,7 @@ function restoreSettingsTab() {
   if (!panel) return;
   var exists = panel.querySelector('.ptab[data-tab="' + name + '"]');
   if (!exists) name = 'desktop';
-  panel.querySelectorAll('.ptab').forEach(function (b) {
+  document.querySelectorAll('#settingsTabs .ptab').forEach(function (b) {
     b.classList.toggle('active', b.dataset.tab === name);
   });
   panel.querySelectorAll('.pane').forEach(function (p) {
@@ -285,6 +328,8 @@ function initPanels() {
       });
     });
   }
+
+  initImageProviderSwitch();
 
   // ---- 设置分页 ----
   var tabs = document.getElementById('settingsTabs');

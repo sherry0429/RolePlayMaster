@@ -29,6 +29,22 @@ async function loadData() {
         appData.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768, timeout: 300 };
       }
       if (appData.settings.comfyui.timeout === undefined) appData.settings.comfyui.timeout = 300;
+      // 兼容新版：图像供应商（默认 ComfyUI）+ 硅基流动配置
+      if (!appData.settings.imageProvider) appData.settings.imageProvider = 'comfyui';
+      if (!appData.settings.siliconflow) {
+        appData.settings.siliconflow = {
+          enabled: false,
+          apiHost: 'https://api.siliconflow.cn',
+          apiKey: '',
+          model: 'Tongyi-MAI/Z-Image-Turbo',
+          defaultWidth: 1024,
+          defaultHeight: 1024,
+          steps: 8,
+          guidance: 7.5,
+          negativePrompt: '',
+          timeout: 120
+        };
+      }
       if (!appData.characters) appData.characters = [];
       // 兼容旧版：为每个聊天补全 characters 和 photos 字段
       if (appData.chats) {
@@ -65,6 +81,22 @@ async function loadData() {
         appData.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768, timeout: 300 };
       }
       if (appData.settings.comfyui.timeout === undefined) appData.settings.comfyui.timeout = 300;
+      // 兼容新版：图像供应商（默认 ComfyUI）+ 硅基流动配置
+      if (!appData.settings.imageProvider) appData.settings.imageProvider = 'comfyui';
+      if (!appData.settings.siliconflow) {
+        appData.settings.siliconflow = {
+          enabled: false,
+          apiHost: 'https://api.siliconflow.cn',
+          apiKey: '',
+          model: 'Tongyi-MAI/Z-Image-Turbo',
+          defaultWidth: 1024,
+          defaultHeight: 1024,
+          steps: 8,
+          guidance: 7.5,
+          negativePrompt: '',
+          timeout: 120
+        };
+      }
       if (!appData.characters) appData.characters = [];
       // 兼容旧版：为每个聊天补全 characters 和 photos 字段
       if (appData.chats) {

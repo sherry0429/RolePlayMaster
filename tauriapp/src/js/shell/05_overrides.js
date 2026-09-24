@@ -83,12 +83,13 @@ function checkNotificationPlatformSupport() { return false; }
  * 但相册按钮在桌面版始终可见（设置面板里需要随时查看当前聊天相册）
  */
 function updatePhotoFeatureVisibility() {
-  var comfyuiEnabled = !!(appData.settings.comfyui && appData.settings.comfyui.enabled);
+  // 拍照入口可见性：由当前图像供应商是否配置齐全决定（ComfyUI / 硅基流动 …）
+  var photoReady = (typeof isPhotoProviderReady === 'function') ? isPhotoProviderReady() : false;
   var photoBtn = document.getElementById('photoActionBtn');
-  if (photoBtn) photoBtn.style.display = comfyuiEnabled ? '' : 'none';
+  if (photoBtn) photoBtn.style.display = photoReady ? '' : 'none';
   // 输入栏上的拍照快捷按钮跟随同一开关
   var inputPhotoBtn = document.getElementById('inputPhotoBtn');
-  if (inputPhotoBtn) inputPhotoBtn.style.display = comfyuiEnabled ? '' : 'none';
+  if (inputPhotoBtn) inputPhotoBtn.style.display = photoReady ? '' : 'none';
   var albumBtn = document.getElementById('albumBtn');
   if (albumBtn) albumBtn.style.display = '';
 }

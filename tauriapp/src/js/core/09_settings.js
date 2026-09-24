@@ -51,6 +51,37 @@ function saveSettings() {
   // 生成超时（秒）
   var to = parseInt(document.getElementById('comfyuiTimeout').value, 10);
   appData.settings.comfyui.timeout = (to >= 10 && to <= 3600) ? to : 300;
+
+  // 硅基流动 SiliconFlow
+  var sfEnabledEl = document.getElementById('siliconflowEnabled');
+  var sf = appData.settings.siliconflow;
+  sf.enabled = !!(sfEnabledEl && sfEnabledEl.checked);
+  var sfKeyEl = document.getElementById('siliconflowApiKey');
+  if (sfKeyEl) sf.apiKey = sfKeyEl.value.trim();
+  // 模型固定为 Tongyi-MAI/Z-Image-Turbo（只支持这一个）
+  sf.model = (typeof SILICONFLOW_MODEL !== 'undefined') ? SILICONFLOW_MODEL : sf.model;
+  var sfHostEl = document.getElementById('siliconflowApiHost');
+  if (sfHostEl) sf.apiHost = sfHostEl.value.trim() || 'https://api.siliconflow.cn';
+  var sfW = parseInt((document.getElementById('siliconflowWidth') || {}).value, 10);
+  sf.defaultWidth = (sfW >= 64 && sfW <= 4096) ? sfW : 1024;
+  var sfH = parseInt((document.getElementById('siliconflowHeight') || {}).value, 10);
+  sf.defaultHeight = (sfH >= 64 && sfH <= 4096) ? sfH : 1024;
+  var sfSteps = parseInt((document.getElementById('siliconflowSteps') || {}).value, 10);
+  sf.steps = (sfSteps >= 1 && sfSteps <= 100) ? sfSteps : 8;
+  var sfNeg = document.getElementById('siliconflowNegative');
+  if (sfNeg) sf.negativePrompt = sfNeg.value.trim();
+  var sfTo = parseInt((document.getElementById('siliconflowTimeout') || {}).value, 10);
+  sf.timeout = (sfTo >= 10 && sfTo <= 3600) ? sfTo : 120;
+
+  // 供应商互斥：勾了谁就用谁（都没勾时保持原选择）
+  if (sf.enabled) {
+    setActiveImageProvider('siliconflow');
+  } else if (appData.settings.comfyui.enabled) {
+    setActiveImageProvider('comfyui');
+  } else {
+    sf.enabled = false;
+    appData.settings.comfyui.enabled = false;
+  }
   // 重新初始化自动话题和通知
   initAutoTopic();
   initChatNotification();
@@ -92,6 +123,18 @@ function logSettingsDiff(oldS, newS) {
   add('comfyui.defaultWidth', oc.defaultWidth, nc.defaultWidth);
   add('comfyui.defaultHeight', oc.defaultHeight, nc.defaultHeight);
   add('comfyui.timeout', oc.timeout, nc.timeout);
+  add('imageProvider', oldS.imageProvider, newS.imageProvider);
+  var os = oldS.siliconflow || {}, ns = newS.siliconflow || {};
+  add('siliconflow.enabled', os.enabled, ns.enabled);
+  if (os.apiKey !== ns.apiKey) changes.push({ field: 'siliconflow.apiKey', from: '(hidden)', to: '(已修改，长度 ' + String(ns.apiKey || '').length + ')' });
+  add('siliconflow.apiHost', os.apiHost, ns.apiHost);
+  add('siliconflow.model', os.model, ns.model);
+  add('siliconflow.defaultWidth', os.defaultWidth, ns.defaultWidth);
+  add('siliconflow.defaultHeight', os.defaultHeight, ns.defaultHeight);
+  add('siliconflow.steps', os.steps, ns.steps);
+  add('siliconflow.guidance', os.guidance, ns.guidance);
+  add('siliconflow.negativePrompt', os.negativePrompt, ns.negativePrompt);
+  add('siliconflow.timeout', os.timeout, ns.timeout);
 
   if (changes.length === 0) return;
   addProgramLog(LOG_TYPE_SYSTEM, {
@@ -226,6 +269,21 @@ function loadComfyuiSettings() {
   document.getElementById('comfyuiDefaultWidth').value = c.defaultWidth || 512;
   document.getElementById('comfyuiDefaultHeight').value = c.defaultHeight || 768;
   document.getElementById('comfyuiTimeout').value = c.timeout || 300;
+  // 硅基流动
+  var sf = appData.settings.siliconflow || {};
+  var sfEnabledEl = document.getElementById('siliconflowEnabled');
+  if (sfEnabledEl) sfEnabledEl.checked = !!sf.enabled;
+  var set = function (id, val) { var el = document.getElementById(id); if (el) el.value = val; };
+  set('siliconflowApiKey', sf.apiKey || '');
+  set('siliconflowApiHost', sf.apiHost || 'https://api.siliconflow.cn');
+  set('siliconflowModel', sf.model || 'Tongyi-MAI/Z-Image-Turbo');
+  set('siliconflowWidth', sf.defaultWidth || 1024);
+  set('siliconflowHeight', sf.defaultHeight || 1024);
+  set('siliconflowSteps', sf.steps || 8);
+  set('siliconflowNegative', sf.negativePrompt || '');
+  set('siliconflowTimeout', sf.timeout || 120);
+  // 图像子 Tab：默认停在当前使用的供应商
+  if (typeof switchImageProviderTab === 'function') switchImageProviderTab(activeImageProviderId());
   if (c.workflowJson) {
     document.getElementById('comfyuiWorkflowStatus').textContent = '✅ 已上传';
     document.getElementById('comfyuiWorkflowStatus').style.color = 'var(--success)';

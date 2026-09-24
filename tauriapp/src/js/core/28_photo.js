@@ -99,8 +99,9 @@ async function takePhotoForCharacter(characterName) {
       prompts = [{ prompt: aiContent, characterName: characterName }];
     }
 
-    // 4. 生成图片
-    var comfyuiEnabled = appData.settings.comfyui && appData.settings.comfyui.enabled;
+    // 4. 生成图片（供应商由「设置 → 图像」决定，具体实现见 31_image_providers.js）
+    var provider = activeImageProvider();
+    var useProvider = !!(provider && provider.isReady());
     if (!chat.photos) chat.photos = [];
 
     for (var i = 0; i < prompts.length; i++) {
@@ -108,26 +109,29 @@ async function takePhotoForCharacter(characterName) {
       updatePhotoProgress('📸 ' + (item.characterName || characterName) + ' 正在拍摄 (' + (i + 1) + '/' + prompts.length + ')');
 
       var photoData = null;
-      if (comfyuiEnabled && appData.settings.comfyui.workflowJson) {
-        addProgramLog(LOG_TYPE_PHOTO, {
-          summary: 'ComfyUI 生成图片 (' + (item.characterName || characterName) + ')',
-          chatName: chat.name + LOG_NAME_PHOTO,
-          detail: '角色：' + (item.characterName || characterName) +
-            '\nWidth: ' + (appData.settings.comfyui.defaultWidth || 512) +
-            '\nHeight: ' + (appData.settings.comfyui.defaultHeight || 768) +
-            '\n\nPrompt:\n' + item.prompt
-        });
-        photoData = await callComfyUI(
+      if (useProvider) {
+        // 各供应商的默认尺寸不同，按当前供应商取
+        var pcfg = (provider.id === 'siliconflow')
+          ? (appData.settings.siliconflow || {})
+          : (appData.settings.comfyui || {});
+        var useW = pcfg.defaultWidth || (provider.id === 'siliconflow' ? 1024 : 512);
+        var useH = pcfg.defaultHeight || (provider.id === 'siliconflow' ? 1024 : 768);
+        photoData = await callImageProvider(
           item.prompt,
-          appData.settings.comfyui.defaultWidth || 512,
-          appData.settings.comfyui.defaultHeight || 768,
+          { width: useW, height: useH, characterName: item.characterName || characterName },
           photoAbortController.signal
         );
       }
 
       var photoObj;
       if (photoData && photoData.dataUrl) {
-        var thumbUrl = await generateThumbnail(photoData.dataUrl, 200, 200);
+        // 缩略图失败不致命：直接拿原图当缩略图（原图较小/解码异常时的情况）
+        var thumbUrl = photoData.dataUrl;
+        try {
+          thumbUrl = await generateThumbnail(photoData.dataUrl, 200, 200);
+        } catch (thumbErr) {
+          console.warn('缩略图生成失败，退回原图', thumbErr);
+        }
         photoObj = {
           id: 'photo_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8),
           dataUrl: photoData.dataUrl,
@@ -141,16 +145,47 @@ async function takePhotoForCharacter(characterName) {
         await saveData();
         renderPhotoMessage(photoObj);
       } else {
+        addProgramLog(LOG_TYPE_ERROR, {
+          summary: '拍照失败（' + (item.characterName || characterName) + '）— 供应商 ' +
+            (provider ? provider.label : '未注册') + (useProvider ? '' : '（未配置）'),
+          chatName: chat.name,
+          detail: {
+            prompt: item.prompt,
+            providerReady: useProvider,
+            lastError: (typeof _lastImageGenError !== 'undefined' ? _lastImageGenError : null)
+          }
+        });
         // 生成失败：不再创建空照片对象，而是把 image prompt 落成一条正式聊天消息
         // —— 它会以气泡形式出现在历史气泡堆、在消息浮层完整展示、且可悬停编辑/删除
         var failChar = item.characterName || characterName;
+        var providerName = provider ? provider.label : '图像供应商';
+        // 具体失败原因：来自供应商层的详细记录（HTTP 状态 / 响应体 / 异常），
+        // 完整细节见 设置 → 日志
+        var detail = (typeof _lastImageGenError !== 'undefined' && _lastImageGenError) ? _lastImageGenError : null;
+        var failReason;
+        if (!useProvider) {
+          failReason = providerName + ' 未配置（请到「设置 → 图像」检查开关与 API Key）';
+        } else if (detail) {
+          var stepHasStatus = detail.step && String(detail.step).indexOf('HTTP ' + detail.httpStatus) >= 0;
+          failReason = providerName + ' · ' + detail.step +
+            (detail.httpStatus !== null && !stepHasStatus ? '（HTTP ' + detail.httpStatus + '）' : '') +
+            (detail.error ? '：' + detail.error : '') +
+            (detail.elapsedMs !== null ? '（' + (detail.elapsedMs / 1000).toFixed(1) + 's）' : '');
+        } else {
+          failReason = providerName + ' 未响应或出错';
+        }
+        var respHint = (detail && detail.responseBody)
+          ? '\n对方返回：' + String(detail.responseBody).slice(0, 500)
+          : '';
         chat.messages.push({
           role: 'assistant',
-          content: '【' + failChar + '】📷 拍照失败（ComfyUI 未响应或未配置），本次图像 prompt 已保留：\n' + item.prompt
+          content: '【' + failChar + '】📷 拍照失败（' + failReason + '）' + respHint +
+            '\n\n本次图像 prompt 已保留：\n' + item.prompt +
+            '\n\n（完整请求与响应见「设置 → 日志」）'
         });
         await saveData();
         renderMessages();
-        showToast('图片生成失败（ComfyUI 未响应或未配置），prompt 已保留在聊天中', 'error');
+        showToast('图片生成失败：' + failReason + '（详情见 设置 → 日志）', 'error');
       }
     }
 
@@ -531,7 +566,44 @@ function setComfyNodeInput(node, value, inputName) {
 /**
  * Blob 转 base64 Data URL
  */
-function blobToBase64(blob) {
+/**
+ * 读取 blob 头部若干字节（兼容性优先，用 FileReader 而非 Blob.arrayBuffer）
+ */
+function _readBlobHead(blob, n) {
+  return new Promise(function (resolve) {
+    try {
+      var fr = new FileReader();
+      fr.onload = function () { resolve(new Uint8Array(fr.result || [])); };
+      fr.onerror = function () { resolve(new Uint8Array(0)); };
+      fr.readAsArrayBuffer(blob.slice(0, n));
+    } catch (e) {
+      resolve(new Uint8Array(0));
+    }
+  });
+}
+
+/** 按文件头嗅探图片 MIME；识别不出返回空串 */
+function sniffImageMime(bytes) {
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  if (bytes.length >= 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return 'image/gif';
+  if (bytes.length >= 12 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return 'image/webp';
+  return '';
+}
+
+/**
+ * blob → dataURL。
+ * 注意：很多图床（如硅基流动的 S3）返回的 Content-Type 是 application/octet-stream，
+ * 若直接读成 data URL，MIME 就是 octet-stream —— WKWebView 无法解码这种 data URL，
+ * <img> 的 onload 永远不触发，拍照流程会卡死。这里按文件头嗅探真实格式后再转。
+ */
+async function blobToBase64(blob, fallbackMime) {
+  var type = blob.type || '';
+  if (!/^image\//i.test(type)) {
+    var head = await _readBlobHead(blob, 16);
+    var sniffed = sniffImageMime(head) || fallbackMime || 'image/png';
+    blob = new Blob([blob], { type: sniffed });
+  }
   return new Promise(function(resolve, reject) {
     var reader = new FileReader();
     reader.onload = function() { resolve(reader.result); };
@@ -669,7 +741,16 @@ function generateThumbnail(dataUrl, maxWidth, maxHeight) {
   maxHeight = maxHeight || 200;
   return new Promise(function(resolve, reject) {
     var img = new Image();
+    // 兜底：解码失败/超时要报错，绝不能挂着不返回（否则拍照流程卡在「未响应」）
+    var failTimer = setTimeout(function () {
+      reject(new Error('缩略图生成超时（图片解码失败）'));
+    }, 15000);
+    img.onerror = function () {
+      clearTimeout(failTimer);
+      reject(new Error('图片解码失败（数据格式不受支持）'));
+    };
     img.onload = function() {
+      clearTimeout(failTimer);
       var canvas = document.createElement('canvas');
       var width = img.width;
       var height = img.height;

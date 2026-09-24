@@ -28,6 +28,21 @@ function createDefaultData() {
         defaultWidth: 512,
         defaultHeight: 768,
         timeout: 300
+      },
+      // 当前使用的图像供应商（可扩展更多）
+      imageProvider: 'comfyui',
+      // 硅基流动 SiliconFlow
+      siliconflow: {
+        enabled: false,
+        apiHost: 'https://api.siliconflow.cn',
+        apiKey: '',
+        model: 'Tongyi-MAI/Z-Image-Turbo',
+        defaultWidth: 1024,
+        defaultHeight: 1024,
+        steps: 8,
+        guidance: 7.5,
+        negativePrompt: '',
+        timeout: 120
       }
     },
     chats: {},       // { id: { name, bgImage, messages: [], spVersions: [] } }
