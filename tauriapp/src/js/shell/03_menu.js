@@ -187,6 +187,8 @@ function initDragHandles() {
     el.addEventListener('mousedown', function (e) {
       if (e.button !== 0) return;
       if (e.target.closest('button, input, textarea, select, a, .ptab')) return;
+      // 「[照片]」气泡可点击打开大图，不参与窗口拖拽
+      if (e.target.closest && e.target.closest('.bs-photo')) return;
       // 可滚动且内容溢出的拖拽区（如历史气泡堆）：让位给滚动条，
       // 否则按住拖窗口会吞掉滚动条拖动。滚轮滚动不受影响。
       var oy = getComputedStyle(el).overflowY;

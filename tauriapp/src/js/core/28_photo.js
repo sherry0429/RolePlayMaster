@@ -893,3 +893,25 @@ async function deleteFailedPhoto(photoId) {
   renderMessages();
   showToast('已删除失败记录');
 }
+
+/**
+ * 删除一条照片记录（消息浮层照片行的删除按钮）。
+ * 删除后：相册少一张图，气泡堆里对应的「[照片]」气泡同步消失。
+ * @param {string} photoId
+ */
+async function deletePhotoById(photoId) {
+  if (!currentChatId) return;
+  var chat = appData.chats[currentChatId];
+  if (!chat || !chat.photos) return;
+  var idx = -1;
+  for (var i = 0; i < chat.photos.length; i++) {
+    if (chat.photos[i].id === photoId) { idx = i; break; }
+  }
+  if (idx < 0) return;
+  if (!(await confirmDialog('删除这张照片吗？'))) return;
+  chat.photos.splice(idx, 1);
+  await saveData();
+  // 浮层与气泡堆一起刷新（气泡堆由 chat.photos 推导，删除即消失）
+  renderMessages();
+  showToast('照片已删除');
+}

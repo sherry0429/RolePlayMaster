@@ -167,6 +167,29 @@ function collectRecentReplies(limit) {
   }
 
   out.reverse();
+
+  // 照片以「[照片]」气泡形式穿插：按 afterMessageIndex 排在对应消息之后
+  var photos = (chat.photos || []).slice().sort(function (a, b) {
+    return (a.createdAt || 0) - (b.createdAt || 0);
+  });
+  photos.forEach(function (p) {
+    var anchorIdx = (p.afterMessageIndex === undefined) ? chat.messages.length - 1 : p.afterMessageIndex;
+    // 找到最后一个 idx <= 锚点的气泡，插到它后面；都比锚点新则插到最前
+    var insertAt = 0;
+    for (var k = out.length - 1; k >= 0; k--) {
+      if (out[k].idx <= anchorIdx) { insertAt = k + 1; break; }
+    }
+    out.splice(Math.min(insertAt, out.length), 0, {
+      idx: anchorIdx,
+      seg: 'photo:' + p.id,          // 唯一 key，复用入场动画/到期计时
+      type: 'photo',
+      photoId: p.id,
+      speaker: p.characterName || '',
+      face: speakerFace(p.characterName || '') || soloFace,
+      text: '[照片]'
+    });
+  });
+
   return out;
 }
 
@@ -279,9 +302,12 @@ function renderBubbleStack() {
     var face = it.face
       ? '<img class="bs-face" src="' + escHtml(it.face) + '" alt="' + escHtml(it.speaker || '') + '">'
       : (it.speaker ? '<span class="bs-face bs-face-empty"></span>' : '');
+    // 照片气泡：文案 [照片]，点击在屏幕中央打开大图
+    var isPhoto = it.type === 'photo';
+    var photoAttr = isPhoto ? ' data-photo-id="' + escHtml(it.photoId) + '"' : '';
     html += sep +
-      '<div class="bs-item' + typing + arrive + '" style="opacity:' + op + '"' +
-      ' data-idx="' + it.idx + '" data-seg="' + it.seg + '"' +
+      '<div class="bs-item' + (isPhoto ? ' bs-photo' : '') + typing + arrive + '" style="opacity:' + op + '"' +
+      ' data-idx="' + it.idx + '" data-seg="' + it.seg + '"' + photoAttr +
       (it.speaker ? ' title="' + escHtml(it.speaker) + '"' : '') + '>' +
       face +
       '<span class="bs-text">' + escHtml(it.text) + '</span>' +
@@ -372,7 +398,10 @@ function bpRowHtml(entry) {
       : '<div style="font-size:11.5px;opacity:.75;padding:4px 2px;">' + escHtml(p.prompt || '') + '</div>';
     return '<div class="bp-row photo">' +
       '<div class="bp-row-head"><span>' + escHtml(p.characterName || '照片') + '</span></div>' +
-      '<div class="bp-row-body">' + inner + '</div></div>';
+      '<div class="bp-row-body">' + inner + '</div>' +
+      '<div class="bp-row-actions">' +
+      '<button class="bp-act del" onclick="deletePhotoById(\'' + escHtml(p.id) + '\')">删除</button>' +
+      '</div></div>';
   }
 
   var headHtml;
@@ -607,6 +636,18 @@ function initBubble() {
     menuBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       toggleBubblePanel();
+    });
+  }
+
+  // 气泡堆里的「[照片]」气泡：点击在屏幕中央打开大图
+  var stackClick = document.getElementById('bubbleStack');
+  if (stackClick) {
+    stackClick.addEventListener('click', function (e) {
+      var photoEl = e.target.closest && e.target.closest('.bs-photo');
+      if (photoEl && photoEl.dataset.photoId) {
+        e.stopPropagation();
+        zoomPhoto(photoEl.dataset.photoId);
+      }
     });
   }
 

@@ -1032,3 +1032,10 @@ body.bubbles-hidden .bubble-stack { display: none !important; }
   color: #fff;
 }
 .bubble-collapse:hover { background: rgba(var(--accent-rgb), 0.85); }
+
+/* 气泡堆里的「[照片]」气泡：可点击打开大图 */
+.bs-item.bs-photo { cursor: pointer; }
+.bs-item.bs-photo .bs-text {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
