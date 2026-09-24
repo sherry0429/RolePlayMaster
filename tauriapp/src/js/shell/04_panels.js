@@ -119,8 +119,9 @@ function switchSettingsTab(name) {
     p.classList.toggle('active', p.dataset.pane === name);
   });
   ShellPrefs.set('settingsTab', name);
-  // 角色 Tab：每次进入都重绘（角色/动画可能在别处被修改）
+  // 角色 / 日志 Tab：每次进入都重绘（内容可能在别处被修改）
   if (name === 'chars') { try { renderSettingsChars(); } catch (e) { /* ignore */ } }
+  if (name === 'logs') { try { renderSettingsLogs(); } catch (e) { /* ignore */ } }
   // 不同分页内容高度不同，重新贴合一次
   setTimeout(fitPanelWindow, 60);
 }
@@ -138,6 +139,7 @@ function restoreSettingsTab() {
     p.classList.toggle('active', p.dataset.pane === name);
   });
   if (name === 'chars') { try { renderSettingsChars(); } catch (e) { /* ignore */ } }
+  if (name === 'logs') { try { renderSettingsLogs(); } catch (e) { /* ignore */ } }
 }
 
 // ==================== 窗口尺寸贴合内容 ====================
@@ -287,6 +289,7 @@ function initPanels() {
   if (topInput) {
     topInput.addEventListener('change', function () {
       shellSetAlwaysOnTop(topInput.checked);
+      addProgramLog(LOG_TYPE_SYSTEM, { summary: '修改设置：窗口置顶 → ' + (topInput.checked ? '开' : '关') });
       showToast(topInput.checked ? '窗口已置顶 📌' : '已取消置顶');
     });
   }
@@ -302,6 +305,10 @@ function initPanels() {
       if (document.body.classList.contains('panel-mode')) fitPanelWindow();
       else shellSyncAvatarWindowSize();
     });
+    // 滑杆拖动过程会产生大量 input 事件，日志只在松手（change）时记一条
+    sizeInput.addEventListener('change', function () {
+      addProgramLog(LOG_TYPE_SYSTEM, { summary: '修改设置：化身尺寸 → ' + sizeInput.value + 'px' });
+    });
   }
 
   var opInput = document.getElementById('optOpacity');
@@ -312,6 +319,9 @@ function initPanels() {
       var val = document.getElementById('optOpacityVal');
       if (val) val.textContent = v;
       applyShellOptionStyles();
+    });
+    opInput.addEventListener('change', function () {
+      addProgramLog(LOG_TYPE_SYSTEM, { summary: '修改设置：气泡不透明度 → ' + opInput.value + '%' });
     });
   }
 
@@ -324,6 +334,9 @@ function initPanels() {
       var val = document.getElementById('optFontSizeVal');
       if (val) val.textContent = v;
       applyShellOptionStyles();
+    });
+    fontInput.addEventListener('change', function () {
+      addProgramLog(LOG_TYPE_SYSTEM, { summary: '修改设置：消息字体大小 → ' + fontInput.value + 'px' });
     });
   }
 
@@ -338,6 +351,9 @@ function initPanels() {
       renderBubble();          // 刷新气泡堆
       renderBubbleMessages();  // 浮层展开时同步刷新（内部会滚到底部）
     });
+    histInput.addEventListener('change', function () {
+      addProgramLog(LOG_TYPE_SYSTEM, { summary: '修改设置：历史消息条数 → ' + histInput.value });
+    });
   }
 
   var alwaysInput = document.getElementById('optAlwaysShowBubbles');
@@ -349,6 +365,7 @@ function initPanels() {
       _bubbleExpiry = {};
       _stackSig = '';
       renderBubble();
+      addProgramLog(LOG_TYPE_SYSTEM, { summary: '修改设置：始终展示历史气泡 → ' + (alwaysInput.checked ? '开' : '关') });
     });
   }
 
@@ -363,6 +380,9 @@ function initPanels() {
       _bubbleExpiry = {};      // 新时限从现在起对所有可见气泡生效
       _stackSig = '';
       renderBubble();
+    });
+    timeoutInput.addEventListener('change', function () {
+      addProgramLog(LOG_TYPE_SYSTEM, { summary: '修改设置：历史气泡展示时长 → ' + timeoutInput.value + ' 秒' });
     });
   }
 

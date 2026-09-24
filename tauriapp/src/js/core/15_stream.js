@@ -156,6 +156,20 @@ async function requestAI(extraMessages) {
       handleEmotionToolCalls(chat, pendingToolCalls, aiMsgIdx);
     }
 
+    // 日志：AI 回复完成（正文 + 本次使用的工具调用），与「AI 对话请求」配对
+    addProgramLog(LOG_TYPE_REQUEST, {
+      summary: pendingToolCalls.length
+        ? 'AI 回复完成（含 ' + pendingToolCalls.length + ' 次工具调用）'
+        : 'AI 回复完成',
+      chatName: chat.name,
+      detail: {
+        content: (chat.messages[aiMsgIdx] && chat.messages[aiMsgIdx].content) || '（仅工具调用，无正文）',
+        toolCalls: pendingToolCalls.map(function (c) {
+          return { name: c.name, arguments: c.args };
+        })
+      }
+    });
+
     // 检查 AI 回复中是否有自动拍照触发标签（仅群聊场景）
     if (chat && chat.characters && chat.characters.length > 0 && chat.messages[aiMsgIdx] && chat.messages[aiMsgIdx].content) {
       var rawContent = chat.messages[aiMsgIdx].content;

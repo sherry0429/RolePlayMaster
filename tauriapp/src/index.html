@@ -35,6 +35,7 @@
         <button class="ptab" data-tab="chars">角色</button>
         <button class="ptab" data-tab="api">接口</button>
         <button class="ptab" data-tab="data">数据</button>
+        <button class="ptab" data-tab="logs">日志</button>
         <button class="ptab" data-tab="memory">记忆</button>
         <button class="ptab" data-tab="image">图像</button>
         <button class="ptab" data-tab="about">关于</button>
@@ -220,6 +221,21 @@
                 <button class="btn-sm btn-danger" onclick="resetSettings()">重置所有数据</button>
               </div>
               <p class="hint">重置会清空本机所有聊天、角色与设置，且不可撤销。</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== 日志 ===== -->
+        <section class="pane" data-pane="logs">
+          <div class="form-block">
+            <h4 class="block-title">程序日志（最近 200 条）</h4>
+            <div class="block-body">
+              <div class="btn-row" style="margin-bottom:8px;">
+                <button class="btn-sm btn-ghost" onclick="renderSettingsLogs()">刷新</button>
+                <button class="btn-sm btn-danger" onclick="clearProgramLog()">清空日志</button>
+                <span class="hint" style="margin:0;">记录 System Prompt / 设置修改、AI 消息（含工具调用）、记忆与拍照触发</span>
+              </div>
+              <div id="settingsLogList" style="max-height:48vh;overflow-y:auto;"></div>
             </div>
           </div>
         </section>
@@ -426,12 +442,9 @@
     <div id="bpMessages" class="bp-messages">
       <div class="bp-empty">还没有消息，说点什么吧</div>
     </div>
-    <!-- 输入框常驻在化身上方（见下方 #bubble），这里只保留快捷指令 -->
+    <!-- 输入框常驻在化身上方（见下方 #bubble），这里只保留设置入口；
+         记忆 / 拍照 / SP 已移入输入栏快捷按钮，继续在输入栏右侧的 ▼ -->
     <div class="bp-quick">
-      <button class="bp-quick-btn" onclick="triggerMemory()" title="整理记忆并更新 System Prompt">🧠 记忆</button>
-      <button class="bp-quick-btn" onclick="triggerContinue()" title="让 AI 继续">▶ 继续</button>
-      <button class="bp-quick-btn" id="photoActionBtn" onclick="triggerTakePhoto()" title="AI 拍照">📷 拍照</button>
-      <button class="bp-quick-btn" onclick="openSpPanel()" title="查看 / 编辑 System Prompt">📝 SP</button>
       <button class="bp-quick-btn" onclick="openSettingsPanel()" title="打开设置">⚙️ 设置</button>
     </div>
   </div>
@@ -441,14 +454,17 @@
     <!-- 最近 10 条 AI 回复：越靠上越旧、越透明；越靠下越新、越清晰 -->
     <div id="bubbleStack" class="bubble-stack" data-drag title="最近 10 条 AI 回复 · 按住可拖动窗口"></div>
 
-    <!-- 输入栏：可直接输入，回车发送；右侧为「继续」与「打开聊天窗」 -->
+    <!-- 输入栏：可直接输入，回车发送；右侧为记忆/拍照/SP 快捷按钮 + 「继续」与「打开聊天窗」 -->
     <div id="bubble" class="bubble">
       <span id="bubbleDot" class="bubble-dot" title="有新回复"></span>
       <textarea id="userInput" rows="1" placeholder="说点什么…"></textarea>
+      <button id="inputMemoryBtn" class="mini-btn" onclick="triggerMemory()" data-tip="整理对话记忆并更新 System Prompt">M</button>
+      <button id="inputPhotoBtn" class="mini-btn" onclick="triggerTakePhoto()" data-tip="AI 拍照（需启用 ComfyUI）"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+      <button id="inputSpBtn" class="mini-btn tip-left" onclick="openSpPanel()" data-tip="查看 / 修改 System Prompt">P</button>
       <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="发送">➤</button>
-      <button class="send-btn stop-btn" id="stopBtn" onclick="stopStreaming()" style="display:none;" title="停止">⏹</button>
-      <button id="bubbleArrow" class="bubble-arrow" title="继续当前话题">▼</button>
-      <button id="bubbleMenuBtn" class="bubble-menu" title="打开聊天窗">☰</button>
+      <button class="send-btn stop-btn tip-left" id="stopBtn" onclick="stopStreaming()" style="display:none;" data-tip="停止生成">⏹</button>
+      <button id="bubbleArrow" class="bubble-arrow tip-left" data-tip="让 AI 继续当前话题">▼</button>
+      <button id="bubbleMenuBtn" class="bubble-menu tip-left" data-tip="打开聊天窗（回看历史消息）">☰</button>
     </div>
 
     <div id="avatar" class="avatar" title="按住拖动窗口 · 右键打开菜单">

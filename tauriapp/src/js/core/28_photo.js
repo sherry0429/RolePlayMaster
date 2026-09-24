@@ -21,6 +21,12 @@ async function triggerTakePhoto(characterName) {
     return await takePhotoForCharacter(characterName);
   }
 
+  // 日志：手动触发拍照功能（进入角色选择）
+  addProgramLog(LOG_TYPE_PHOTO, {
+    summary: '手动触发拍照功能（选择角色）',
+    chatName: currentChatId ? (appData.chats[currentChatId] || {}).name || '' : ''
+  });
+
   // 未指定角色名，显示角色选择对话框
   showPhotoCharSelect();
 }

@@ -86,6 +86,9 @@ function updatePhotoFeatureVisibility() {
   var comfyuiEnabled = !!(appData.settings.comfyui && appData.settings.comfyui.enabled);
   var photoBtn = document.getElementById('photoActionBtn');
   if (photoBtn) photoBtn.style.display = comfyuiEnabled ? '' : 'none';
+  // 输入栏上的拍照快捷按钮跟随同一开关
+  var inputPhotoBtn = document.getElementById('inputPhotoBtn');
+  if (inputPhotoBtn) inputPhotoBtn.style.display = comfyuiEnabled ? '' : 'none';
   var albumBtn = document.getElementById('albumBtn');
   if (albumBtn) albumBtn.style.display = '';
 }

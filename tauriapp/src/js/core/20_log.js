@@ -80,31 +80,61 @@ function renderLogContent() {
   var html = '';
   // 倒序展示（最新的在上面）
   for (var i = programLog.length - 1; i >= 0; i--) {
-    var entry = programLog[i];
-    var icon = LOG_TYPE_ICON[entry.type] || '📝';
-    var typeLabel = getTypeLabel(entry.type);
-    html += '<div class="log-entry">';
-    html += '<div class="log-entry-header" onclick="toggleLogEntry(this)">';
-    html += '<span>' + icon + ' <strong>' + escHtml(typeLabel) + '</strong>';
-    if (entry.summary) {
-      html += ' <span style="font-weight:normal;font-size:13px;color:var(--text-secondary);">' + escHtml(entry.summary) + '</span>';
-    }
-    if (entry.chatName) {
-      html += ' <span class="log-chat-name">' + escHtml(entry.chatName) + '</span>';
-    }
-    html += '</span>';
-    html += '<span><span class="log-time">' + entry.time + '</span> <span class="log-arrow">▶</span></span>';
-    html += '</div>';
-    html += '<div class="log-entry-body"><div style="padding:12px 14px;">';
-    // 如果有 detail，渲染 detail 内容
-    if (entry.detail !== null) {
-      html += renderLogDetail(entry);
-    }
-    html += '</div></div>';
-    html += '</div>';
+    html += buildLogEntryHtml(programLog[i]);
   }
 
   body.innerHTML = html;
+}
+
+/** 构建单条日志的 HTML（日志抽屉与设置→日志共用） */
+function buildLogEntryHtml(entry) {
+  var icon = LOG_TYPE_ICON[entry.type] || '📝';
+  var typeLabel = getTypeLabel(entry.type);
+  var html = '<div class="log-entry">';
+  html += '<div class="log-entry-header" onclick="toggleLogEntry(this)">';
+  html += '<span>' + icon + ' <strong>' + escHtml(typeLabel) + '</strong>';
+  if (entry.summary) {
+    html += ' <span style="font-weight:normal;font-size:13px;color:var(--text-secondary);">' + escHtml(entry.summary) + '</span>';
+  }
+  if (entry.chatName) {
+    html += ' <span class="log-chat-name">' + escHtml(entry.chatName) + '</span>';
+  }
+  html += '</span>';
+  html += '<span><span class="log-time">' + entry.time + '</span> <span class="log-arrow">▶</span></span>';
+  html += '</div>';
+  html += '<div class="log-entry-body"><div style="padding:12px 14px;">';
+  if (entry.detail !== null) {
+    html += renderLogDetail(entry);
+  }
+  html += '</div></div>';
+  html += '</div>';
+  return html;
+}
+
+// ==================== 设置面板 → 日志 Tab ====================
+
+/** 设置面板「日志」Tab：最近 200 条，最新在上 */
+function renderSettingsLogs() {
+  var body = document.getElementById('settingsLogList');
+  if (!body) return;
+  if (programLog.length === 0) {
+    body.innerHTML = '<div class="log-empty">暂无日志<br><span style="font-size:12px;">修改 SP / 设置、收发消息、触发记忆或拍照后自动记录</span></div>';
+    return;
+  }
+  var html = '';
+  for (var i = programLog.length - 1; i >= 0; i--) {
+    html += buildLogEntryHtml(programLog[i]);
+  }
+  body.innerHTML = html;
+}
+
+/** 清空全部日志（设置 → 日志） */
+function clearProgramLog() {
+  if (programLog.length === 0) { showToast('日志已经是空的'); return; }
+  programLog = [];
+  try { renderSettingsLogs(); } catch (e) { /* ignore */ }
+  try { renderLogContent(); } catch (e) { /* ignore */ }
+  showToast('日志已清空');
 }
 
 /**

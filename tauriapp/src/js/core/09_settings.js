@@ -19,6 +19,9 @@ function toggleAutoTopicConfig() {
 }
 
 function saveSettings() {
+  // 保存前的旧值快照（用于 diff 日志；密钥/令牌不落明文）
+  var old = JSON.parse(JSON.stringify(appData.settings));
+
   appData.settings.apiHost = document.getElementById('apiHost').value.trim() || DEFAULT_API_HOST;
   appData.settings.apiKey = document.getElementById('apiKey').value.trim();
   // 摘要压缩阈值
@@ -53,7 +56,44 @@ function saveSettings() {
   // 如果消息正在显示，重新渲染以应用说话人区分
   if (currentChatId) renderMessages();
   saveData();
+  // 日志：记录发生变化的设置项（apiKey / syncToken 只记「已修改」，不记值）
+  logSettingsDiff(old, appData.settings);
   showToast('设置已保存', 'success');
+}
+
+/**
+ * 对比保存前后的设置，把变化的项写入程序日志。
+ * 敏感字段（apiKey / syncToken）只记录「已修改」，不记录具体值。
+ */
+function logSettingsDiff(oldS, newS) {
+  var changes = [];
+  function add(field, o, n) {
+    if (o !== n) changes.push({ field: field, from: o, to: n });
+  }
+  add('apiHost', oldS.apiHost, newS.apiHost);
+  if (oldS.apiKey !== newS.apiKey) changes.push({ field: 'apiKey', from: '(hidden)', to: '(已修改，长度 ' + String(newS.apiKey || '').length + ')' });
+  add('compressThreshold', oldS.compressThreshold, newS.compressThreshold);
+  add('speakerMode', oldS.speakerMode, newS.speakerMode);
+  add('autoTopic', oldS.autoTopic, newS.autoTopic);
+  add('chatNotification', oldS.chatNotification, newS.chatNotification);
+  add('autoTopicInterval', oldS.autoTopicInterval, newS.autoTopicInterval);
+  add('autoTopicMaxCount', oldS.autoTopicMaxCount, newS.autoTopicMaxCount);
+  if (oldS.syncToken !== newS.syncToken) changes.push({ field: 'syncToken', from: '(hidden)', to: '(已修改，长度 ' + String(newS.syncToken || '').length + ')' });
+  add('cloudSyncHost', oldS.cloudSyncHost, newS.cloudSyncHost);
+  var oc = oldS.comfyui || {}, nc = newS.comfyui || {};
+  add('comfyui.enabled', oc.enabled, nc.enabled);
+  add('comfyui.serverUrl', oc.serverUrl, nc.serverUrl);
+  add('comfyui.nodeIds.prompt', oc.nodeIds && oc.nodeIds.prompt, nc.nodeIds && nc.nodeIds.prompt);
+  add('comfyui.nodeIds.width', oc.nodeIds && oc.nodeIds.width, nc.nodeIds && nc.nodeIds.width);
+  add('comfyui.nodeIds.height', oc.nodeIds && oc.nodeIds.height, nc.nodeIds && nc.nodeIds.height);
+  add('comfyui.defaultWidth', oc.defaultWidth, nc.defaultWidth);
+  add('comfyui.defaultHeight', oc.defaultHeight, nc.defaultHeight);
+
+  if (changes.length === 0) return;
+  addProgramLog(LOG_TYPE_SYSTEM, {
+    summary: '修改设置（' + changes.length + ' 项）',
+    detail: { changes: changes }
+  });
 }
 
 function resetSettings() {

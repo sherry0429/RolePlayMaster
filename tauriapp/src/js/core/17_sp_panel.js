@@ -60,6 +60,8 @@ function spNavNext() {
 function spStartEdit() {
   if (!currentChatId) return;
   var sp = getCurrentSpVersion();
+  var oldContent = sp.content || '';
+  var oldVersion = sp.version;
   showTextareaModal('编辑 System Prompt (v' + sp.version + ')', sp.content || '', (val) => {
     if (!currentChatId) return;
     var chat = appData.chats[currentChatId];
@@ -69,6 +71,12 @@ function spStartEdit() {
     chat.spVersions[chat.spViewIndex].content = newContent;
     saveData();
     updateSpDisplay();
+    // 日志：记录 SP 修改前后内容（debug 用）
+    addProgramLog(LOG_TYPE_SYSTEM, {
+      summary: '修改 System Prompt (v' + oldVersion + ')' + (oldContent === newContent ? '（内容未变化）' : ''),
+      chatName: chat.name,
+      detail: { version: oldVersion, before: oldContent, after: newContent }
+    });
     showToast('System Prompt 已更新', 'success');
   });
 }
