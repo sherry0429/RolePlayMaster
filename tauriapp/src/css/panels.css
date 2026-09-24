@@ -698,3 +698,19 @@ body.panel-mode .ctx-menu { display: none !important; }
   font-size: 20px;
   opacity: 0.5;
 }
+
+/* ==================== 设置面板：去掉黑色投影 / 标题行右侧按钮 ==================== */
+/* 面板周围不需要黑色渐变投影（在透明窗口上会形成一圈黑晕） */
+.panel {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+/* 小节标题行：标题在左，操作按钮贴右上角 */
+.block-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.block-head-row .block-title { margin: 0; }
+.block-head-row .btn-row { margin: 0; }

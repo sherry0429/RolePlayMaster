@@ -100,18 +100,6 @@
             </div>
           </div>
 
-          <div class="form-block">
-            <h4 class="block-title">全局背景图片</h4>
-            <div class="block-body">
-              <div class="btn-row">
-                <button class="btn-sm btn-primary" onclick="document.getElementById('bgImageFile').click()">上传图片</button>
-                <button class="btn-sm btn-danger" onclick="clearBgImage()" id="clearBgBtn" style="display:none;">清除</button>
-                <span id="bgImageStatus" class="inline-status"></span>
-              </div>
-              <input type="file" id="bgImageFile" accept="image/*" style="display:none" onchange="handleBgImageUpload(event, false)">
-              <p class="hint">桌面窗口是透明的，背景图不会绘制到窗口上，仅作为与网页版互通的数据保留。</p>
-            </div>
-          </div>
         </section>
 
         <!-- ===== 聊天 ===== -->
@@ -120,6 +108,9 @@
             <h4 class="block-title">聊天列表</h4>
             <div class="block-body">
               <div class="chat-list-section" id="chatList"></div>
+              <div class="btn-row" style="margin-top:10px;">
+                <button class="btn-sm btn-ghost" onclick="openAlbumDrawer()" id="albumBtn">当前聊天相册</button>
+              </div>
               <p class="hint">点击切换当前对话；右侧可编辑名称与角色绑定、删除聊天。化身会随之切换。</p>
             </div>
           </div>
@@ -128,14 +119,16 @@
         <!-- ===== 角色 ===== -->
         <section class="pane" data-pane="chars">
           <div class="form-block">
-            <h4 class="block-title">角色图库</h4>
+            <div class="block-head-row">
+              <h4 class="block-title">角色图库</h4>
+              <div class="btn-row">
+                <button class="btn-sm btn-primary" onclick="addCharacter()">新建角色</button>
+                <button class="btn-sm btn-ghost" onclick="openGalleryDrawer()">新建群聊 / 角色管理</button>
+              </div>
+            </div>
             <div class="block-body">
               <div class="char-mgr-grid" id="settingsCharList"></div>
-              <div class="btn-row" style="margin-top:10px;">
-                <button class="btn-sm btn-primary" onclick="addCharacter()">新建角色</button>
-                <button class="btn-sm btn-ghost" onclick="openGalleryDrawer()">打开完整图库</button>
-              </div>
-              <p class="hint">「编辑」修改头像与描述；「动画」上传待机与情绪动画（约 2 秒视频，自动抽帧转 sprite sheet，AI 聊天时按情绪自动触发）。建群请点「打开完整图库」或右键化身。</p>
+              <p class="hint">「编辑」修改头像与描述；「动画」上传待机与情绪动画（约 2 秒视频，自动抽帧转 sprite sheet，AI 聊天时按情绪自动触发）。</p>
             </div>
           </div>
         </section>
@@ -198,17 +191,6 @@
                 <button class="btn-sm btn-ghost" onclick="exportDataAsFile()">导出全部数据</button>
                 <button class="btn-sm btn-ghost" onclick="importData()">导入数据</button>
                 <button class="btn-sm btn-ghost" onclick="shareLink()">生成分享链接</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-block">
-            <h4 class="block-title">管理与查看</h4>
-            <div class="block-body">
-              <div class="btn-grid">
-                <button class="btn-sm btn-ghost" onclick="openGalleryDrawer()">角色管理</button>
-                <button class="btn-sm btn-ghost" onclick="openAlbumDrawer()" id="albumBtn">当前聊天相册</button>
-                <button class="btn-sm btn-ghost" onclick="startGroupChatFlow()">创建群聊</button>
               </div>
             </div>
           </div>

@@ -146,6 +146,9 @@ function shellSyncAvatarWindowSize() {
   var avatarH = open ? size * 0.5 : size;         // 化身的「目标」高度，而不是过渡中的高度
 
   var blockH = (stackH > 0 ? stackH + gap : 0) + barH + gap + avatarH;
+  // 没有任何气泡时气泡堆不占位，输入栏按钮的悬停提示会向上浮出约 30px，
+  // 这里预留同样高度，否则初始化的窗口太矮会把提示截断
+  if (stackH === 0 && !open) blockH += 30;
 
   // 气泡堆的高度上限 = 屏幕工作区里，扣掉「输入栏 + 化身 + 内边距」之后剩下的全部空间。
   // 这样气泡堆最多能长到把窗口撑满屏幕，长文本就不会被顶部遮罩切掉。

@@ -122,8 +122,7 @@ function switchSettingsTab(name) {
   // 角色 / 日志 Tab：每次进入都重绘（内容可能在别处被修改）
   if (name === 'chars') { try { renderSettingsChars(); } catch (e) { /* ignore */ } }
   if (name === 'logs') { try { renderSettingsLogs(); } catch (e) { /* ignore */ } }
-  // 不同分页内容高度不同，重新贴合一次
-  setTimeout(fitPanelWindow, 60);
+  // 所有分页同高（以「桌面」分页为准），切换分页不改变窗口高度
 }
 
 function restoreSettingsTab() {
@@ -165,9 +164,28 @@ function fitPanelWindow() {
   var head = panel.querySelector('.panel-head');
   var tabs = panel.querySelector('.panel-tabs');
   var body = panel.querySelector('.panel-body');
+
+  // 所有分页高度统一：始终以「桌面」分页的内容高度为准 ——
+  // 这样切换分页时窗口高度不变；更高的分页由 .panel-body 内部滚动承载。
+  var probe = panel.querySelector('.pane[data-pane="desktop"]') || panel.querySelector('.pane.active');
+  var paneH = body ? body.scrollHeight : 0;
+  if (probe) {
+    var wasActive = probe.classList.contains('active');
+    var prevDisp = probe.style.display, prevVis = probe.style.visibility;
+    if (!wasActive) {
+      probe.style.display = 'block';
+      probe.style.visibility = 'hidden';
+      var bs = getComputedStyle(body);
+      var padY = (parseFloat(bs.paddingTop) || 0) + (parseFloat(bs.paddingBottom) || 0);
+      paneH = probe.scrollHeight + padY;
+      probe.style.display = prevDisp;
+      probe.style.visibility = prevVis;
+    }
+  }
+
   var contentH = (head ? head.offsetHeight : 0)
     + (tabs ? tabs.offsetHeight : 0)
-    + (body ? body.scrollHeight : 0);
+    + paneH;
   panel.style.maxHeight = prevMaxH;
 
   var wantW = parseInt(panel.dataset.panelW || '980', 10);
@@ -259,12 +277,7 @@ function resetShellLayout() {
 function initPanels() {
   var layer = document.getElementById('panelLayer');
   if (layer) {
-    // 点击面板外部空白区域关闭面板（抽屉有自己的遮罩，不在这里处理）
-    layer.addEventListener('mousedown', function (e) {
-      if (e.target !== layer) return;
-      if (!layer.querySelector('.panel.active')) return;
-      closeAllPanels();
-    });
+    // 点击面板外部空白不再关闭面板（面板只通过 ✕ 关闭）
     layer.querySelectorAll('[data-close-all]').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
