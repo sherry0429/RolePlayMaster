@@ -714,3 +714,11 @@ body.panel-mode .ctx-menu { display: none !important; }
 }
 .block-head-row .block-title { margin: 0; }
 .block-head-row .btn-row { margin: 0; }
+
+/* 所有分页同高：面板纵向撑满可用高度（layer 的高度 = 按「桌面」分页算出的窗口高度），
+   短分页不再缩到内容高度，切换分页时面板边界保持不动 */
+.panel-layer { align-items: stretch; }
+.panel {
+  align-self: stretch;
+  max-height: 100%;
+}
