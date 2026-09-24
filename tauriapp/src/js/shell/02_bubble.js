@@ -57,11 +57,8 @@ function applyBubblesCollapsed(collapse) {
   if (collapse) {
     // 冻结：记下收起时刻；期间 renderBubbleStack 直接早退，不做任何到期处理
     _bubbleFreezeAt = Date.now();
-    return;
-  }
-
-  // 展开：把冻结期间流逝的时间补回到所有未到期气泡上（倒计时原地顺延，不重置）
-  if (_bubbleFreezeAt) {
+  } else if (_bubbleFreezeAt) {
+    // 展开：把冻结期间流逝的时间补回到所有未到期气泡上（倒计时原地顺延，不重置）
     var paused = Date.now() - _bubbleFreezeAt;
     for (var k in _bubbleExpiry) _bubbleExpiry[k] += paused;
     _bubbleFreezeAt = 0;
@@ -69,6 +66,9 @@ function applyBubblesCollapsed(collapse) {
   // 收起期间可能有新消息到达，强制重绘一次（新气泡会带入场动画）
   _stackSig = '';
   renderBubble();
+  // 关键：窗口高度必须跟随重算 —— 启动即收起/收起状态重启时，
+  // 窗口是按「无气泡堆」算的，展开后不重算就会把气泡顶部截断
+  shellSyncAvatarWindowSize();
 }
 
 /**
