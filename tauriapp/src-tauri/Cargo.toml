@@ -28,6 +28,8 @@ base64 = "0.22"
 # stream 用于按块上报下载进度，system-proxy 让请求遵循系统代理设置。
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream", "system-proxy"] }
 futures-util = "0.3"
+# 系统通知（拍照完成后推送）：macOS 走 UNUserNotificationCenter，Windows 走系统 Toast
+tauri-plugin-notification = "2"
 
 [profile.release]
 codegen-units = 1

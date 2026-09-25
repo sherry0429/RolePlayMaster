@@ -93,6 +93,7 @@ function fillSettingsForm() {
   setChecked('speakerMode', s.speakerMode !== false);
   setChecked('autoTopic', !!s.autoTopic);
   setChecked('chatNotification', !!s.chatNotification);
+  setChecked('photoNotification', !!s.photoNotification);
   setValue('autoTopicInterval', s.autoTopicInterval || 10);
   setValue('autoTopicMaxCount', s.autoTopicMaxCount || 5);
   setValue('syncToken', s.syncToken || '');

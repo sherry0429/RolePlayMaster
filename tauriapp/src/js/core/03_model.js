@@ -18,6 +18,7 @@ function createDefaultData() {
       cloudSyncHost: '',
       autoTopic: false,
       chatNotification: false,
+      photoNotification: false,
       autoTopicInterval: 10,
       autoTopicMaxCount: 5,
       comfyui: {

@@ -4,6 +4,7 @@
   "description": "桌面化身窗口的权限集合。前端只通过自定义命令（save_text_file / open_text_file / enter_panel_mode …）与后端通信，自定义命令不受 ACL 管辖，因此这里只需最基础的 core:default。",
   "windows": ["main"],
   "permissions": [
-    "core:default"
+    "core:default",
+    "notification:default"
   ]
 }

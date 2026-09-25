@@ -31,6 +31,8 @@ function saveSettings() {
   appData.settings.speakerMode = document.getElementById('speakerMode').checked;
   appData.settings.autoTopic = document.getElementById('autoTopic').checked;
   appData.settings.chatNotification = document.getElementById('chatNotification').checked;
+  // 拍照完成系统通知（设置 → 图像第一行）
+  appData.settings.photoNotification = document.getElementById('photoNotification').checked;
   // 自动话题配置
   var interval = parseFloat(document.getElementById('autoTopicInterval').value);
   appData.settings.autoTopicInterval = (interval >= 0.1) ? interval : 10;
@@ -110,6 +112,7 @@ function logSettingsDiff(oldS, newS) {
   add('speakerMode', oldS.speakerMode, newS.speakerMode);
   add('autoTopic', oldS.autoTopic, newS.autoTopic);
   add('chatNotification', oldS.chatNotification, newS.chatNotification);
+  add('photoNotification', oldS.photoNotification, newS.photoNotification);
   add('autoTopicInterval', oldS.autoTopicInterval, newS.autoTopicInterval);
   add('autoTopicMaxCount', oldS.autoTopicMaxCount, newS.autoTopicMaxCount);
   if (oldS.syncToken !== newS.syncToken) changes.push({ field: 'syncToken', from: '(hidden)', to: '(已修改，长度 ' + String(newS.syncToken || '').length + ')' });

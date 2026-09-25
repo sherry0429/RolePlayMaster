@@ -300,6 +300,7 @@ function importDataFromText(rawText) {
     if (!data.settings.syncToken) data.settings.syncToken = '';
     if (!data.settings.autoTopic) data.settings.autoTopic = false;
     if (!data.settings.chatNotification) data.settings.chatNotification = false;
+    if (!data.settings.photoNotification) data.settings.photoNotification = false;
     if (data.settings.autoTopicInterval === undefined) data.settings.autoTopicInterval = 10;
     if (data.settings.autoTopicMaxCount === undefined) data.settings.autoTopicMaxCount = 5;
     if (!data.settings.comfyui) {

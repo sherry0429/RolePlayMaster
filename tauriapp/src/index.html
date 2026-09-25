@@ -294,6 +294,17 @@
 
         <!-- ===== 图像 ===== -->
         <section class="pane" data-pane="image">
+          <!-- 拍照完成系统通知（全局开关，与具体供应商无关） -->
+          <div class="form-block">
+            <div class="block-body">
+              <label class="switch-line">
+                <span class="switch-label">拍照完成系统通知<em>拍照结束后发送系统通知（Windows / macOS）</em></span>
+                <input type="checkbox" id="photoNotification">
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
           <!-- 供应商子 Tab：每个 Tab 是独立配置；开关决定「当前使用哪个」 -->
           <div class="provider-tabs" id="imageProviderTabs">
             <button class="ptab active" data-provider="comfyui">ComfyUI Local</button>
@@ -459,17 +470,18 @@
       </div>
       <div class="panel-body">
         <div class="sp-section" id="spSection">
-          <div class="sp-header">
-            <span class="sp-title">当前版本</span>
-            <button class="btn-sm btn-ghost sp-edit-btn" onclick="spStartEdit()" id="spEditBtn">✏️ 编辑</button>
+          <div class="sp-toolbar">
             <span class="sp-version-badge" id="spVersionBadge">v0</span>
+            <div class="sp-view-toggle">
+              <button type="button" class="sp-toggle-btn active" id="spViewRaw" onclick="spSetView('raw')">原文</button>
+              <button type="button" class="sp-toggle-btn" id="spViewDiff" onclick="spSetView('diff')">对比</button>
+            </div>
+            <div class="sp-diff-stats" id="spDiffStats"></div>
+            <button type="button" class="btn-sm btn-ghost sp-edit-btn" onclick="spStartEdit()" id="spEditBtn">✎ 编辑</button>
           </div>
-          <div class="sp-version-nav">
-            <button onclick="spNavPrev()" id="spPrevBtn" title="上一版本">◀</button>
-            <span class="sp-version-text" id="spVersionText">无版本</span>
-            <button onclick="spNavNext()" id="spNextBtn" title="下一版本">▶</button>
-          </div>
+          <div class="sp-chips" id="spChips"></div>
           <div class="sp-content" id="spDisplay">暂无 System Prompt</div>
+          <div class="sp-meta" id="spMeta"></div>
         </div>
         <div class="hint">切换版本后，后续对话将基于所选版本继续；编辑只修改当前版本内容，不新增版本。</div>
       </div>

@@ -197,6 +197,11 @@ async function takePhotoForCharacter(characterName) {
       detail: characterName + ' 已拍摄 ' + prompts.length + ' 张照片'
     });
     showToast('📸 ' + characterName + ' 已拍摄 ' + prompts.length + ' 张照片', 'success');
+    // 系统通知（设置 → 图像 开关控制）
+    sendPhotoNotification(
+      '拍照完成',
+      characterName + ' 已拍摄 ' + prompts.length + ' 张照片'
+    );
 
   } catch (e) {
     if (e.name === 'AbortError') {
@@ -995,4 +1000,63 @@ async function deletePhotoById(photoId) {
   // 浮层与气泡堆一起刷新（气泡堆由 chat.photos 推导，删除即消失）
   renderMessages();
   showToast('照片已删除');
+}
+
+// ==================== 拍照完成系统通知 ====================
+
+/**
+ * 发送「拍照完成」系统通知。
+ * 优先走 Tauri 原生通知插件（window.__TAURI__.notification，macOS / Windows 均支持）；
+ * 在纯浏览器环境（网页版 / 本地预览）回退到 Web Notification API。
+ * 开关：设置 → 图像 → 拍照完成系统通知（appData.settings.photoNotification）
+ */
+async function sendPhotoNotification(title, body) {
+  try {
+    if (!appData.settings || !appData.settings.photoNotification) return;
+
+    // ---- Tauri 原生通知 ----
+    var np = (typeof window !== 'undefined') && window.__TAURI__ && window.__TAURI__.notification;
+    if (np) {
+      var granted = false;
+      try {
+        // 兼容两种 API 形态：isPermissionGranted()（布尔）与 permissionState()（字符串）
+        if (typeof np.isPermissionGranted === 'function') {
+          granted = await np.isPermissionGranted() === true;
+        } else if (typeof np.permissionState === 'function') {
+          granted = (await np.permissionState()) === 'granted';
+        } else {
+          granted = true; // 查不到权限状态时仍尝试发送，由后端兜底
+        }
+        if (!granted && typeof np.requestPermission === 'function') {
+          var perm = await np.requestPermission();
+          granted = (perm === 'granted' || perm === true);
+        }
+      } catch (permErr) {
+        console.warn('[通知] 权限查询失败', permErr);
+        granted = true; // 权限 API 异常时仍尝试发送，由后端兜底
+      }
+      if (!granted) {
+        console.warn('[通知] 系统通知权限被拒绝，无法推送');
+        return;
+      }
+      await np.sendNotification({ title: title, body: body });
+      return;
+    }
+
+    // ---- Web Notification 回退（浏览器环境） ----
+    if (typeof Notification !== 'undefined') {
+      if (Notification.permission === 'granted') {
+        new Notification(title, { body: body });
+      } else if (Notification.permission === 'default') {
+        var p = await Notification.requestPermission();
+        if (p === 'granted') new Notification(title, { body: body });
+      }
+      return;
+    }
+
+    console.warn('[通知] 当前环境不支持系统通知');
+  } catch (e) {
+    // 通知失败不影响拍照主流程
+    console.warn('[通知] 发送失败', e);
+  }
 }

@@ -443,6 +443,8 @@ fn hide_window(app: tauri::AppHandle) {
 
 pub fn run() {
     tauri::Builder::default()
+        // 系统通知插件（拍照完成后推送；前端经 window.__TAURI__.notification 调用）
+        .plugin(tauri_plugin_notification::init())
         .manage(ShellState {
             on_top: AtomicBool::new(true),
             pre_panel: Mutex::new(None),
