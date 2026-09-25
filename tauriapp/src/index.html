@@ -65,6 +65,24 @@
           </div>
 
           <div class="form-block">
+            <h4 class="block-title">空闲收起</h4>
+            <div class="block-body">
+              <label class="switch-line">
+                <span class="switch-label">空闲时收起化身<em>一段时间无操作后，化身滚出屏幕边缘，只留下输入栏</em></span>
+                <input type="checkbox" id="optIdleHide" checked>
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+              <div id="idleHideConfig">
+                <div class="slider-line">
+                  <div class="slider-head"><span>空闲判定时间（分钟）</span><em id="optIdleHideMinutesVal">3</em></div>
+                  <input type="range" id="optIdleHideMinutes" min="1" max="30" step="1" value="3">
+                </div>
+              </div>
+              <p class="hint">点击、打字、滚轮都会让化身滚回来；鼠标只是划过不会打扰它。AI 正在回复、拍照中或设置面板打开时不会收起。</p>
+            </div>
+          </div>
+
+          <div class="form-block">
             <h4 class="block-title">消息展示</h4>
             <div class="block-body">
               <div class="slider-line">
@@ -680,6 +698,7 @@
 <script src="js/shell/06_cloud.js"></script>
 <script src="js/shell/07_dialogs.js"></script>
 <script src="js/shell/10_anim_ui.js"></script>
+<script src="js/shell/11_idle_hide.js"></script>
 <script src="js/shell/08_boot.js"></script>
 </body>
 </html>

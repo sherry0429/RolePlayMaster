@@ -143,16 +143,18 @@ function shellSyncAvatarWindowSize() {
   var stackVisible = !!(stackEl && getComputedStyle(stackEl).display !== 'none');
   var stackH = stackVisible ? stackEl.getBoundingClientRect().height : 0;
   var barH = barEl ? barEl.getBoundingClientRect().height : 40;
-  var avatarH = open ? size * 0.5 : size;         // 化身的「目标」高度，而不是过渡中的高度
+  // 空闲收起后化身不占位（窗口收缩成「气泡堆 + 输入栏」，位置不变）
+  var avatarAway = document.body.classList.contains('avatar-away-done');
+  var avatarH = avatarAway ? 0 : (open ? size * 0.5 : size);   // 化身的「目标」高度，而不是过渡中的高度
 
-  var blockH = (stackH > 0 ? stackH + gap : 0) + barH + gap + avatarH;
+  var blockH = (stackH > 0 ? stackH + gap : 0) + barH + (avatarAway ? 0 : gap + avatarH);
   // 没有任何气泡时气泡堆不占位，输入栏按钮的悬停提示会向上浮出约 30px，
   // 这里预留同样高度，否则初始化的窗口太矮会把提示截断
   if (stackH === 0 && !open) blockH += 30;
 
   // 气泡堆的高度上限 = 屏幕工作区里，扣掉「输入栏 + 化身 + 内边距」之后剩下的全部空间。
   // 这样气泡堆最多能长到把窗口撑满屏幕，长文本就不会被顶部遮罩切掉。
-  var chromeH = barH + gap + avatarH + 14 + gap;      // 14 = stage 上下内边距
+  var chromeH = barH + (avatarAway ? 0 : gap + avatarH) + 14 + gap;   // 14 = stage 上下内边距
   var stackMax = Math.max(120, Math.round(availH - chromeH));
   document.documentElement.style.setProperty('--stack-max-h', stackMax + 'px');
   // 上限变了，「是否被截断」也要跟着重判（内容未变时 renderBubbleStack 不会重排）

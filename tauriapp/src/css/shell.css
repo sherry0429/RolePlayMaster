@@ -1059,3 +1059,51 @@ body.chat-open .bubble { display: none !important; }
   background: rgba(255, 255, 255, 0.08);
   color: var(--glass-text);
 }
+
+/* ==================== 空闲收起化身：滚走 / 滚回 ==================== */
+/* 滚走：朝最近的屏幕边缘滚动 + 缩小 + 淡出（方向与位移由 JS 写入 CSS 变量） */
+#avatar.avatar-away {
+  animation: avatarRollAway 0.9s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  pointer-events: none;
+}
+@keyframes avatarRollAway {
+  to {
+    transform: translate(var(--roll-x, 180px), var(--roll-y, 180px))
+               rotate(var(--roll-rot, 900deg)) scale(0.12);
+    opacity: 0;
+  }
+}
+/* 动画播完后化身不再占位：窗口收缩，只留输入栏 */
+body.avatar-away-done #avatar { display: none; }
+
+/* 滚回来：从原方向滚入 + 落地弹两下 */
+#avatar.avatar-return {
+  animation: avatarRollBack 1.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes avatarRollBack {
+  0% {
+    transform: translate(var(--roll-x, 180px), var(--roll-y, 180px))
+               rotate(var(--roll-rot, 900deg)) scale(0.12);
+    opacity: 0;
+  }
+  55% {
+    transform: translate(0, 0) rotate(0deg) scale(1.05);
+    opacity: 1;
+  }
+  68% {
+    transform: translate(0, 4px) rotate(0deg) scale(0.97);
+  }
+  78% {
+    transform: translate(0, -7px) rotate(0deg) scale(1.02);
+  }
+  88% {
+    transform: translate(0, 2px) rotate(0deg) scale(0.99);
+  }
+  94% {
+    transform: translate(0, -3px) rotate(0deg) scale(1.005);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}

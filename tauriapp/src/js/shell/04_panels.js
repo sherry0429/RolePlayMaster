@@ -244,6 +244,22 @@ function fitPanelWindow() {
 // ==================== 桌面外壳选项 ====================
 
 function applyShellOptionsToControls() {
+  // 空闲收起
+  var idleEl = document.getElementById('optIdleHide');
+  if (idleEl) {
+    var idleOn = ShellPrefs.get('idleHideAvatar', true) !== false;
+    idleEl.checked = idleOn;
+    var idleCfg = document.getElementById('idleHideConfig');
+    if (idleCfg) idleCfg.style.display = idleOn ? '' : 'none';
+  }
+  var idleMinEl = document.getElementById('optIdleHideMinutes');
+  if (idleMinEl) {
+    var mins = parseInt(ShellPrefs.get('idleHideMinutes', 3), 10) || 3;
+    idleMinEl.value = mins;
+    var idleMinVal = document.getElementById('optIdleHideMinutesVal');
+    if (idleMinVal) idleMinVal.textContent = mins;
+  }
+
   var size = ShellPrefs.get('avatarSize', 220);
   var opacity = ShellPrefs.get('opacity', 85);
   var onTop = ShellPrefs.get('alwaysOnTop', true);
@@ -380,6 +396,32 @@ function initPanels() {
     });
     opInput.addEventListener('change', function () {
       addProgramLog(LOG_TYPE_SYSTEM, { summary: '修改设置：气泡不透明度 → ' + opInput.value + '%' });
+    });
+  }
+
+  // ---- 空闲收起 ----
+  var idleInput = document.getElementById('optIdleHide');
+  if (idleInput) {
+    idleInput.addEventListener('change', function () {
+      ShellPrefs.set('idleHideAvatar', idleInput.checked);
+      var cfg = document.getElementById('idleHideConfig');
+      if (cfg) cfg.style.display = idleInput.checked ? '' : 'none';
+      applyIdleHidePrefs();
+      addProgramLog(LOG_TYPE_SYSTEM, { summary: '修改设置：空闲时收起化身 → ' + (idleInput.checked ? '开' : '关') });
+    });
+  }
+
+  var idleMinInput = document.getElementById('optIdleHideMinutes');
+  if (idleMinInput) {
+    idleMinInput.addEventListener('input', function () {
+      var v = Math.max(1, Math.min(30, parseInt(idleMinInput.value, 10) || 3));
+      ShellPrefs.set('idleHideMinutes', v);
+      var val = document.getElementById('optIdleHideMinutesVal');
+      if (val) val.textContent = v;
+      applyIdleHidePrefs();
+    });
+    idleMinInput.addEventListener('change', function () {
+      addProgramLog(LOG_TYPE_SYSTEM, { summary: '修改设置：空闲判定时间 → ' + idleMinInput.value + ' 分钟' });
     });
   }
 

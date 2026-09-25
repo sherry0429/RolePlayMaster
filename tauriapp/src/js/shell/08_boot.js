@@ -32,6 +32,7 @@ async function shellBoot() {
   initBubble();
   initContextMenu();
   initPanels();
+  try { initIdleHide(); } catch (e) { /* ignore */ }
   initShareBaseOption();
   bindSettingsInteractions();
 
