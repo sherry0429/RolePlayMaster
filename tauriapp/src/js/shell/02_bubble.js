@@ -147,62 +147,84 @@ function collectRecentReplies(limit) {
   // 只有一个角色的聊天里，说话人没有歧义 —— 没带【】标记时也用它的头像
   var soloChar = (chat.characters && chat.characters.length === 1) ? chat.characters[0] : null;
   var soloFace = (soloChar && soloChar.avatar) ? soloChar.avatar : '';
-  var out = [];
+  var total = chat.messages.length;
 
-  // 从最新往前取，取够 limit 个单元为止
-  for (var i = chat.messages.length - 1; i >= 0 && out.length < limit; i--) {
-    var m = chat.messages[i];
-    if (!m || m.role !== 'assistant') continue;
-    var raw = stripTriggerTags(m.content || '');
-    if (!raw.trim()) continue;
-
-    if (speakerMode && hasSpeakerTags(raw)) {
-      var segs = splitBySpeaker(raw);
-      if (segs.length > 0) {
-        // 同一段里可能有多个说话人：倒着取，保证最新的一段排在最后（最下方）
-        for (var s = segs.length - 1; s >= 0 && out.length < limit; s--) {
-          var segText = stackCollapseWs(segs[s].text);
-          if (!segText) continue;
-          var segWho = segs[s].speaker || '';
-          out.push({
-            idx: i, seg: s, speaker: segWho,
-            face: segWho ? speakerFace(segWho) : soloFace,
-            text: segText
-          });
-        }
-        continue;
-      }
-    }
-
-    // 未开启说话人区分 / 无标记：整条消息一个气泡
-    out.push({ idx: i, seg: -1, speaker: '', face: soloFace, text: stackCollapseWs(raw) });
-  }
-
-  out.reverse();
-
-  // 照片以「[照片]」气泡形式穿插：按 afterMessageIndex 排在对应消息之后
-  var photos = (chat.photos || []).slice().sort(function (a, b) {
-    return (a.createdAt || 0) - (b.createdAt || 0);
-  });
-  photos.forEach(function (p) {
-    var anchorIdx = (p.afterMessageIndex === undefined) ? chat.messages.length - 1 : p.afterMessageIndex;
-    // 找到最后一个 idx <= 锚点的气泡，插到它后面；都比锚点新则插到最前
-    var insertAt = 0;
-    for (var k = out.length - 1; k >= 0; k--) {
-      if (out[k].idx <= anchorIdx) { insertAt = k + 1; break; }
-    }
-    out.splice(Math.min(insertAt, out.length), 0, {
-      idx: anchorIdx,
+  function photoUnit(p) {
+    return {
+      idx: (typeof p.afterMessageIndex === 'number') ? p.afterMessageIndex : -1,
       seg: 'photo:' + p.id,          // 唯一 key，复用入场动画/到期计时
       type: 'photo',
       photoId: p.id,
       speaker: p.characterName || '',
       face: speakerFace(p.characterName || '') || soloFace,
       text: '[照片]'
-    });
-  });
+    };
+  }
 
-  return out;
+  // 照片按「锚点消息」分组：锚点 = 该照片所在的那条消息（负数/缺失 = 任何消息之前，
+  // 例如空聊天里拍的照片）。同一锚点内保持拍摄顺序。
+  var photoTail = [];                 // 锚点在所有消息之前
+  var photoByAnchor = {};
+  (chat.photos || []).slice()
+    .sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); })
+    .forEach(function (p) {
+      var anchor = (typeof p.afterMessageIndex === 'number' && p.afterMessageIndex >= 0)
+        ? Math.min(p.afterMessageIndex, total - 1)     // 超出末尾的一律算「最后一条消息之后」
+        : -1;
+      if (anchor < 0) photoTail.push(p);
+      else (photoByAnchor[anchor] = photoByAnchor[anchor] || []).push(p);
+    });
+
+  // 消息气泡与照片合成一条时间线，从最新往前取满 limit 个「单元」——
+  // 照片同样占用条数配额，且严格按聊天顺序穿插（照片排在所属消息之后）。
+  var units = [];
+  for (var i = total - 1; i >= 0 && units.length < limit; i--) {
+    // 该消息之后的照片（比消息本体新）
+    var anchorPhotos = photoByAnchor[i];
+    if (anchorPhotos) {
+      for (var pi = anchorPhotos.length - 1; pi >= 0 && units.length < limit; pi--) {
+        units.push(photoUnit(anchorPhotos[pi]));
+      }
+    }
+
+    var m = chat.messages[i];
+    if (!m || m.role !== 'assistant') continue;
+    var raw = stripTriggerTags(m.content || '');
+    if (!raw.trim()) continue;
+
+    var pushed = false;
+    if (speakerMode && hasSpeakerTags(raw)) {
+      var segs = splitBySpeaker(raw);
+      if (segs.length > 0) {
+        // 倒退收集：同一消息内也从最后一段往前推，最后整体 reverse 得到正确顺序
+        for (var s = segs.length - 1; s >= 0 && units.length < limit; s--) {
+          var segText = stackCollapseWs(segs[s].text);
+          if (!segText) continue;
+          var segWho = segs[s].speaker || '';
+          units.push({
+            idx: i, seg: s, speaker: segWho,
+            face: segWho ? speakerFace(segWho) : soloFace,
+            text: segText
+          });
+          pushed = true;
+        }
+      }
+    }
+    if (!pushed && (speakerMode && hasSpeakerTags(raw) ? false : true)) {
+      // 未开启说话人区分 / 无标记：整条消息一个气泡
+      units.push({ idx: i, seg: -1, speaker: '', face: soloFace, text: stackCollapseWs(raw) });
+    }
+  }
+
+  units.reverse();
+
+  // 锚点在所有消息之前的照片（空聊天里拍的）：补在时间线最前，同样受条数配额约束
+  if (photoTail.length && units.length < limit) {
+    var room = limit - units.length;
+    units = photoTail.slice(-room).map(photoUnit).concat(units);
+  }
+
+  return units;
 }
 
 function renderBubbleStack() {
