@@ -142,7 +142,7 @@ async function compressChat() {
   }
   compressMessages.push({
     role: 'user',
-    content: PROMPT_MEMORY
+    content: getMemoryPrompt()
   });
 
   // 记录压缩日志

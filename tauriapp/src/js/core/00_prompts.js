@@ -97,3 +97,64 @@ var LOG_NAME_MEMORY = ' [压缩记忆]';
 var LOG_NAME_PHOTO = ' [拍照]';
 var LOG_NAME_AUTO_TOPIC = ' [自动话题]';
 var LOG_NAME_GROUP_INIT = ' [群聊初始化]';
+
+// ==================== 自定义提示词（设置 → 数据 → 功能提示词调整） ====================
+// 用户可在设置中覆盖以下三个功能的运行时控制提示词：
+//   memory   → 记忆功能（/记忆、🧠 按钮）
+//   continue → 继续功能（/继续、▶ 按钮）
+//   photo    → 拍照功能（📷 拍照按钮）
+// 覆盖值为空字符串时使用本文件的默认值。
+
+/* 读取某个功能的自定义提示词（未自定义时返回空字符串） */
+function getPromptOverride(type) {
+  try {
+    if (typeof appData !== 'undefined' && appData && appData.settings && appData.settings.promptOverrides) {
+      return appData.settings.promptOverrides[type] || '';
+    }
+  } catch (e) { /* ignore */ }
+  return '';
+}
+
+/* 记忆功能实际发送的压缩指令 */
+function getMemoryPrompt() {
+  return getPromptOverride('memory') || PROMPT_MEMORY;
+}
+
+/* 继续功能实际发送的控制提示词（空字符串/null 表示不附带额外消息） */
+function getContinuePrompt() {
+  var override = getPromptOverride('continue');
+  if (override !== '') return override;
+  return (typeof PROMPT_CONTINUE === 'string') ? PROMPT_CONTINUE : '';
+}
+
+/* 拍照正文：单角色时用指定角色的推算指令，否则用默认多角色正文 */
+function getPhotoBodyDefault(specificCharacter) {
+  if (specificCharacter) {
+    return '请根据以上对话中角色的外貌设定和聊天记录，推算角色' + specificCharacter + '的当前外貌和状态。';
+  }
+  return PROMPT_TAKE_PHOTO_BODY;
+}
+
+/* 拍照模板默认值（设置编辑器中展示）。
+   占位符：${photoBody} 角色推算正文 / ${roleList} 涉及角色列表 / ${appearanceGuide} 外貌设定参考 */
+function getPhotoPromptTemplate() {
+  return PROMPT_TAKE_PHOTO_PREAMBLE + '\n${photoBody}\n${roleList}\n${appearanceGuide}\n'
+    + PROMPT_TAKE_PHOTO_INSTRUCTION + PROMPT_TAKE_PHOTO_SEPARATOR + PROMPT_TAKE_PHOTO_EXAMPLE + PROMPT_TAKE_PHOTO_NOTE;
+}
+
+/* 组装拍照功能实际发送的完整指令 */
+function buildPhotoPrompt(specificCharacter, roleList, appearanceGuide) {
+  var tpl = getPromptOverride('photo') || getPhotoPromptTemplate();
+  return tpl
+    .replace(/\$\{photoBody\}/g, getPhotoBodyDefault(specificCharacter))
+    .replace(/\$\{roleList\}/g, roleList || '')
+    .replace(/\$\{appearanceGuide\}/g, appearanceGuide || '');
+}
+
+/* 各功能默认提示词（设置编辑器中使用） */
+function getDefaultPromptText(type) {
+  if (type === 'memory') return PROMPT_MEMORY;
+  if (type === 'continue') return getContinuePrompt();
+  if (type === 'photo') return getPhotoPromptTemplate();
+  return '';
+}

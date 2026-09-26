@@ -21,6 +21,8 @@ function createDefaultData() {
       photoNotification: false,
       autoTopicInterval: 10,
       autoTopicMaxCount: 5,
+      // 功能提示词自定义（设置 → 数据 → 功能提示词调整），空字符串表示使用默认值
+      promptOverrides: { memory: '', 'continue': '', photo: '' },
       comfyui: {
         enabled: false,
         serverUrl: 'http://127.0.0.1:8188',

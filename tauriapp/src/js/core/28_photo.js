@@ -326,19 +326,8 @@ function buildPhotoRequestMessages(chat, sp, specificCharacter) {
     }
   }
 
-  // 构建拍照指令
-  var userContent = PROMPT_TAKE_PHOTO_PREAMBLE + '\n';
-  if (specificCharacter) {
-    userContent += '请根据以上对话中角色的外貌设定和聊天记录，推算角色' + specificCharacter + '的当前外貌和状态。\n';
-  } else {
-    userContent += PROMPT_TAKE_PHOTO_BODY + '\n';
-  }
-  userContent += roleList + '\n';
-  userContent += appearanceGuide + '\n';
-  userContent += PROMPT_TAKE_PHOTO_INSTRUCTION;
-  userContent += PROMPT_TAKE_PHOTO_SEPARATOR;
-  userContent += PROMPT_TAKE_PHOTO_EXAMPLE;
-  userContent += PROMPT_TAKE_PHOTO_NOTE;
+  // 构建拍照指令（支持设置中的自定义模板，占位符见 getPhotoPromptTemplate）
+  var userContent = buildPhotoPrompt(specificCharacter, roleList, appearanceGuide);
 
   messages.push({ role: 'user', content: userContent });
 

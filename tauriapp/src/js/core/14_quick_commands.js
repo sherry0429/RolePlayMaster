@@ -37,6 +37,8 @@ function triggerContinue() {
     showToast('请先发送消息再继续', 'error');
     return;
   }
-  requestAI();
+  // 继续功能的控制提示词（可在设置中自定义；为空则直接以已有上下文继续）
+  var continuePrompt = getContinuePrompt();
+  requestAI(continuePrompt ? [{ role: 'user', content: continuePrompt }] : null);
 }
 

@@ -305,12 +305,97 @@ function updatePhotoFeatureVisibility() {
   var comfyuiEnabled = appData.settings.comfyui && appData.settings.comfyui.enabled;
   var photoBtn = document.getElementById('photoActionBtn');
   var albumBtn = document.getElementById('albumBtn');
-  
+
   if (photoBtn) {
     photoBtn.style.display = comfyuiEnabled ? '' : 'none';
   }
   if (albumBtn) {
     albumBtn.style.display = comfyuiEnabled ? '' : 'none';
   }
+}
+
+// ==================== 功能提示词调整（设置 → 数据） ====================
+
+var PROMPT_ADJUST_META = {
+  memory: {
+    title: '记忆功能调整',
+    desc: '「🧠 记忆」按钮 / /记忆 命令触发时，发送给 AI 的记忆压缩指令。'
+  },
+  'continue': {
+    title: '继续功能调整',
+    desc: '「▶ 继续」按钮 / /继续 命令触发时，附带发送给 AI 的控制提示词（不会进入聊天记录）。留空则直接以已有上下文继续。'
+  },
+  photo: {
+    title: '拍照功能调整',
+    desc: '拍照请求发送给 AI 的指令模板。占位符：${photoBody}＝角色推算正文（单角色/多角色自动切换）、${roleList}＝涉及角色列表、${appearanceGuide}＝角色外貌设定参考。'
+  }
+};
+
+var _promptAdjustType = null;
+
+/* 打开功能提示词调整弹框 */
+function openPromptAdjust(type) {
+  var meta = PROMPT_ADJUST_META[type];
+  if (!meta || !appData.settings.promptOverrides) return;
+  _promptAdjustType = type;
+
+  var override = getPromptOverride(type);
+  var def = getDefaultPromptText(type);
+  var current = (override !== '') ? override : def;
+
+  var overlay = document.getElementById('modalOverlay');
+  var content = document.getElementById('modalContent');
+  content.style.maxWidth = '680px';
+
+  var html = '<h3>' + escHtml(meta.title) + '</h3>';
+  html += '<p class="hint" style="margin:0 0 6px;">' + escHtml(meta.desc) + '</p>';
+  if (override !== '') {
+    html += '<p class="hint" style="margin:0 0 6px;color:#e6a23c;">当前为自定义值，点击「重置」可恢复默认。</p>';
+  } else {
+    html += '<p class="hint" style="margin:0 0 6px;">当前为默认值。</p>';
+  }
+  html += '<textarea id="promptAdjustTextarea" style="width:100%;min-height:300px;max-height:55vh;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:12px;line-height:1.5;resize:vertical;font-family:monospace;">' + escHtml(current) + '</textarea>';
+  html += '<div class="modal-btns">';
+  html += '<button class="btn-sm btn-primary" onclick="savePromptAdjust()">保存</button>';
+  html += '<button class="btn-sm btn-ghost" onclick="resetPromptAdjust()">重置</button>';
+  html += '<button class="btn-sm btn-ghost" onclick="closeModal()">取消</button>';
+  html += '</div>';
+
+  content.innerHTML = html;
+  overlay.classList.add('show');
+  overlay._onConfirm = null;
+}
+
+/* 保存自定义提示词（与默认一致或为空时视为使用默认值） */
+function savePromptAdjust() {
+  if (!_promptAdjustType) {
+    closeModal();
+    return;
+  }
+  var ta = document.getElementById('promptAdjustTextarea');
+  var val = ta ? ta.value : '';
+  var def = getDefaultPromptText(_promptAdjustType);
+  var trimmed = val.trim();
+  appData.settings.promptOverrides[_promptAdjustType] = (trimmed === '' || trimmed === def.trim()) ? '' : val;
+  saveData();
+  addProgramLog(LOG_TYPE_SYSTEM, {
+    summary: (appData.settings.promptOverrides[_promptAdjustType] !== '' ? '自定义' : '恢复默认') + PROMPT_ADJUST_META[_promptAdjustType].title
+  });
+  closeModal();
+  showToast(appData.settings.promptOverrides[_promptAdjustType] !== '' ? '已保存自定义提示词' : '与默认一致，已使用默认提示词', 'success');
+  _promptAdjustType = null;
+}
+
+/* 重置为默认值：清空自定义并回填默认文本（弹框保持打开，方便确认） */
+function resetPromptAdjust() {
+  if (!_promptAdjustType) return;
+  appData.settings.promptOverrides[_promptAdjustType] = '';
+  var ta = document.getElementById('promptAdjustTextarea');
+  if (ta) ta.value = getDefaultPromptText(_promptAdjustType);
+  saveData();
+  addProgramLog(LOG_TYPE_SYSTEM, {
+    summary: '重置' + PROMPT_ADJUST_META[_promptAdjustType].title
+  });
+  showToast('已重置为默认值', 'success');
 }
 

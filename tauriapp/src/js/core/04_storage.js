@@ -24,6 +24,10 @@ async function loadData() {
       if (appData.settings.autoTopicInterval === undefined) appData.settings.autoTopicInterval = 10;
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
+      // 兼容新版：功能提示词自定义
+      if (!appData.settings.promptOverrides) {
+        appData.settings.promptOverrides = { memory: '', 'continue': '', photo: '' };
+      }
       // 兼容新版：补全 comfyui 设置
       if (!appData.settings.comfyui) {
         appData.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768, timeout: 300 };
@@ -76,6 +80,10 @@ async function loadData() {
       if (appData.settings.autoTopicInterval === undefined) appData.settings.autoTopicInterval = 10;
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
+      // 兼容新版：功能提示词自定义
+      if (!appData.settings.promptOverrides) {
+        appData.settings.promptOverrides = { memory: '', 'continue': '', photo: '' };
+      }
       // 兼容新版：补全 comfyui 设置
       if (!appData.settings.comfyui) {
         appData.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768, timeout: 300 };

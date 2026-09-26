@@ -69,8 +69,9 @@ function sendMessage() {
       showToast('请先发送消息再继续', 'error');
       return;
     }
-    // 直接触发 AI 继续请求
-    requestAI();
+    // 直接触发 AI 继续请求（附带可在设置中自定义的控制提示词）
+    var continuePrompt = getContinuePrompt();
+    requestAI(continuePrompt ? [{ role: 'user', content: continuePrompt }] : null);
     return;
   }
 
