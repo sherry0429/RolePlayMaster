@@ -265,6 +265,11 @@
                 <input type="checkbox" id="speakerMode" checked>
                 <span class="switch-ui" aria-hidden="true"></span>
               </label>
+              <label class="switch-line">
+                <span class="switch-label">新版 XML System Prompt<em>记忆压缩输出结构化 SPX 格式（灰度开关，默认开启）</em></span>
+                <input type="checkbox" id="useSpxFormat" checked>
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
             </div>
           </div>
 
@@ -312,6 +317,16 @@
               <label class="switch-line">
                 <span class="switch-label">拍照完成系统通知<em>拍照结束后发送系统通知（Windows / macOS）</em></span>
                 <input type="checkbox" id="photoNotification">
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-block">
+            <div class="block-body">
+              <label class="switch-line">
+                <span class="switch-label">AI 自动拍照<em>剧情出现值得记录的画面时由 AI 调用工具自动拍摄（需启用图像生成，默认关闭）</em></span>
+                <input type="checkbox" id="autoPhotoTool">
                 <span class="switch-ui" aria-hidden="true"></span>
               </label>
             </div>
@@ -680,6 +695,8 @@
 <!-- ==================== 核心逻辑（由网页版移植，保持全局函数风格） ==================== -->
 <script src="js/core/01_constants.js"></script>
 <script src="js/core/00_prompts.js"></script>
+<script src="js/core/sp_format.js"></script>
+<script src="js/core/tool_registry.js"></script>
 <script src="js/core/02_state.js"></script>
 <script src="js/core/03_model.js"></script>
 <script src="js/core/04_storage.js"></script>

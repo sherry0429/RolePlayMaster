@@ -12,7 +12,6 @@ var PROMPT_MEMORY = `请对以上对话内容进行分析总结，输出system_p
 - 对任务定义原封不动的保留。
 - 更新角色设定，角色设定不包括用户本身，角色设定包括其他聊天角色的身份，外貌，性格，个人经历。外貌，个人经历要尽可能详细。每部分描述不要涉及不相关的内容
 - 更新背景故事，背景故事要简洁精炼，只记录涉及世界观和重大事件的内容，不超过100字。
-- 更新特殊物品，只记录与性调教相关的物理意义上的物品，如建筑首饰等，不包括事件，标准等逻辑上的内容。
 - 更新回复样例，记录每个角色根据当前性格生活化的一句聊天内容，要简短，体现人物性格。一人一句。
 以下为模版：
 # 任务定义
@@ -30,15 +29,29 @@ var PROMPT_MEMORY = `请对以上对话内容进行分析总结，输出system_p
 # 背景故事
 ...
 
-# 特殊物品
-- 物品1: ...
-- 物品2: ...
-
 # 回复样例
 [角色1]....
 [角色2]....
 
 直接输出内容，不需要额外的说明。';`
+
+// ==================== 记忆压缩（SPX 新格式） ====================
+// useSpxFormat 开启时（默认）发送此模板，要求 AI 在当前 <roleplay_sp> 基础上输出 SPX
+// 解析与合并逻辑见 sp_format.js（mergeSp：rules 禁改、缺失节点从旧版回填）
+var PROMPT_MEMORY_SPX = `请对以上对话内容进行分析总结，在当前 <roleplay_sp> 的基础上输出更新后的完整 <roleplay_sp>（XML 格式）。
+- <task> 节点原封不动保留。
+- <rules> 节点整体原样保留，禁止修改。
+- <characters> 更新每个角色的身份(identity)、外貌(appearance)、性格(personality)、经历(history)。外貌与经历要尽可能详细。每部分描述不要涉及不相关的内容。不包括用户本身。
+- <backstory> 背景故事要简洁精炼，只记录涉及世界观和重大事件的内容，不超过100字。
+- <state> 根据最新剧情更新当前状态。
+- <samples> 回复样例：记录每个角色根据当前性格生活化的一句聊天内容，要简短，体现人物性格。一人一条，char 属性填角色名。
+
+严格输出要求（必须遵守）：
+1. 只输出 XML 本体，第一个字符必须是 <（即 <roleplay_sp），最后一个字符必须是 >；
+2. 禁止使用 Markdown 标题（不要出现 # 任务定义 这种旧格式），禁止用反引号代码块包裹；
+3. 不要在 XML 前后添加任何说明、寒暄或总结文字；
+4. 所有节点标签必须正确闭合，正文中如需使用 < 或 & 请写成 &lt; &amp;。
+当前 <roleplay_sp> 已作为 system 消息提供。`;
 
 // ==================== 继续对话 ====================
 // 点击「▶ /继续」按钮或输入 /继续 时触发
@@ -61,7 +74,30 @@ var PROMPT_TAKE_PHOTO_NOTE = '\n注意：请直接输出 prompt 内容，不要�
 // 建群后自动调用 AI 补充角色设定、背景故事和回复样例
 // confirmCharSelect() → autoInitGroupChat() 中使用
 // 注意：${charDescList} 会被替换为角色描述列表
-var PROMPT_GROUP_INIT_TEMPLATE = '是一个多角色扮演模拟引擎。现在需要你根据以下角色信息，完成初始化设置：\n\n角色列表：\n${charDescList}\n\n请完成以下任务，直接输出结果，不需要额外说明：\n1. 为每个角色补充详细的设定，包含角色的外貌、身份背景、性格。其中外貌进行详细描写\n2. 随机生成一句话的初始场景作为背景故事，要有剧情冲突\n3. 为每个角色生成一句回复样例，突出人物性格，用【角色名】开头\n4. 如果角色名是知名二次元角色，则直接套用二次元设定。\n\n外貌描写示例：\n<外貌>身高165cm，一头柔顺的黑色长发垂至腰际，斜刘海半遮右眼，琥珀般的眼眸清澈见底。皮肤白皙，常穿白色连衣裙配米色开衫。</外貌>\n\n身份描写示例：\n<身份>XX大学文学系大二学生，学生会文艺部部长，从小学习古筝，参加过多场市级演出。家境优越但不张扬。<身份>\n\n性格描写示例：\n<性格>温柔细腻但内心坚韧，待人接物有礼有节，偶尔会流露出俏皮的一面。责任感强，是朋友们信赖的倾诉对象。</性格>\n\n输出格式要求（严格按照以下格式）：\n# 角色设定\n【角色名称】\n  <外貌>XXXXXX</外貌>\n  <身份>XXXXXX</身份>\n  <性格>XXXXXX</性格>\n\n# 背景故事\n（一句话场景描述）\n\n# 回复样例\n（每个角色一句话，用【角色名】开头）';
+var PROMPT_GROUP_INIT_TEMPLATE = `是一个多角色扮演模拟引擎。现在需要你根据以下角色信息，完成初始化设置。
+
+角色列表：
+\${charDescList}
+
+请完成以下任务：
+1. 为每个角色补充详细的设定，包含角色的外貌、身份背景、性格。其中外貌进行详细描写
+2. 随机生成一句话的初始场景作为背景故事，要有剧情冲突
+3. 为每个角色生成一句回复样例，突出人物性格
+4. 如果角色名是知名二次元角色，则直接套用二次元设定。
+
+严格按照以下 XML 格式输出（只输出这三个节点，不要输出 <roleplay_sp> 根节点，不要输出 task / rules，不要额外说明）：
+<characters>
+  <character name="角色名">
+    <identity>身份背景描写</identity>
+    <appearance>外貌详细描写，例如：身高165cm，一头柔顺的黑色长发垂至腰际，斜刘海半遮右眼，琥珀般的眼眸清澈见底。皮肤白皙，常穿白色连衣裙配米色开衫。</appearance>
+    <personality>性格描写，例如：温柔细腻但内心坚韧，待人接物有礼有节，偶尔会流露出俏皮的一面。</personality>
+    <history>个人经历描写</history>
+  </character>
+</characters>
+<backstory>一句话场景描述，要有剧情冲突</backstory>
+<samples>
+  <sample char="角色名">一句生活化的台词</sample>
+</samples>`;
 function buildGroupInitPrompt(charDescList) {
   return PROMPT_GROUP_INIT_TEMPLATE.replace('${charDescList}', charDescList);
 }
@@ -74,23 +110,6 @@ var PROMPT_AUTO_TOPIC_TEMPLATE = '如果当前没有进行中事件，则随机�
 function buildAutoTopicPrompt(charHint) {
   return PROMPT_AUTO_TOPIC_TEMPLATE.replace('{charHint}', charHint || '');
 }
-
-// ==================== 自动拍照触发 ====================
-// 创建群聊时追加到 system_prompt 末尾（见 29_群聊功能.js）
-// 让 AI 根据场景/外貌变化或用户要求，自动标记需要拍照的角色
-var PROMPT_AUTO_PHOTO_TRIGGER = `每次回复根据当前聊天记录，当发生以下情况时，必须在回复结尾添加拍照标记：
-1. 角色的外貌、衣着、发型、场景、姿势、表情、情绪发生任何明显变化，或用户使用（旁白）暗示即将发生变化等
-2. 用户要求角色拍照、记录、留念、合影、合照等
-3. 剧情进入重要节点、名场面、高潮、特殊时刻等
-4. 角色进行了换装、变身、穿上或者脱下衣服等
-
-**以上条件只要满足任意一项，就必须输出拍照标记，不得省略。**
-**每个角色最多包含一个标记**
-**拍照标记后不再跟其他对话内容**
-
-拍照标记格式：
-<trigger type="photo" character="角色名" />
-`;
 
 // ==================== 显示在日志中的友好名称 ====================
 var LOG_NAME_MEMORY = ' [压缩记忆]';
@@ -151,9 +170,14 @@ function buildPhotoPrompt(specificCharacter, roleList, appearanceGuide) {
     .replace(/\$\{appearanceGuide\}/g, appearanceGuide || '');
 }
 
-/* 各功能默认提示词（设置编辑器中使用） */
+/* 各功能默认提示词（设置编辑器中使用）
+   memory：跟随「新版 XML System Prompt」开关返回对应格式的默认模板，
+   避免编辑器在 SPX 模式下仍展示旧版 Markdown 模板造成误导 */
 function getDefaultPromptText(type) {
-  if (type === 'memory') return PROMPT_MEMORY;
+  if (type === 'memory') {
+    var useSpx = !appData.settings || appData.settings.useSpxFormat !== false;
+    return useSpx ? PROMPT_MEMORY_SPX : PROMPT_MEMORY;
+  }
   if (type === 'continue') return getContinuePrompt();
   if (type === 'photo') return getPhotoPromptTemplate();
   return '';

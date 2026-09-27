@@ -147,7 +147,10 @@ async function triggerAutoTopic() {
   }
   var startIdx = sp.lastIndex + 1;
   for (var i = startIdx; i < chat.messages.length; i++) {
-    messages.push({ role: chat.messages[i].role, content: chat.messages[i].content });
+    var tm = chat.messages[i];
+    // 工具协议消息（tool ack / 纯工具调用）不进入自动话题上下文
+    if (isToolProtocolMessage(tm)) continue;
+    messages.push({ role: tm.role, content: tm.content });
   }
 
   // 构建自动话题提示 - 优先使用聊天框关联的角色，避免发散到角色图库全部角色

@@ -127,47 +127,9 @@ async function confirmCharSelect() {
 }
 
 function generateGroupSystemPrompt(selectedChars) {
-  var charDescList = selectedChars.map(c => {
-    var lines = [`- ${c.name}`];
-    if (c.description) {
-      lines.push(`  - 身份：${c.description}`);
-    } else {
-      lines.push(`  - 外貌：（待补充）`);
-      lines.push(`  - 身份：（待补充）`);
-      lines.push(`  - 性格：（待补充）`);
-    }
-    return lines.join('\n');
-  }).join('\n');
-
-  var charNames = selectedChars.map(c => c.name).join('、');
-
-  // 动态判断是否包含自动拍照触发（仅 ComfyUI 启用时）
-  var photoTrigger = '';
-  if (appData.settings.comfyui && appData.settings.comfyui.enabled) {
-    photoTrigger = PROMPT_AUTO_PHOTO_TRIGGER;
-  }
-
-  return `# 任务定义
-你现在是一个多角色扮演模拟引擎，负责驱动一个叙事世界。你的任务是：
-- 严格遵循指定角色的身份、性格、知识背景和说话风格。
-- 用户：根据关系和性格有对应亲密称呼，默认为你。
-- 推动符合当前世界观下的合理剧情发展。
-- 在需要时自动完成各角色之间的对话、必要时包括行动和内在心理描写。
-- 回复时以角色名字用【】开头。回复消息除了角色名字用【】包括外，不要再使用【】。
-- ${photoTrigger}
-
-# 角色设定
-${charDescList}
-
-# 背景故事
-（待AI生成）
-
-# 当前状态
-无
-
-# 回复样例
-（待AI生成）
-`;
+  // SPX 骨架：task/rules 由 App 固定提供（说话人格式等），角色/样例由 AI 初始化填充
+  // 拍照自动触发不再写入 SP（由 function call take_photo 承担，见 tool_registry.js）
+  return buildGroupSpTemplate(selectedChars);
 }
 
 async function autoInitGroupChat(chatId, selectedChars) {
@@ -220,31 +182,17 @@ async function autoInitGroupChat(chatId, selectedChars) {
     var content = result.choices?.[0]?.message?.content || '';
 
     if (content) {
-      // 清理 AI 返回的内容：去除 markdown 包裹和多余人话
-      content = cleanAndRepairSp(content, '');
-      // autoInitGroupChat 的 fullSp 已硬编码任务定义，需要去掉 AI 可能自带的
-      content = removeSection(content, '任务定义');
-
-      // 更新 System Prompt 为完整版本
-      var fullSp = `# 任务定义
-你现在是一个多角色扮演模拟引擎，负责驱动一个叙事世界。你的任务是：
-- 严格遵循指定角色的身份、性格、知识背景和说话风格。
-- 用户：根据关系和性格有对应亲密称呼，默认为你。
-- 推动符合当前世界观下的合理剧情发展。
-- 在需要时自动完成各角色之间的对话、必要时包括行动和内在心理描写。
-- 回复时以角色名字用【】开头。如果是旁白则直接加在文本开始或结尾。除角色名外消息内不再存在【】字符
-- ${PROMPT_AUTO_PHOTO_TRIGGER}
-
-${content}
-
-# 当前状态
-无
-`;
-
-      chat.spVersions[0].content = fullSp;
-      saveData();
-      if (currentChatId === chatId) {
-        updateSpDisplay();
+      // AI 只输出 characters/backstory/samples 片段；与 SPX 骨架合并（task/rules 来自骨架，禁改）
+      var merged = mergeSp(content, chat.spVersions[0].content);
+      if (merged && isSpFormat(merged)) {
+        chat.spVersions[0].content = merged;
+        saveData();
+        if (currentChatId === chatId) {
+          updateSpDisplay();
+        }
+      } else {
+        // 解析失败保留骨架，用户可手动编辑 SP
+        showToast('群聊初始化结果解析失败，请手动编辑 System Prompt', 'error');
       }
     }
   } catch (e) {
@@ -574,6 +522,12 @@ async function syncFromCloud() {
 
 function applyImportedData(data) {
   appData = data;
+  // SP 旧格式迁移（含导入的旧数据）
+  if (appData.chats) {
+    for (var mid of Object.keys(appData.chats)) {
+      migrateChatSpVersions(appData.chats[mid]);
+    }
+  }
   saveData();
   // 刷新界面
   applyTheme(appData.theme);

@@ -91,6 +91,8 @@ function fillSettingsForm() {
   setValue('apiKey', s.apiKey || '');
   setValue('compressThreshold', s.compressThreshold || COMPRESS_THRESHOLD);
   setChecked('speakerMode', s.speakerMode !== false);
+  setChecked('useSpxFormat', s.useSpxFormat !== false);
+  setChecked('autoPhotoTool', !!s.autoPhotoTool);
   setChecked('autoTopic', !!s.autoTopic);
   setChecked('chatNotification', !!s.chatNotification);
   setChecked('photoNotification', !!s.photoNotification);

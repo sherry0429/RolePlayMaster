@@ -24,6 +24,8 @@ async function loadData() {
       if (appData.settings.autoTopicInterval === undefined) appData.settings.autoTopicInterval = 10;
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
+      if (appData.settings.useSpxFormat === undefined) appData.settings.useSpxFormat = true;
+      if (appData.settings.autoPhotoTool === undefined) appData.settings.autoPhotoTool = false;
       // 兼容新版：功能提示词自定义
       if (!appData.settings.promptOverrides) {
         appData.settings.promptOverrides = { memory: '', 'continue': '', photo: '' };
@@ -59,6 +61,7 @@ async function loadData() {
           if (appData.chats[id].photos === undefined) {
             appData.chats[id].photos = [];
           }
+          migrateChatSpVersions(appData.chats[id]);
         }
       }
       return true; // IndexedDB 有数据
@@ -80,6 +83,8 @@ async function loadData() {
       if (appData.settings.autoTopicInterval === undefined) appData.settings.autoTopicInterval = 10;
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
+      if (appData.settings.useSpxFormat === undefined) appData.settings.useSpxFormat = true;
+      if (appData.settings.autoPhotoTool === undefined) appData.settings.autoPhotoTool = false;
       // 兼容新版：功能提示词自定义
       if (!appData.settings.promptOverrides) {
         appData.settings.promptOverrides = { memory: '', 'continue': '', photo: '' };
@@ -115,6 +120,7 @@ async function loadData() {
           if (appData.chats[id].photos === undefined) {
             appData.chats[id].photos = [];
           }
+          migrateChatSpVersions(appData.chats[id]);
         }
       }
 

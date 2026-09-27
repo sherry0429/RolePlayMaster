@@ -44,6 +44,8 @@ function renderMessages(shouldScrollToBottom = true) {
   // 只渲染最近的消息，并在每个消息之后检查是否有对应的照片
   for (var idx = startIndex; idx < totalMessages; idx++) {
     var msg = chat.messages[idx];
+    // 跳过工具协议消息（tool ack / 纯工具调用，不含对话正文）
+    if (isToolProtocolMessage(msg)) continue;
     var msgContent = stripTriggerTags(msg.content);
     var isUser = msg.role === 'user';
     var avatar = isUser ? '👤' : '🤖';

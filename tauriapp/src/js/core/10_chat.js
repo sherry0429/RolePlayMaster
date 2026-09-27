@@ -64,6 +64,8 @@ function selectChat(id) {
   if (isReplaying) stopReplay();
   currentChatId = id;
   var chat = appData.chats[id];
+  // SP 旧格式懒迁移（Markdown+XML 混合格式 → SPX，原文存 legacyContent）
+  if (migrateChatSpVersions(chat)) saveData();
   // 重置消息渲染数量
   resetRenderedCount();
   // 更新顶部名称
@@ -82,45 +84,21 @@ function selectChat(id) {
 }
 
 // ===== SP 解析辅助函数 =====
-
-function extractTagContent(text, tagName) {
-  var regex = new RegExp('<' + tagName + '>([\\s\\S]*?)</' + tagName + '>', 'i');
-  var match = text.match(regex);
-  return match ? match[1].trim() : '';
-}
+// SPX 结构化读取统一走 sp_format.js（parseSp / getSpIdentityFields / getSpCharacterNames），
+// 此处仅保留旧格式兜底与表单组装逻辑。
 
 function extractCharIdentityFromSP(spContent, charName) {
   if (!spContent || !charName) return '';
-
-  var charMarker = '【' + charName + '】';
-  var charIdx = spContent.indexOf(charMarker);
-  if (charIdx === -1) return '';
-
-  var afterChar = spContent.substring(charIdx + charMarker.length);
-  var nextCharIdx = afterChar.indexOf('【');
-  var charSection = nextCharIdx !== -1 ? afterChar.substring(0, nextCharIdx) : afterChar;
-
-  var identity = extractTagContent(charSection, '身份');
-  var personality = extractTagContent(charSection, '性格');
-
+  var fields = getSpIdentityFields(spContent, charName);
   var parts = [];
-  if (identity) parts.push('身份：' + identity);
-  if (personality) parts.push('性格：' + personality);
-
+  if (fields.identity) parts.push('身份：' + fields.identity);
+  if (fields.personality) parts.push('性格：' + fields.personality);
   return parts.join('\n');
 }
 
 function findAllCharNamesInSP(spContent) {
   if (!spContent) return [];
-  var names = [];
-  var regex = /【([^】]+)】/g;
-  var match;
-  while ((match = regex.exec(spContent)) !== null) {
-    if (names.indexOf(match[1]) === -1) {
-      names.push(match[1]);
-    }
-  }
-  return names;
+  return getSpCharacterNames(spContent);
 }
 
 function findNewCharsInSP(spContent, existingChars) {

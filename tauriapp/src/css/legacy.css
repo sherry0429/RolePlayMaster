@@ -2779,3 +2779,222 @@ html, body {
 .sync-progress-container.active .sync-progress-label {
   animation: syncPulse 1.5s ease-in-out infinite;
 }
+/* ==================== SP 区块卡片编辑器 ==================== */
+.sp-editor-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.sp-tab-btn {
+  padding: 5px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+}
+.sp-tab-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.sp-editor-body {
+  max-height: 58vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sp-card {
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--blk, var(--accent));
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--blk-bg, var(--bg-secondary));
+}
+.sp-card-muted {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-align: center;
+  padding: 8px;
+}
+.sp-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blk, var(--text-primary));
+  margin-bottom: 8px;
+}
+.sp-card-hint {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: 6px;
+}
+.sp-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  font-family: inherit;
+  outline: none;
+  margin-bottom: 6px;
+}
+.sp-input:focus {
+  border-color: var(--accent);
+}
+.sp-char-card {
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: var(--bg-primary);
+}
+.sp-char-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.sp-char-head .sp-char-name {
+  flex: 1;
+  margin-bottom: 0;
+  font-weight: 600;
+}
+.sp-char-del {
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+}
+.sp-char-del:hover {
+  color: var(--danger);
+}
+
+
+/* ==================== SP 区块展示（只读，彩色区块） ==================== */
+.sp-content .sp-blocks,
+.sp-blocks {
+  white-space: normal;
+}
+.sp-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sp-block {
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--blk, var(--accent));
+  border-radius: 10px;
+  background: var(--blk-bg, var(--bg-secondary));
+  padding: 8px 10px;
+}
+.sp-block-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blk, var(--accent));
+  margin-bottom: 6px;
+}
+.sp-block-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blk, var(--accent));
+  flex: 0 0 auto;
+}
+.sp-block-meta {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+.sp-block-body {
+  font-size: 12.5px;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+.sp-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.sp-line.sp-blank {
+  height: 5px;
+}
+.sp-block-empty {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.sp-char-block {
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.07);
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+.sp-char-block:last-child {
+  margin-bottom: 0;
+}
+.sp-char-block-head {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.sp-field {
+  display: flex;
+  gap: 6px;
+  margin-top: 3px;
+}
+.sp-field-label {
+  flex: 0 0 34px;
+  color: var(--text-tertiary);
+  font-size: 11.5px;
+}
+.sp-field-text {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.sp-sample-line {
+  margin-bottom: 3px;
+}
+.sp-sample-line:last-child {
+  margin-bottom: 0;
+}
+.sp-sample-char {
+  color: var(--blk, var(--accent));
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+/* ---- 区块配色（展示 .sp-block--x 与编辑 .sp-card--x 共用） ---- */
+.sp-block--task, .sp-card--task { --blk: #6366f1; --blk-bg: rgba(99, 102, 241, 0.07); }
+.sp-block--char, .sp-card--char { --blk: #0d9488; --blk-bg: rgba(13, 148, 136, 0.07); }
+.sp-block--backstory, .sp-card--backstory { --blk: #d97706; --blk-bg: rgba(217, 119, 6, 0.08); }
+.sp-block--state, .sp-card--state { --blk: #16a34a; --blk-bg: rgba(22, 163, 74, 0.08); }
+.sp-block--samples, .sp-card--samples { --blk: #db2777; --blk-bg: rgba(219, 39, 119, 0.07); }
+.sp-block--rules, .sp-card--rules { --blk: #64748b; --blk-bg: rgba(100, 116, 139, 0.08); }
+.sp-block--unknown, .sp-card--unknown {
+  --blk: #94a3b8;
+  --blk-bg: transparent;
+  border-style: dashed;
+}
+
+[data-theme="dark"] .sp-block--task, [data-theme="dark"] .sp-card--task { --blk: #a5b4fc; --blk-bg: rgba(99, 102, 241, 0.14); }
+[data-theme="dark"] .sp-block--char, [data-theme="dark"] .sp-card--char { --blk: #5eead4; --blk-bg: rgba(13, 148, 136, 0.16); }
+[data-theme="dark"] .sp-block--backstory, [data-theme="dark"] .sp-card--backstory { --blk: #fcd34d; --blk-bg: rgba(217, 119, 6, 0.15); }
+[data-theme="dark"] .sp-block--state, [data-theme="dark"] .sp-card--state { --blk: #86efac; --blk-bg: rgba(22, 163, 74, 0.15); }
+[data-theme="dark"] .sp-block--samples, [data-theme="dark"] .sp-card--samples { --blk: #f9a8d4; --blk-bg: rgba(219, 39, 119, 0.15); }
+[data-theme="dark"] .sp-block--rules, [data-theme="dark"] .sp-card--rules { --blk: #cbd5e1; --blk-bg: rgba(100, 116, 139, 0.16); }
+[data-theme="dark"] .sp-char-block { background: rgba(255, 255, 255, 0.05); }

@@ -72,6 +72,14 @@ async function requestAI(extraMessages) {
     requestBody.messages.splice(hintPos, 0, { role: 'system', content: emotionTool.hint });
   }
 
+  // AI 自动拍照（function call）：开关开启且图像生成可用时注入 take_photo 工具
+  // （与 show_emotion 共用同一套 tool_calls 聚合通道，见 tool_registry.js）
+  var photoToolEnabled = shouldInjectPhotoTool();
+  if (photoToolEnabled) {
+    requestBody.tools = requestBody.tools || [];
+    requestBody.tools.push(TAKE_PHOTO_TOOL);
+  }
+
   // 流式返回中的 tool_calls 增量（按 index 分片拼装）
   var pendingToolCalls = [];
 
@@ -150,6 +158,11 @@ async function requestAI(extraMessages) {
     document.getElementById('sendBtn').style.display = 'flex';
     document.getElementById('stopBtn').style.display = 'none';
     abortController = null;
+
+    // AI 自动拍照：take_photo 工具调用（先于情绪处理，空占位消息由各自逻辑清理）
+    if (photoToolEnabled) {
+      handlePhotoToolCalls(chat, pendingToolCalls, aiMsgIdx);
+    }
 
     // 情绪动画触发：解析模型给出的 show_emotion 调用并入队
     if (pendingToolCalls.length) {

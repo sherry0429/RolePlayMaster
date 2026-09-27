@@ -61,6 +61,8 @@ Tauri 的 WebView 不支持浏览器原生 `window.confirm()`（macOS 上恒返�
 | 桌面版 `js/core/` | 网页版 `js/` | 职责 |
 |---|---|---|
 | `00_prompts.js` | `00_prompts.js` | 提示词集中管理（记忆/拍照/群聊/自动话题） |
+| `sp_format.js` | `sp_format.js` | SPX（XML System Prompt）格式唯一出入口：解析/序列化/合并/旧格式迁移 |
+| `tool_registry.js` | `tool_registry.js` | 工具注册表：take_photo 自动拍照（function calling）的注入/解析/触发 |
 | `01_constants.js` | `01_常量.js` | 常量与 IndexedDB 底层封装 |
 | `02_state.js` | `02_全局状态.js` | 全局状态变量 |
 | `03_model.js` | `03_数据结构.js` | 默认数据结构与 `createChat` |

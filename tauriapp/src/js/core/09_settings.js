@@ -29,6 +29,8 @@ function saveSettings() {
   appData.settings.compressThreshold = (threshold >= 10) ? threshold : COMPRESS_THRESHOLD;
   // 新设置项
   appData.settings.speakerMode = document.getElementById('speakerMode').checked;
+  appData.settings.useSpxFormat = document.getElementById('useSpxFormat').checked;
+  appData.settings.autoPhotoTool = document.getElementById('autoPhotoTool').checked;
   appData.settings.autoTopic = document.getElementById('autoTopic').checked;
   appData.settings.chatNotification = document.getElementById('chatNotification').checked;
   // 拍照完成系统通知（设置 → 图像第一行）
@@ -207,6 +209,8 @@ async function confirmResetAll() {
     document.getElementById('apiKey').value = '';
     document.getElementById('compressThreshold').value = COMPRESS_THRESHOLD;
     document.getElementById('speakerMode').checked = true;
+    document.getElementById('useSpxFormat').checked = true;
+    document.getElementById('autoPhotoTool').checked = false;
     document.getElementById('autoTopic').checked = false;
     document.getElementById('chatNotification').checked = false;
     document.getElementById('autoTopicInterval').value = 10;
@@ -319,7 +323,7 @@ function updatePhotoFeatureVisibility() {
 var PROMPT_ADJUST_META = {
   memory: {
     title: '记忆功能调整',
-    desc: '「🧠 记忆」按钮 / /记忆 命令触发时，发送给 AI 的记忆压缩指令。'
+    desc: '「🧠 记忆」按钮 / /记忆 命令触发时，发送给 AI 的记忆压缩指令。默认值跟随「新版 XML System Prompt」开关：开启时要求 AI 输出 <roleplay_sp> XML。若压缩提示解析失败，多半是自定义指令与当前格式不匹配，点「重置」恢复默认即可。'
   },
   'continue': {
     title: '继续功能调整',
@@ -327,7 +331,7 @@ var PROMPT_ADJUST_META = {
   },
   photo: {
     title: '拍照功能调整',
-    desc: '拍照请求发送给 AI 的指令模板。占位符：${photoBody}＝角色推算正文（单角色/多角色自动切换）、${roleList}＝涉及角色列表、${appearanceGuide}＝角色外貌设定参考。'
+    desc: '拍照时「让 AI 生成画面描述」的指令模板，手动拍照与 AI 自动拍照（工具触发后）共用此模板。占位符：${photoBody}＝角色推算正文（单角色/多角色自动切换）、${roleList}＝涉及角色列表、${appearanceGuide}＝角色外貌设定参考。注：是否触发拍照由工具调用 / 手动按钮决定，不在此配置。'
   }
 };
 
