@@ -186,8 +186,8 @@ function buildPhotoRequestMessages(chat, sp, specificCharacter) {
     messages.push({ role: 'system', content: sp.content });
   }
 
-  // 获取最近的消息（最多 20 条）
-  var recentMessages = chat.messages.slice(-20);
+  // 获取最近的消息（最多 20 条，过滤工具协议消息）
+  var recentMessages = chat.messages.slice(-20).filter(function (m) { return !isToolProtocolMessage(m); });
   for (var i = 0; i < recentMessages.length; i++) {
     messages.push({
       role: recentMessages[i].role,
@@ -205,63 +205,17 @@ function buildPhotoRequestMessages(chat, sp, specificCharacter) {
     charNames = charNames.filter(function(n) { return n === specificCharacter; });
   }
 
-  // 获取角色外貌设定（从 SP 中提取，支持多角色）
+  // 获取角色外貌设定（SPX 结构化提取，旧格式自动兜底，见 sp_format.js）
   var appearanceSections = [];
   if (sp && sp.content) {
-    // 方式1：按【角色名】分段提取外貌
-    // 群聊初始化后 system_prompt 格式为：
-    // 【角色名】
-    //   <外貌>XXXXX</外貌>
-    //   <身份>XXXXX</身份>
-    //   <性格>XXXXX</性格>
-    var charSectionRegex = /【(.+?)】([\s\S]*?)(?=\n【|$)/g;
-    var sectionMatch;
-    while ((sectionMatch = charSectionRegex.exec(sp.content)) !== null) {
-      var charName = sectionMatch[1].trim();
-      var charBody = sectionMatch[2];
-      // 优先尝试 XML 标签格式 <外貌>...</外貌>
-      var appMatch = charBody.match(/<外貌>([\s\S]*?)<\/外貌>/);
-      // 未匹配到 XML 标签，再尝试冒号格式 外貌：
-      if (!appMatch) {
-        appMatch = charBody.match(/外貌[：:]([\s\S]*?)(?:\n\n|\n#{1,}|$)/);
-      }
-      if (appMatch) {
-        appearanceSections.push({
-          characterName: charName,
-          appearance: appMatch[1].trim()
-        });
-      }
+    appearanceSections = getAppearances(sp.content);
+    // 如果指定了角色，优先只保留该角色的外貌设定
+    if (specificCharacter) {
+      var namedSections = appearanceSections.filter(function (s) {
+        return s.characterName === specificCharacter;
+      });
+      if (namedSections.length > 0) appearanceSections = namedSections;
     }
-    // 方式2：如果按角色分段没找到，尝试全局匹配外貌（XML 标签格式优先）
-    if (appearanceSections.length === 0) {
-      // 尝试匹配 <外貌>...</外貌> XML 标签
-      var xmlRegex = /<外貌>([\s\S]*?)<\/外貌>/g;
-      var xmlMatch;
-      while ((xmlMatch = xmlRegex.exec(sp.content)) !== null) {
-        appearanceSections.push({
-          characterName: '',
-          appearance: xmlMatch[1].trim()
-        });
-      }
-      // 仍未匹配到，尝试冒号格式
-      if (appearanceSections.length === 0) {
-        var globalRegex = /外貌[：:]([\s\S]*?)(?:\n\n|\n#{1,}|$)/g;
-        var globalMatch;
-        while ((globalMatch = globalRegex.exec(sp.content)) !== null) {
-          appearanceSections.push({
-            characterName: '',
-            appearance: globalMatch[1].trim()
-          });
-        }
-      }
-    }
-  }
-
-  // 如果指定了角色，只保留该角色的外貌设定
-  if (specificCharacter) {
-    appearanceSections = appearanceSections.filter(function(s) {
-      return s.characterName === specificCharacter;
-    });
   }
 
   var roleList = charNames.length > 0 ? '涉及角色：' + charNames.join('、') + '。' : '';

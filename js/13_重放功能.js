@@ -30,6 +30,8 @@ function buildReplayUnits(messages, photos) {
 
   for (var i = 0; i < totalMessages; i++) {
     var msg = messages[i];
+    // 跳过工具协议消息（tool ack / 纯工具调用，不含对话正文）
+    if (isToolProtocolMessage(msg)) continue;
     if (msg.role === 'user') {
       units.push({ type: 'user', msgIdx: i, content: msg.content });
     } else if (speakerMode && hasSpeakerTags(msg.content)) {

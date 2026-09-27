@@ -84,6 +84,10 @@
           <input type="number" id="compressThreshold" placeholder="300" min="10" max="9999">
         </div>
         <div class="checkbox-group">
+          <input type="checkbox" id="useSpxFormat" checked>
+          <label for="useSpxFormat">使用新版 XML System Prompt（记忆压缩输出结构化格式）</label>
+        </div>
+        <div class="checkbox-group">
           <input type="checkbox" id="speakerMode" checked>
           <label for="speakerMode">说话人区分（用【】拆分多角色消息）</label>
         </div>
@@ -114,6 +118,10 @@
         <div class="checkbox-group">
           <input type="checkbox" id="comfyuiEnabled">
           <label for="comfyuiEnabled">启用 ComfyUI（关闭则使用默认 AI 生成图片）</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="autoPhotoTool">
+          <label for="autoPhotoTool">AI 自动拍照（工具调用触发，需启用 ComfyUI）</label>
         </div>
         <div class="form-group">
           <label>ComfyUI 服务器地址</label>
@@ -314,6 +322,8 @@
 
 <script src="./js/01_常量.js"></script>
 <script src="./js/00_prompts.js"></script>
+<script src="./js/sp_format.js"></script>
+<script src="./js/tool_registry.js"></script>
 <script src="./js/02_全局状态.js"></script>
 <script src="./js/03_数据结构.js"></script>
 <script src="./js/04_存储.js"></script>

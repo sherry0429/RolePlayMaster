@@ -56,6 +56,16 @@ async function requestAI(extraMessages) {
   document.getElementById('stopBtn').style.display = 'flex';
   abortController = new AbortController();
 
+  // AI 自动拍照（function call）：开关开启且 ComfyUI 启用时注入工具
+  var photoToolEnabled = shouldInjectPhotoTool();
+  var requestBody = { model: DEFAULT_MODEL, messages: messages, stream: true };
+  if (photoToolEnabled) {
+    requestBody.tools = [TAKE_PHOTO_TOOL];
+  }
+
+  // 流式返回中的 tool_calls 增量（按 index 分片拼装）
+  var pendingToolCalls = [];
+
   try {
     var response = await fetch(url, {
       method: 'POST',
@@ -63,11 +73,7 @@ async function requestAI(extraMessages) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: messages,
-        stream: true
-      }),
+      body: JSON.stringify(requestBody),
       signal: abortController.signal
     });
 
@@ -96,10 +102,22 @@ async function requestAI(extraMessages) {
 
         try {
           var json = JSON.parse(data);
-          var delta = json.choices?.[0]?.delta?.content;
-          if (delta) {
-            chat.messages[aiMsgIdx].content += delta;
+          var delta = json.choices?.[0]?.delta || {};
+          var deltaContent = delta.content;
+          if (deltaContent) {
+            chat.messages[aiMsgIdx].content += deltaContent;
             updateStreamingMessage(aiMsgIdx, chat.messages[aiMsgIdx].content);
+          }
+          // tool_calls 分片：{ index, id?, function: { name?, arguments? } }
+          var tcDeltas = delta.tool_calls;
+          if (tcDeltas) {
+            for (var t = 0; t < tcDeltas.length; t++) {
+              var tcd = tcDeltas[t];
+              var slot = (tcd.index !== undefined) ? tcd.index : pendingToolCalls.length;
+              if (!pendingToolCalls[slot]) pendingToolCalls[slot] = { name: '', args: '' };
+              if (tcd.function && tcd.function.name) pendingToolCalls[slot].name += tcd.function.name;
+              if (tcd.function && tcd.function.arguments) pendingToolCalls[slot].args += tcd.function.arguments;
+            }
           }
         } catch (e) {
           // 忽略解析错误
@@ -148,6 +166,11 @@ async function requestAI(extraMessages) {
           })(char);
         }
       }
+    }
+
+    // AI 自动拍照：take_photo 工具调用（设置开关，见 tool_registry.js）
+    if (photoToolEnabled) {
+      handlePhotoToolCalls(chat, pendingToolCalls, aiMsgIdx);
     }
 
     saveData();

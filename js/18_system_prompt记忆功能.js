@@ -84,21 +84,14 @@ function cleanAndRepairSp(raw, previousSp) {
 
 /**
  * 从 system_prompt 文本中提取指定 section 的内容（不含标题行）
+ * 仅供下方 cleanAndRepairSp 旧格式灰度路径使用（useSpxFormat 关闭时）；
+ * SPX 结构解析一律走 sp_format.js
  */
 function extractSection(spText, sectionName) {
   if (!spText) return '';
   var regex = new RegExp(`^#\\s*${sectionName}\\s*\\n([\\s\\S]*?)(?=^#\\s|$(?!\\n))`, 'm');
   var match = spText.match(regex);
   return match ? match[1].trim() : '';
-}
-
-/**
- * 从 system_prompt 文本中删除指定 section（含标题行）
- */
-function removeSection(spText, sectionName) {
-  if (!spText) return '';
-  var regex = new RegExp(`^#\\s*${sectionName}\\s*\\n([\\s\\S]*?)(?=^#\\s|$)`, 'm');
-  return spText.replace(regex, '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function checkCompress() {
@@ -138,11 +131,18 @@ async function compressChat() {
     compressMessages.push({ role: 'system', content: sp.content });
   }
   for (var m of msgsToCompress) {
+    // 工具协议消息（tool ack / 纯工具调用）不进入压缩上下文
+    if (isToolProtocolMessage(m)) continue;
     compressMessages.push({ role: m.role, content: m.content });
   }
+  var useSpx = appData.settings.useSpxFormat !== false;
+  // SPX 模式：用户自定义过记忆提示词则尊重之，否则用 SPX 模板；灰度关闭时走旧模板
+  var memoryPrompt = useSpx
+    ? (getPromptOverride('memory') || PROMPT_MEMORY_SPX)
+    : (typeof getMemoryPrompt === 'function' ? getMemoryPrompt() : PROMPT_MEMORY);
   compressMessages.push({
     role: 'user',
-    content: PROMPT_MEMORY
+    content: memoryPrompt
   });
 
   // 记录压缩日志
@@ -172,24 +172,52 @@ async function compressChat() {
     var summary = result.choices?.[0]?.message?.content || '';
 
     if (summary) {
-      // 清理并修复 AI 返回的 system_prompt
-      summary = cleanAndRepairSp(summary, sp.content);
+      var newContent = null;
+      if (useSpx) {
+        // SPX：预清洗 → 与当前版本合并（rules 禁改、缺失节点回填）→ 校验
+        var merged = mergeSp(summary, sp.content);
+        if (merged && isSpFormat(merged)) {
+          newContent = merged;
+        } else {
+          // 解析失败：宁可记忆不更新，不可记忆损坏。原始返回写入日志便于定位格式问题
+          addProgramLog(LOG_TYPE_MEMORY, {
+            summary: '记忆整理结果解析失败（已保留当前版本）',
+            chatName: chat.name + LOG_NAME_MEMORY,
+            detail: { reason: 'AI 返回内容无法解析为 SPX / 旧版结构', raw: summary }
+          });
+          showToast('记忆整理结果解析失败，已保留当前版本（原始返回见日志）', 'error');
+        }
+      } else {
+        // 旧格式灰度路径
+        newContent = cleanAndRepairSp(summary, sp.content);
+      }
 
-      // 如果当前查看的不是最新版本，删除当前版本之后的所有版本
-      var currentVi = chat.spViewIndex;
-      chat.spVersions = chat.spVersions.slice(0, currentVi + 1);
+      if (newContent) {
+        // 如果当前查看的不是最新版本，删除当前版本之后的所有版本
+        var currentVi = chat.spViewIndex;
+        chat.spVersions = chat.spVersions.slice(0, currentVi + 1);
 
-      // 新增一个版本
-      var newVersion = chat.spVersions[chat.spVersions.length - 1].version + 1;
-      chat.spVersions.push({
-        version: newVersion,
-        content: summary,
-        lastIndex: chat.messages.length - 1
+        // 新增一个版本
+        var newVersion = chat.spVersions[chat.spVersions.length - 1].version + 1;
+        chat.spVersions.push({
+          version: newVersion,
+          content: newContent,
+          lastIndex: chat.messages.length - 1,
+          format: useSpx ? SPX_FORMAT : undefined
+        });
+        chat.spViewIndex = chat.spVersions.length - 1;
+        saveData();
+        updateSpDisplay();
+        showToast('记忆已更新至 v' + newVersion, 'success');
+      }
+    } else {
+      // AI 返回为空（请求被截断/模型无输出）
+      addProgramLog(LOG_TYPE_MEMORY, {
+        summary: '记忆整理未返回内容（已保留当前版本）',
+        chatName: chat.name + LOG_NAME_MEMORY,
+        detail: 'AI 返回内容为空'
       });
-      chat.spViewIndex = chat.spVersions.length - 1;
-      saveData();
-      updateSpDisplay();
-      showToast('记忆已更新至 v' + newVersion, 'success');
+      showToast('记忆整理未返回内容，已保留当前版本', 'error');
     }
   } catch (e) {
     console.error('压缩失败', e);

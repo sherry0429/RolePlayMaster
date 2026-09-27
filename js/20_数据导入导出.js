@@ -125,6 +125,8 @@ function handleImport(event) {
       if (!data.theme) data.theme = 'light';
       if (!data.characters) data.characters = [];
       if (!data.settings.speakerMode) data.settings.speakerMode = true;
+      if (data.settings.useSpxFormat === undefined) data.settings.useSpxFormat = true;
+      if (data.settings.autoPhotoTool === undefined) data.settings.autoPhotoTool = false;
       if (!data.settings.syncToken) data.settings.syncToken = '';
       if (!data.settings.autoTopic) data.settings.autoTopic = false;
       if (!data.settings.chatNotification) data.settings.chatNotification = false;

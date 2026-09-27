@@ -25,6 +25,8 @@ async function init() {
   document.getElementById('compressThreshold').value = appData.settings.compressThreshold || COMPRESS_THRESHOLD;
   // 新设置项
   document.getElementById('speakerMode').checked = appData.settings.speakerMode !== false;
+  document.getElementById('useSpxFormat').checked = appData.settings.useSpxFormat !== false;
+  document.getElementById('autoPhotoTool').checked = !!appData.settings.autoPhotoTool;
   document.getElementById('autoTopic').checked = !!appData.settings.autoTopic;
   document.getElementById('chatNotification').checked = !!appData.settings.chatNotification;
   document.getElementById('autoTopicInterval').value = appData.settings.autoTopicInterval || 10;

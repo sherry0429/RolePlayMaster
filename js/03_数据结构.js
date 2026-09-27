@@ -20,6 +20,10 @@ function createDefaultData() {
       chatNotification: false,
       autoTopicInterval: 10,
       autoTopicMaxCount: 5,
+      useSpxFormat: true,     // 使用新版 SPX（XML）System Prompt（灰度开关，默认开）
+      autoPhotoTool: false,   // AI 自动拍照（function call 触发，默认关闭）
+      // 功能提示词自定义（桌面版「设置 → 数据 → 功能提示词调整」，空字符串表示使用默认值）
+      promptOverrides: { memory: '', 'continue': '', photo: '' },
       comfyui: {
         enabled: false,
         serverUrl: 'http://127.0.0.1:8188',

@@ -86,9 +86,13 @@ function getChatCharacterImage() {
 }
 
 /**
- * 从文本中提取【】括号内的角色名（去重）
+ * 从文本中提取角色名（去重）
+ * SPX 格式走 sp_format.js 结构化解析；普通文本（AI 回复等）扫描【】标记
  */
 function extractSpeakerNames(text) {
+  if (isSpFormat(text)) {
+    return getSpCharacterNames(text);
+  }
   var names = new Set();
   var regex = /【(.+?)】/g;
   var match;

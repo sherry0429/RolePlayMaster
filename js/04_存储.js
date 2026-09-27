@@ -24,12 +24,17 @@ async function loadData() {
       if (appData.settings.autoTopicInterval === undefined) appData.settings.autoTopicInterval = 10;
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
+      if (appData.settings.useSpxFormat === undefined) appData.settings.useSpxFormat = true;
+      if (appData.settings.autoPhotoTool === undefined) appData.settings.autoPhotoTool = false;
+      if (!appData.settings.promptOverrides) {
+        appData.settings.promptOverrides = { memory: '', 'continue': '', photo: '' };
+      }
       // 兼容新版：补全 comfyui 设置
       if (!appData.settings.comfyui) {
         appData.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768 };
       }
       if (!appData.characters) appData.characters = [];
-      // 兼容旧版：为每个聊天补全 characters 和 photos 字段
+      // 兼容旧版：为每个聊天补全 characters 和 photos 字段，并迁移 SP 旧格式
       if (appData.chats) {
         for (var id of Object.keys(appData.chats)) {
           if (appData.chats[id].characters === undefined) {
@@ -38,6 +43,7 @@ async function loadData() {
           if (appData.chats[id].photos === undefined) {
             appData.chats[id].photos = [];
           }
+          migrateChatSpVersions(appData.chats[id]);
         }
       }
       return true; // IndexedDB 有数据
@@ -59,12 +65,17 @@ async function loadData() {
       if (appData.settings.autoTopicInterval === undefined) appData.settings.autoTopicInterval = 10;
       if (appData.settings.autoTopicMaxCount === undefined) appData.settings.autoTopicMaxCount = 5;
       if (appData.settings.cloudSyncHost === undefined) appData.settings.cloudSyncHost = '';
+      if (appData.settings.useSpxFormat === undefined) appData.settings.useSpxFormat = true;
+      if (appData.settings.autoPhotoTool === undefined) appData.settings.autoPhotoTool = false;
+      if (!appData.settings.promptOverrides) {
+        appData.settings.promptOverrides = { memory: '', 'continue': '', photo: '' };
+      }
       // 兼容新版：补全 comfyui 设置
       if (!appData.settings.comfyui) {
         appData.settings.comfyui = { enabled: false, serverUrl: 'http://127.0.0.1:8188', workflowJson: '', nodeIds: { prompt: '', width: '', height: '' }, defaultWidth: 512, defaultHeight: 768 };
       }
       if (!appData.characters) appData.characters = [];
-      // 兼容旧版：为每个聊天补全 characters 和 photos 字段
+      // 兼容旧版：为每个聊天补全 characters 和 photos 字段，并迁移 SP 旧格式
       if (appData.chats) {
         for (var id of Object.keys(appData.chats)) {
           if (appData.chats[id].characters === undefined) {
@@ -73,6 +84,7 @@ async function loadData() {
           if (appData.chats[id].photos === undefined) {
             appData.chats[id].photos = [];
           }
+          migrateChatSpVersions(appData.chats[id]);
         }
       }
 

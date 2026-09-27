@@ -26,6 +26,8 @@ function saveSettings() {
   appData.settings.compressThreshold = (threshold >= 10) ? threshold : COMPRESS_THRESHOLD;
   // 新设置项
   appData.settings.speakerMode = document.getElementById('speakerMode').checked;
+  appData.settings.useSpxFormat = document.getElementById('useSpxFormat').checked;
+  appData.settings.autoPhotoTool = document.getElementById('autoPhotoTool').checked;
   appData.settings.autoTopic = document.getElementById('autoTopic').checked;
   appData.settings.chatNotification = document.getElementById('chatNotification').checked;
   // 自动话题配置
@@ -117,6 +119,8 @@ async function confirmResetAll() {
     document.getElementById('apiKey').value = '';
     document.getElementById('compressThreshold').value = COMPRESS_THRESHOLD;
     document.getElementById('speakerMode').checked = true;
+    document.getElementById('useSpxFormat').checked = true;
+    document.getElementById('autoPhotoTool').checked = false;
     document.getElementById('autoTopic').checked = false;
     document.getElementById('chatNotification').checked = false;
     document.getElementById('autoTopicInterval').value = 10;
