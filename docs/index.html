@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RolePlayMaster · 桌面化身版 — 把你的 AI 角色从聊天窗口里放出来</title>
+<meta name="description" content="RolePlayMaster 桌面化身版：基于 Tauri v2 的 AI 角色扮演桌面应用。透明无边框窗口 + 会呼吸的圆形化身，支持群聊聚合、动态 System Prompt、记忆压缩与 AI 情绪动画。">
+<link rel="icon" type="image/png" href="icon.png">
+<style>
+  :root {
+    --bg: #0b0a10;
+    --bg-soft: #12101a;
+    --card: rgba(255, 255, 255, 0.04);
+    --card-border: rgba(255, 255, 255, 0.09);
+    --text: #eceaf4;
+    --text-dim: #9b97ad;
+    --accent: #8b7cf0;
+    --accent-soft: rgba(139, 124, 240, 0.16);
+    --accent-line: rgba(139, 124, 240, 0.45);
+    --radius: 18px;
+    --maxw: 1120px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--accent-line); color: #fff; }
+
+  /* ---------- 背景氛围光 ---------- */
+  .glow {
+    position: absolute; border-radius: 50%;
+    filter: blur(120px); pointer-events: none; z-index: 0;
+  }
+  .glow-1 { width: 560px; height: 560px; top: -180px; left: 8%; background: rgba(139,124,240,.14); }
+  .glow-2 { width: 480px; height: 480px; top: 220px; right: -140px; background: rgba(94,168,255,.08); }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ---------- 导航 ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(14px);
+    background: rgba(11, 10, 16, 0.72);
+    border-bottom: 1px solid var(--card-border);
+  }
+  .nav-inner { max-width: var(--maxw); margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 28px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
+  .brand img { width: 30px; height: 30px; border-radius: 50%; }
+  .nav-links { display: flex; gap: 24px; margin-left: auto; align-items: center; }
+  .nav-links a { color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color .2s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-gh {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--accent-soft); border: 1px solid var(--accent-line);
+    color: var(--text) !important; padding: 7px 14px; border-radius: 10px; font-weight: 600;
+  }
+  @media (max-width: 720px) { .nav-links a:not(.nav-gh) { display: none; } }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative;
+    padding: 96px 24px 72px;
+    display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center;
+  }
+  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; padding-top: 64px; } }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--accent);
+    background: var(--accent-soft); border: 1px solid var(--accent-line);
+    padding: 6px 14px; border-radius: 999px; margin-bottom: 22px;
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  h1 {
+    font-size: clamp(38px, 5.4vw, 60px);
+    line-height: 1.15; letter-spacing: -1px; font-weight: 800;
+  }
+  h1 .grad {
+    background: linear-gradient(105deg, #a99cff 10%, #8b7cf0 45%, #6ea8ff 90%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .sub {
+    margin-top: 20px; font-size: 18px; color: var(--text-dim); max-width: 520px;
+  }
+  .hero .sub strong { color: var(--text); font-weight: 600; }
+  .cta-row { display: flex; gap: 14px; margin-top: 34px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 13px 26px; border-radius: 13px; font-size: 15px; font-weight: 600;
+    text-decoration: none; transition: transform .18s, box-shadow .18s, background .18s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary {
+    background: linear-gradient(120deg, #8b7cf0, #6d5ce8);
+    color: #fff; box-shadow: 0 8px 28px rgba(109, 92, 232, .35);
+  }
+  .btn-primary:hover { box-shadow: 0 12px 34px rgba(109, 92, 232, .5); }
+  .btn-ghost { border: 1px solid var(--card-border); color: var(--text); background: var(--card); }
+  .btn-ghost:hover { border-color: var(--accent-line); }
+
+  .hero-visual { position: relative; display: flex; justify-content: center; }
+  .hero-shot {
+    width: min(360px, 82%);
+    border-radius: 22px;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 0 60px rgba(139,124,240,.14);
+    animation: floaty 6s ease-in-out infinite;
+  }
+  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+  .float-chip {
+    position: absolute; z-index: 2;
+    background: rgba(22, 19, 34, .88); backdrop-filter: blur(10px);
+    border: 1px solid var(--accent-line); border-radius: 14px;
+    padding: 10px 16px; font-size: 13px; color: var(--text);
+    box-shadow: 0 12px 32px rgba(0,0,0,.45);
+    animation: floaty 7s ease-in-out infinite;
+  }
+  .chip-1 { top: 6%; left: -2%; animation-delay: -2s; }
+  .chip-2 { bottom: 10%; right: 0; animation-delay: -4s; }
+  .float-chip b { color: var(--accent); }
+
+  /* ---------- 通用 Section ---------- */
+  /* 注意：section 同时带有 .wrap 类，必须用 section.wrap 提高优先级，
+     否则 .wrap 的 padding 简写会覆盖掉垂直间距 */
+  section.wrap { padding: 120px 24px; }
+  @media (max-width: 720px) { section.wrap { padding: 80px 20px; } }
+  .sec-tag {
+    color: var(--accent); font-size: 13px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px;
+  }
+  h2 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; letter-spacing: -.5px; line-height: 1.25; }
+  .sec-desc { color: var(--text-dim); margin-top: 14px; max-width: 640px; font-size: 16px; }
+  .sec-head { margin-bottom: 48px; }
+
+  /* ---------- 形态三连 ---------- */
+  .states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  @media (max-width: 900px) { .states { grid-template-columns: 1fr; } }
+  .state-card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius); overflow: hidden;
+    transition: transform .25s, border-color .25s;
+  }
+  .state-card:hover { transform: translateY(-6px); border-color: var(--accent-line); }
+  .state-card .img-box {
+    background: #000; display: flex; align-items: flex-end; justify-content: center;
+    height: 300px; overflow: hidden;
+  }
+  .state-card img { height: 100%; width: auto; max-width: 100%; object-fit: contain; }
+  .state-card .txt { padding: 20px 22px 24px; }
+  .state-card .txt h3 { font-size: 17px; margin-bottom: 8px; }
+  .state-card .txt p { font-size: 14px; color: var(--text-dim); }
+
+  /* ---------- 特性网格 ---------- */
+  .features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  @media (max-width: 1000px) { .features { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
+  .feature {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius); padding: 26px 22px;
+    transition: transform .25s, border-color .25s, background .25s;
+  }
+  .feature:hover { transform: translateY(-5px); border-color: var(--accent-line); background: rgba(139,124,240,.06); }
+  .feature .icon {
+    width: 46px; height: 46px; border-radius: 13px;
+    background: var(--accent-soft); border: 1px solid var(--accent-line);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+  }
+  .feature .icon svg { width: 23px; height: 23px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .feature h3 { font-size: 16px; margin-bottom: 9px; }
+  .feature p { font-size: 13.5px; color: var(--text-dim); }
+
+  /* ---------- 大图展示 ---------- */
+  .showcase {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;
+    padding: 56px 0;
+  }
+  .showcase.rev .shot-col { order: 2; }
+  @media (max-width: 900px) { .showcase { grid-template-columns: 1fr; } .showcase.rev .shot-col { order: 0; } }
+  .shot-col img {
+    width: 100%; border-radius: var(--radius); border: 1px solid var(--card-border);
+    box-shadow: 0 24px 60px rgba(0,0,0,.5); cursor: zoom-in;
+    transition: transform .25s;
+  }
+  .shot-col img:hover { transform: scale(1.015); }
+  .shot-col.wide img { width: 118%; max-width: none; }
+  @media (max-width: 900px) { .shot-col.wide img { width: 100%; } }
+  .txt-col .kicker { color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: 2px; margin-bottom: 10px; }
+  .txt-col h2 { margin-bottom: 16px; }
+  .txt-col p { color: var(--text-dim); font-size: 15.5px; }
+  .txt-col ul { margin-top: 18px; list-style: none; }
+  .txt-col ul li {
+    padding: 9px 0 9px 30px; position: relative; font-size: 14.5px; color: var(--text-dim);
+    border-bottom: 1px dashed rgba(255,255,255,.07);
+  }
+  .txt-col ul li:last-child { border-bottom: none; }
+  .txt-col ul li::before {
+    content: ""; position: absolute; left: 4px; top: 16px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent-soft); border: 1.5px solid var(--accent-line);
+  }
+  .txt-col ul li::after {
+    content: ""; position: absolute; left: 8.5px; top: 20.5px;
+    width: 5px; height: 3px; border-left: 1.5px solid var(--accent); border-bottom: 1.5px solid var(--accent);
+    transform: rotate(-45deg);
+  }
+  .txt-col ul li b { color: var(--text); font-weight: 600; }
+
+  /* ---------- 截图画廊 ---------- */
+  .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .gallery { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .gallery { grid-template-columns: 1fr; } }
+  .gal-item {
+    position: relative; border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--card-border); cursor: zoom-in; background: #17141f;
+    aspect-ratio: 8 / 9; display: flex; align-items: center; justify-content: center;
+  }
+  .gal-item img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s, opacity .3s; }
+  .gal-item:hover img { transform: scale(1.04); opacity: .85; }
+  .gal-item .cap {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 26px 14px 10px; font-size: 13px; color: #fff;
+    background: linear-gradient(transparent, rgba(0,0,0,.78));
+    opacity: 0; transition: opacity .25s;
+  }
+  .gal-item:hover .cap { opacity: 1; }
+
+  /* ---------- 灯箱 ---------- */
+  #lightbox {
+    position: fixed; inset: 0; z-index: 100; display: none;
+    background: rgba(5, 4, 10, .92); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center; flex-direction: column; gap: 16px;
+    padding: 30px; cursor: zoom-out;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img { max-width: 92vw; max-height: 82vh; border-radius: 14px; border: 1px solid var(--card-border); }
+  #lightbox .lb-cap { color: var(--text-dim); font-size: 14px; }
+  .lb-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 46px; height: 46px; border-radius: 50%;
+    background: rgba(255,255,255,.07); border: 1px solid var(--card-border);
+    color: var(--text); font-size: 20px; cursor: pointer; user-select: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lb-nav:hover { background: var(--accent-soft); border-color: var(--accent-line); }
+  .lb-prev { left: 22px; } .lb-next { right: 22px; }
+
+  /* ---------- 技术要点 ---------- */
+  .tech-band {
+    background: linear-gradient(160deg, rgba(139,124,240,.09), rgba(94,168,255,.05));
+    border: 1px solid var(--card-border); border-radius: 24px;
+    padding: 52px 48px;
+  }
+  @media (max-width: 640px) { .tech-band { padding: 36px 24px; } }
+  .tech-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 36px; }
+  @media (max-width: 860px) { .tech-grid { grid-template-columns: 1fr; } }
+  .tech-item h3 { font-size: 15.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 9px; }
+  .tech-item h3::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--accent); transform: rotate(45deg); flex: none; }
+  .tech-item p { font-size: 13.5px; color: var(--text-dim); }
+
+  /* ---------- 下载应用 ---------- */
+  .dl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) { .dl-row { grid-template-columns: 1fr; } }
+  .dl-card {
+    display: flex; align-items: center; gap: 18px;
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius); padding: 26px 24px; text-decoration: none;
+    color: var(--text); transition: transform .22s, border-color .22s, background .22s;
+  }
+  .dl-card:hover { transform: translateY(-4px); border-color: var(--accent-line); background: rgba(139,124,240,.07); }
+  .dl-card > svg { width: 40px; height: 40px; flex: none; stroke: var(--accent); }
+  .dl-txt { flex: 1; min-width: 0; }
+  .dl-txt h3 { font-size: 17px; margin-bottom: 5px; }
+  .dl-txt p { font-size: 13.5px; color: var(--text-dim); }
+  .dl-txt p span { font-size: 12.5px; color: #6d6885; }
+  .dl-arrow { font-size: 26px; color: var(--accent); flex: none; line-height: 1; }
+  .steps { counter-reset: step; margin-top: 34px; display: grid; gap: 14px; }
+  .step {
+    display: flex; gap: 18px; align-items: flex-start;
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 20px 22px;
+  }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    flex: none; width: 34px; height: 34px; border-radius: 10px;
+    background: var(--accent-soft); border: 1px solid var(--accent-line);
+    color: var(--accent); font-weight: 700; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step h3 { font-size: 15.5px; margin-bottom: 4px; }
+  .step p { font-size: 13.5px; color: var(--text-dim); }
+  .step code {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 12.5px;
+    background: rgba(139,124,240,.13); color: #b7abff;
+    padding: 2px 8px; border-radius: 6px;
+  }
+
+  /* ---------- CTA 尾部 ---------- */
+  .end-cta { text-align: center; padding: 110px 24px 80px; }
+  .end-cta h2 { margin-bottom: 14px; }
+  .end-cta p { color: var(--text-dim); margin-bottom: 34px; }
+
+  footer {
+    border-top: 1px solid var(--card-border); padding: 30px 0 40px;
+    color: var(--text-dim); font-size: 13.5px; text-align: center;
+  }
+  footer a { color: var(--text-dim); text-decoration: none; border-bottom: 1px dotted var(--accent-line); }
+  footer a:hover { color: var(--text); }
+
+  /* ---------- 入场动画 ---------- */
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.on { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="brand" href="#">
+      <img src="icon.png" alt="logo"> RolePlayMaster
+    </a>
+    <div class="nav-links">
+      <a href="#states">桌面形态</a>
+      <a href="#features">特性</a>
+      <a href="#gallery">界面一览</a>
+      <a href="#download">下载应用</a>
+      <a class="nav-gh" href="https://github.com/sherry0429/RolePlayMaster" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<header class="wrap hero">
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+  <div>
+    <span class="badge"><span class="dot"></span>Tauri v2 · macOS / Windows 桌面应用</span>
+    <h1>你的 AI 角色，<br>现在住在<span class="grad">桌面上</span></h1>
+    <p class="sub">
+      RolePlayMaster 把角色扮演 AI 从聊天窗口里放出来——没有侧边栏，没有聊天大窗，
+      只有一颗<strong>会呼吸的圆形化身</strong>浮在屏幕角落。落下光标就能打字，回车即发送，
+      角色的回复以气泡的形式悬在你的桌面上。
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/sherry0429/RolePlayMaster/releases" target="_blank" rel="noopener">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        下载应用
+      </a>
+      <a class="btn btn-ghost" href="#features">了解特性</a>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <img class="hero-shot" src="screenshots/聊天ING.png" alt="化身上方的气泡堆与输入栏">
+    <div class="float-chip chip-1"><b>群聊聚合</b> · 多角色缩进一颗化身</div>
+    <div class="float-chip chip-2"><b>动态 System Prompt</b> · 300 句自动压缩记忆</div>
+  </div>
+</header>
+
+<!-- ============ 桌面形态 ============ -->
+<section id="states" class="wrap reveal">
+  <div class="sec-head">
+    <div class="sec-tag">Desktop Presence</div>
+    <h2>一台没有"界面"的桌面应用</h2>
+    <p class="sec-desc">
+      透明无边框窗口紧贴内容：化身上方悬着最近的消息气泡堆和常驻输入栏，
+      不占屏幕、不打断手头的事，却随时都在。
+    </p>
+  </div>
+  <div class="states">
+    <div class="state-card">
+      <div class="img-box"><img src="screenshots/化身.png" alt="待机形态" loading="lazy"></div>
+      <div class="txt">
+        <h3>待机：化身 + 常驻输入栏</h3>
+        <p>圆形化身边缘渐隐、像一颗气泡浮在桌面。点输入栏直接打字，Enter 发送、Shift+Enter 换行，无需先打开任何窗口。</p>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="img-box"><img src="screenshots/聊天气泡.png" alt="聊天中" loading="lazy"></div>
+      <div class="txt">
+        <h3>聊天：气泡堆悬在桌面</h3>
+        <p>最近 3 个气泡常显在化身上方（每条最多 6 行），越往下越新、越清晰。开启说话人区分后，一个气泡 = 一个角色的一段话，人名直接用头像代替。</p>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="img-box"><img src="screenshots/化身自动隐藏.png" alt="自动隐藏" loading="lazy"></div>
+      <div class="txt">
+        <h3>隐身：自动收纳</h3>
+        <p>不需要时气泡堆自动收起，只留一条输入栏甚至只剩化身；按住任意区域即可拖到屏幕任意角落，窗口尺寸全程动态贴合内容。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 特性网格 ============ -->
+<section id="features" class="wrap reveal">
+  <div class="sec-head">
+    <div class="sec-tag">Features</div>
+    <h2>为"角色扮演"而生的一整套能力</h2>
+    <p class="sec-desc">从群聊、记忆到情绪动画，每个功能都围绕一件事：让角色更真实地陪在你身边。</p>
+  </div>
+  <div class="features">
+    <div class="feature">
+      <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg></div>
+      <h3>桌面化身</h3>
+      <p>透明无边框窗口，自动提取角色主色染遍气泡与按钮；化身边缘逐层淡出，像一颗会呼吸的气泡。</p>
+    </div>
+    <div class="feature">
+      <div class="icon"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5c4.7 0 8.5 3.8 8.5 8.5z"/></svg></div>
+      <h3>气泡堆 + 消息浮层</h3>
+      <p>化身正上方悬着最近消息，点 ☰ 展开浮层回看历史，附带记忆 / 继续 / 拍照 / SP 快捷指令。</p>
+    </div>
+    <div class="feature">
+      <div class="icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M3.5 19c.6-3 2.9-4.6 5.5-4.6S13.9 16 14.5 19M15.5 14.6c2.2.2 4.1 1.6 4.8 4.4"/></svg></div>
+      <h3>群聊聚合化身</h3>
+      <p>多角色缩小成小圆、环形排布聚合进同一颗大圆；群聊回复按说话人拆成独立气泡，各带头像。</p>
+    </div>
+    <div class="feature">
+      <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></div>
+      <h3>动态 System Prompt</h3>
+      <p>人格设定版本化管理，可切换、可对比、可回滚；剧情演进，人格随之演化。</p>
+    </div>
+    <div class="feature">
+      <div class="icon"><svg viewBox="0 0 24 24"><path d="M9.5 2a5.5 5.5 0 0 0-5.4 6.6 5.5 5.5 0 0 0 3 9.9A4.5 4.5 0 0 0 12 22a4.5 4.5 0 0 0 4.9-3.5 5.5 5.5 0 0 0 3-9.9A5.5 5.5 0 0 0 14.5 2z"/><path d="M12 6v4"/></svg></div>
+      <h3>记忆压缩</h3>
+      <p>每 300 句自动把全部聊天交给 AI 提炼摘要，融合进当前 System Prompt——聊得越久，角色越懂你。</p>
+    </div>
+    <div class="feature">
+      <div class="icon"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+      <h3>AI 拍照</h3>
+      <p>接入 ComfyUI 工作流，随时让角色"拍一张"当下的场景，收入专属相册。</p>
+    </div>
+    <div class="feature">
+      <div class="icon"><svg viewBox="0 0 24 24"><polygon points="10 8 16 12 10 16 10 8"/><rect x="2" y="4" width="20" height="16" rx="3"/></svg></div>
+      <h3>情绪动画</h3>
+      <p>上传约 2 秒的 AI 生成视频，自动抽帧拼成 sprite sheet；待机呼吸循环，情绪播完自动回待机。</p>
+    </div>
+    <div class="feature">
+      <div class="icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+      <h3>数据完全属于你</h3>
+      <p>全部数据存在本机 IndexedDB，支持导入 / 导出 JSON、云端同步由原生侧代发，密钥只留本机。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ System Prompt 展示 ============ -->
+<section class="wrap reveal">
+  <div class="showcase">
+    <div class="shot-col"><img src="screenshots/系统prompt编辑.png" alt="System Prompt 编辑器" loading="lazy"></div>
+    <div class="txt-col">
+      <div class="kicker">动态 System Prompt</div>
+      <h2>会成长的人格设定</h2>
+      <p>System Prompt 不是一段写死的文本，而是一份随剧情演进的"活档案"：结构化分节、版本化管理，编辑器里可以原文 / 对比双视图自由切换。</p>
+      <ul>
+        <li><b>版本化</b>——每次演化生成新版本，可随时切回任意旧版本，旧版本之后触发更新则自动分叉</li>
+        <li><b>自动压缩</b>——超过阈值自动请 AI 提炼全部聊天为摘要并融合进人格，只携带增量上下文请求</li>
+        <li><b>逐聊天隔离</b>——每个聊天拥有独立的 System Prompt 与背景，互不串线</li>
+      </ul>
+    </div>
+  </div>
+  <div class="showcase rev">
+    <div class="shot-col wide"><img src="screenshots/群聊面板.png" alt="角色图库与群聊" loading="lazy"></div>
+    <div class="txt-col">
+      <div class="kicker">角色 &amp; 群聊</div>
+      <h2>建一个属于你的角色剧团</h2>
+      <p>内置角色库开箱即用：勾选几位角色一键建群，他们会在同一颗聚合化身里各自开口、互相接话。</p>
+      <ul>
+        <li><b>角色管理</b>——头像、人设、动画逐项编辑，支持导入 / 导出分享</li>
+        <li><b>群聊面板</b>——可视化建群、成员管理，多角色回复自动按说话人拆分</li>
+        <li><b>接入任意模型</b>——默认 DeepSeek，改 API Host / Key 即可切换任意 OpenAI 兼容供应商</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 设置 + 动画 ============ -->
+<section class="wrap reveal">
+  <div class="showcase">
+    <div class="shot-col"><img src="screenshots/动画系统.png" alt="动画管理" loading="lazy"></div>
+    <div class="txt-col">
+      <div class="kicker">情绪动画</div>
+      <h2>让化身动起来</h2>
+      <p>为角色上传约 2 秒的 AI 生成短视频（MP4 / WebM），应用自动抽帧、去重并拼成 sprite sheet。待机时循环播放呼吸感动画，聊天中触发对应情绪动画，播完自动回待机。</p>
+      <ul>
+        <li><b>零手工处理</b>——上传即完成抽帧与合图，全程自动</li>
+        <li><b>情绪驱动</b>——惊讶、开心、不满……动画跟随剧情触发</li>
+        <li><b>设置七大分页</b>——桌面 / 聊天 / 接口 / 数据 / 记忆 / 图像 / 关于，各归其位</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 界面一览 ============ -->
+<section id="gallery" class="wrap reveal">
+  <div class="sec-head">
+    <div class="sec-tag">Gallery</div>
+    <h2>界面一览</h2>
+    <p class="sec-desc">点击任意截图查看大图。</p>
+  </div>
+  <div class="gallery">
+    <div class="gal-item"><img src="screenshots/化身.png" alt="化身与输入栏" loading="lazy"><div class="cap">化身与常驻输入栏</div></div>
+    <div class="gal-item"><img src="screenshots/聊天气泡.png" alt="聊天气泡堆" loading="lazy"><div class="cap">聊天气泡堆</div></div>
+    <div class="gal-item"><img src="screenshots/聊天ING.png" alt="聊天进行中" loading="lazy"><div class="cap">聊天进行中</div></div>
+    <div class="gal-item"><img src="screenshots/右键菜单.png" alt="右键菜单" loading="lazy"><div class="cap">右键菜单 · 全部功能入口</div></div>
+    <div class="gal-item"><img src="screenshots/群聊面板.png" alt="角色图库与群聊" loading="lazy"><div class="cap">角色图库与群聊</div></div>
+    <div class="gal-item"><img src="screenshots/系统prompt编辑.png" alt="System Prompt 编辑器" loading="lazy"><div class="cap">System Prompt 编辑器</div></div>
+    <div class="gal-item"><img src="screenshots/动画触发.png" alt="情绪动画触发" loading="lazy"><div class="cap">情绪动画触发</div></div>
+    <div class="gal-item"><img src="screenshots/动画系统.png" alt="动画管理" loading="lazy"><div class="cap">动画管理</div></div>
+    <div class="gal-item"><img src="screenshots/化身自动隐藏.png" alt="化身自动隐藏" loading="lazy"><div class="cap">自动隐藏形态</div></div>
+    <div class="gal-item"><img src="screenshots/设置-基础.png" alt="设置 · 基础" loading="lazy"><div class="cap">设置 · 基础</div></div>
+    <div class="gal-item"><img src="screenshots/设置-聊天.png" alt="设置 · 聊天" loading="lazy"><div class="cap">设置 · 聊天</div></div>
+    <div class="gal-item"><img src="screenshots/设置-数据接口.png" alt="设置 · 数据接口" loading="lazy"><div class="cap">设置 · 数据接口</div></div>
+    <div class="gal-item"><img src="screenshots/设置-数据.png" alt="设置 · 数据" loading="lazy"><div class="cap">设置 · 数据</div></div>
+    <div class="gal-item"><img src="screenshots/设置-图片.png" alt="设置 · 图像" loading="lazy"><div class="cap">设置 · 图像</div></div>
+    <div class="gal-item"><img src="screenshots/设置-角色.png" alt="设置 · 角色" loading="lazy"><div class="cap">设置 · 角色</div></div>
+    <div class="gal-item"><img src="screenshots/设置-关于.png" alt="设置 · 关于" loading="lazy"><div class="cap">设置 · 关于</div></div>
+  </div>
+</section>
+
+<!-- ============ 技术要点 ============ -->
+<section class="wrap reveal">
+  <div class="tech-band">
+    <div class="sec-tag">Under the Hood</div>
+    <h2>轻、快、透明的技术底座</h2>
+    <div class="tech-grid">
+      <div class="tech-item">
+        <h3>Tauri v2 透明窗口</h3>
+        <p>transparent + 无边框 + 无阴影，macOS 启用 private API；窗口尺寸全程按内容动态计算，绝不大片透明区域遮挡桌面。</p>
+      </div>
+      <div class="tech-item">
+        <h3>原生侧代发云端请求</h3>
+        <p>云端同步由 Rust 侧 reqwest 代发，绕开 WebView 同源策略；基于 Tauri Channel 逐块上报真实下载进度。</p>
+      </div>
+      <div class="tech-item">
+        <h3>同源复用 30 个业务模块</h3>
+        <p>网页版 30 个业务模块原样移植到桌面版，流式请求、记忆压缩、群聊、相册逐行同源，修 bug 一次两端受益。</p>
+      </div>
+      <div class="tech-item">
+        <h3>化身主色提取</h3>
+        <p>32×32 canvas 上做 4bit 量化直方图，中心加权、明暗降权、饱和度抬升，角色主色自动染遍整套 UI。</p>
+      </div>
+      <div class="tech-item">
+        <h3>窗口停靠与面板模式</h3>
+        <p>开面板放大居中、关面板逐像素还原；拖动过就不会被拽回去，底边钉住、只向剩余空间生长。</p>
+      </div>
+      <div class="tech-item">
+        <h3>数据本地优先</h3>
+        <p>全部数据存于本机 IndexedDB，导入 / 导出 JSON、生成分享链接、云端双向同步，控制权始终在你手里。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 下载应用 ============ -->
+<section id="download" class="wrap reveal">
+  <div class="sec-head">
+    <div class="sec-tag">Download</div>
+    <h2>下载应用</h2>
+    <p class="sec-desc">免费开源 · 支持 macOS 与 Windows · 无需任何账号，数据完全存在你自己的电脑上。</p>
+  </div>
+  <div class="dl-row">
+    <a class="dl-card" href="https://github.com/sherry0429/RolePlayMaster/releases" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0-8-8 8 8 0 0 0 8 8z" opacity="0"/><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 21h16"/></svg>
+      <div class="dl-txt">
+        <h3>macOS</h3>
+        <p>下载 .dmg 安装包 · 拖入「应用程序」即可使用<br><span>要求 macOS 12 及以上</span></p>
+      </div>
+      <span class="dl-arrow">&#8250;</span>
+    </a>
+    <a class="dl-card" href="https://github.com/sherry0429/RolePlayMaster/releases" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.2 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
+      <div class="dl-txt">
+        <h3>Windows</h3>
+        <p>下载安装包 · 双击运行按提示安装<br><span>要求 Windows 10 及以上</span></p>
+      </div>
+      <span class="dl-arrow">&#8250;</span>
+    </a>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div>
+        <h3>安装并启动</h3>
+        <p>首次启动，化身会自动停靠到屏幕右下角，并内置 8 个角色供你直接开聊，无需任何配置。</p>
+      </div>
+    </div>
+    <div class="step">
+      <div>
+        <h3>填入 API Key</h3>
+        <p>右键化身 →「打开设置面板」→「接口」分页，填入你的 API Host 与 API Key（默认适配 DeepSeek，任意 OpenAI 兼容接口均可）。密钥只保存在本机。</p>
+      </div>
+    </div>
+    <div class="step">
+      <div>
+        <h3>开始对话</h3>
+        <p>点化身上方的输入栏直接打字，Enter 发送；右键化身可以建群、切换角色、触发记忆与拍照。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 尾部 CTA ============ -->
+<div class="end-cta wrap reveal">
+  <h2>把角色放出来，<span class="grad" style="background:linear-gradient(105deg,#a99cff,#6ea8ff);-webkit-background-clip:text;background-clip:text;color:transparent">让它住进你的桌面</span></h2>
+  <p>免费 · 开源 · 数据完全本地</p>
+  <div class="cta-row" style="justify-content:center">
+    <a class="btn btn-primary" href="https://github.com/sherry0429/RolePlayMaster/releases" target="_blank" rel="noopener">前往下载</a>
+    <a class="btn btn-ghost" href="https://github.com/sherry0429/RolePlayMaster" target="_blank" rel="noopener">查看源码</a>
+  </div>
+</div>
+
+<footer class="wrap">
+  <p>RolePlayMaster · 基于 Tauri v2 构建的 AI 角色桌面化身 ·
+    <a href="https://github.com/sherry0429/RolePlayMaster" target="_blank" rel="noopener">GitHub</a>
+  </p>
+</footer>
+
+<!-- 灯箱 -->
+<div id="lightbox" role="dialog" aria-modal="true">
+  <img id="lb-img" src="" alt="">
+  <div class="lb-cap" id="lb-cap"></div>
+  <div class="lb-nav lb-prev" id="lb-prev">&#10094;</div>
+  <div class="lb-nav lb-next" id="lb-next">&#10095;</div>
+</div>
+
+<script>
+  // 滚动入场动画
+  const io = new IntersectionObserver(es => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // 灯箱：封面大图 + 画廊共用
+  const shots = Array.from(document.querySelectorAll('.shot-col img, .gal-item img'));
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lb-img');
+  const lbCap = document.getElementById('lb-cap');
+  let idx = 0;
+  function openLb(i) {
+    idx = (i + shots.length) % shots.length;
+    lbImg.src = shots[idx].src;
+    lbCap.textContent = shots[idx].alt || '';
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLb() { lb.classList.remove('open'); document.body.style.overflow = ''; }
+  shots.forEach((img, i) => img.addEventListener('click', () => openLb(i)));
+  lb.addEventListener('click', e => { if (e.target === lb || e.target === lbImg) closeLb(); });
+  document.getElementById('lb-prev').addEventListener('click', e => { e.stopPropagation(); openLb(idx - 1); });
+  document.getElementById('lb-next').addEventListener('click', e => { e.stopPropagation(); openLb(idx + 1); });
+  document.addEventListener('keydown', e => {
+    if (!lb.classList.contains('open')) return;
+    if (e.key === 'Escape') closeLb();
+    if (e.key === 'ArrowLeft') openLb(idx - 1);
+    if (e.key === 'ArrowRight') openLb(idx + 1);
+  });
+</script>
+</body>
+</html>

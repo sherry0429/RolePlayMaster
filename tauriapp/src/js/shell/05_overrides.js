@@ -127,6 +127,18 @@ updateUIForNoChat = function () {
   refreshShell();
 };
 
+/**
+ * 保存聊天编辑：角色关联可能在此变化（首次勾选角色），
+ * 核心层只刷新聊天列表，化身/气泡需要外壳层强制重绘，
+ * 否则要再手动点一次聊天（触发 selectChat）头像才会更新。
+ */
+var _legacySaveEditChat = saveEditChat;
+saveEditChat = function (id) {
+  _legacySaveEditChat(id);
+  _avatarSignature = '';   // 清空指纹，强制化身重绘
+  refreshShell();
+};
+
 var _legacyApplyImportedData = applyImportedData;
 applyImportedData = function (data) {
   _avatarSignature = '';   // 强制化身重绘
