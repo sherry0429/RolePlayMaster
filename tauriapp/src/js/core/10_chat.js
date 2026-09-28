@@ -284,11 +284,25 @@ function saveEditChat(id) {
   if (!chat.characters || chat.characters.length === 0) {
     var checkedBoxes = document.querySelectorAll('[data-char-select]:checked');
     if (checkedBoxes.length > 0) {
-      chat.characters = [...checkedBoxes].map(cb => {
+      // 保留完整角色对象（含 description），供生成群聊 SP 骨架使用
+      var selectedChars = [...checkedBoxes].map(cb => {
         var charIdx = parseInt(cb.value);
-        var c = appData.characters[charIdx];
-        return c ? { name: c.name, avatar: c.avatar || '' } : null;
+        return appData.characters[charIdx] || null;
       }).filter(Boolean);
+
+      chat.characters = selectedChars.map(c => ({ name: c.name, avatar: c.avatar || '' }));
+
+      // 与创建群聊（confirmCharSelect）保持一致：首次关联角色时初始化 System Prompt
+      var currentSp = (chat.spVersions && chat.spVersions[0] && chat.spVersions[0].content) || '';
+      if (!currentSp.trim()) {
+        // 写入 SPX 骨架（task/rules 固定，角色身份取自角色描述）
+        chat.spVersions[0].content = generateGroupSystemPrompt(selectedChars);
+        if (id === currentChatId) updateSpDisplay();
+        // 有 API Key 时让 AI 填充第一版 System Prompt（异步，不阻塞保存）
+        if (appData.settings.apiKey) {
+          autoInitGroupChat(id, selectedChars);
+        }
+      }
     }
   }
 
